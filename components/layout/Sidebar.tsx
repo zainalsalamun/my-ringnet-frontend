@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { 
@@ -15,25 +16,29 @@ import {
 } from 'lucide-react';
 
 export default function Sidebar() {
+  const [imgError, setImgError] = useState(false);
+
   return (
     <aside className="w-[260px] h-screen bg-[#111827] text-slate-300 flex flex-col font-sans overflow-y-auto">
       {/* Logo Area */}
       <div className="p-6 pb-2">
         <div className="flex items-center space-x-3 mb-1">
           <div className="w-8 h-8 relative">
-            {/* Fallback to text if image fails */}
-            <Image 
-              src="/assets/logo.png" 
-              alt="Logo" 
-              fill 
-              className="object-contain"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-            <div className="w-full h-full bg-blue-500 rounded text-white flex items-center justify-center font-bold text-xs -z-10 absolute inset-0">
-              RN
-            </div>
+            {!imgError && (
+              <Image 
+                src="/assets/logo.png" 
+                alt="Logo" 
+                fill 
+                sizes="100px"
+                className="object-contain"
+                onError={() => setImgError(true)}
+              />
+            )}
+            {imgError && (
+              <div className="w-full h-full bg-blue-500 rounded text-white flex items-center justify-center font-bold text-xs absolute inset-0">
+                RN
+              </div>
+            )}
           </div>
           <div>
             <h1 className="text-xl font-bold text-white tracking-tight">MyRingNet</h1>
@@ -61,7 +66,7 @@ export default function Sidebar() {
         </Link>
         
         <div>
-          <button className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-colors">
+          <button type="button" className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-colors">
             <div className="flex items-center space-x-3">
               <Users size={18} className="text-slate-400" />
               <span className="text-sm">Pengguna</span>

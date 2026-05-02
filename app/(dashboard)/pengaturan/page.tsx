@@ -1,0 +1,1 @@
+import { SettingsPage } from "@/components/pages/OtherPages"; export default SettingsPage;

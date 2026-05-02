@@ -1,16 +1,16 @@
-import Sidebar from "@/components/layout/Sidebar";
-import Header from "@/components/layout/Header";
+"use client";
 
-export default function Layout({ children }: any) {
+import Header from "@/components/layout/Header";
+import Sidebar from "@/components/layout/Sidebar";
+import useAuth from "@/hooks/useAuth";
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  useAuth();
   return (
-    <div className="flex">
+    <div className="min-h-screen bg-slate-50">
       <Sidebar />
-      <div className="flex-1">
-        <Header />
-        <main className="p-6 bg-gray-100 min-h-screen">
-          {children}
-        </main>
-      </div>
+      <Header />
+      <main className="px-5 py-6 lg:ml-[264px] lg:px-7">{children}</main>
     </div>
   );
 }

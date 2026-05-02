@@ -1,0 +1,1 @@
+import { ReportsPage } from "@/components/pages/OtherPages"; export default ReportsPage;

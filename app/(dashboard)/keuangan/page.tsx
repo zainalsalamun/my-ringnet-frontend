@@ -1,0 +1,1 @@
+import { FinancePage } from "@/components/pages/OtherPages"; export default FinancePage;

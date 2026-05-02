@@ -1,0 +1,1 @@
+import { LeadForm } from "@/components/pages/FormPages"; export default function Page(){ return <LeadForm />; }

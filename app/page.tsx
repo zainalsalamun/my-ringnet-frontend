@@ -23,7 +23,7 @@ export default function LoginPage() {
       setSession(res.data.data.token, res.data.data.user);
       router.push("/dashboard");
     } catch {
-      setSession("demo-token", { id: 1, name: "Admin RingNet", email, role: "admin" });
+      setSession("demo-token", { id: "demo-admin", name: "Admin RingNet", email, role: "admin" });
       router.push("/dashboard");
     } finally {
       setLoading(false);

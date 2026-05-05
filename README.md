@@ -27,6 +27,8 @@ Buka aplikasi di:
 http://localhost:3001
 ```
 
+Panduan migrasi dan deployment VPS tersedia di [DEPLOYMENT.md](/Users/macbookpro/development/ringnet/my-ringnet-frontend/DEPLOYMENT.md).
+
 Credential seed yang tersedia:
 
 ```text

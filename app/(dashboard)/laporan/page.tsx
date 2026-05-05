@@ -1,1 +1,3 @@
-import { ReportsPage } from "@/components/pages/OtherPages"; export default ReportsPage;
+import { ReportsCrudPage } from "@/components/pages/MenuCrudPages";
+
+export default ReportsCrudPage;

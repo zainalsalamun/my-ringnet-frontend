@@ -1,1 +1,3 @@
-import { FinancePage } from "@/components/pages/OtherPages"; export default FinancePage;
+import { FinanceCrudPage } from "@/components/pages/MenuCrudPages";
+
+export default FinanceCrudPage;

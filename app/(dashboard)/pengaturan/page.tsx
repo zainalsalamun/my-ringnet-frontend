@@ -1,1 +1,3 @@
-import { SettingsPage } from "@/components/pages/OtherPages"; export default SettingsPage;
+import { SettingsCrudPage } from "@/components/pages/MenuCrudPages";
+
+export default SettingsCrudPage;

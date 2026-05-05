@@ -1,36 +1,128 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MyRingNet Frontend
 
-## Getting Started
+Frontend admin dashboard untuk sistem manajemen ISP **MyRingNet**. Aplikasi ini dibangun dengan Next.js App Router, Tailwind CSS, Axios, Zustand, dan Recharts. UI memakai sidebar gelap, area konten terang, tabel operasional, form CRUD, dropdown custom, shimmer loading, dan panel notifikasi.
 
-First, run the development server:
+## Stack
+
+- Next.js 16 App Router
+- React 19
+- Tailwind CSS 4
+- Axios
+- Zustand
+- Recharts
+- Lucide React
+
+## Menjalankan Project
+
+Pastikan backend berjalan di `http://localhost:3000`.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev -- -p 3001
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka aplikasi di:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```text
+http://localhost:3001
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Credential seed yang tersedia:
 
-## Learn More
+```text
+Email: superadmin@ringnet.com
+Password: password123
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Environment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Buat atau sesuaikan `.env.local`:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```env
+NEXT_PUBLIC_API=http://localhost:3000/api
+```
 
-## Deploy on Vercel
+## Fitur Yang Sudah Ada
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Login JWT dan protected dashboard layout.
+- Header dengan pencarian global visual, tombol logout, dropdown profil, dan panel notifikasi.
+- Notifikasi real dari backend untuk invoice jatuh tempo, pembayaran diterima, dan lead baru.
+- Sidebar dengan menu turunan `Pengguna` dan `Pengaturan`.
+- Dashboard ringkasan real dari backend: pelanggan, invoice, pendapatan, tunggakan, chart revenue, chart status invoice, aktivitas terbaru.
+- User Management dengan filter role/status dan default menyembunyikan role `pelanggan` dari daftar akun akses panel.
+- Proteksi super admin agar tidak bisa dihapus.
+- CRUD Admin, Pelanggan, Bisnis/Perusahaan, Mitra Bisnis.
+- CRUD Marketing Leads dengan dropdown mitra dari database.
+- CRUD List Tagihan/Layanan Internet dengan dropdown pelanggan dari data pelanggan.
+- Input nominal Rupiah untuk tagihan dan pembayaran.
+- CRUD Keuangan/Pembayaran.
+- CRUD Laporan.
+- Pengaturan umum termasuk panel pajak inline edit.
+- CRUD Paket Layanan di menu `Pengaturan > Paket Layanan`.
+- Dropdown paket di form pelanggan dan invoice mengambil data dari tabel `service_packages`.
+- Shimmer loading dan empty state tabel.
+- Favicon/browser icon memakai logo RingNet.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Struktur Penting
+
+```text
+app/
+├── (dashboard)/
+│   ├── dashboard/
+│   ├── internet-services/
+│   ├── keuangan/
+│   ├── laporan/
+│   ├── marketing/
+│   ├── pengaturan/
+│   │   └── paket-layanan/
+│   └── users/
+├── layout.tsx
+└── page.tsx
+
+components/
+├── layout/
+│   ├── Header.tsx
+│   └── Sidebar.tsx
+├── pages/
+│   ├── DashboardPage.tsx
+│   ├── FormPages.tsx
+│   ├── ListPages.tsx
+│   ├── MenuCrudPages.tsx
+│   └── UserManagementPage.tsx
+└── ui/
+    └── AdminUI.tsx
+```
+
+## Integrasi API
+
+Axios instance berada di `lib/api.ts` dan otomatis menambahkan token dari `localStorage`:
+
+```text
+ringnet_token
+ringnet_user
+```
+
+Endpoint utama yang dipakai frontend:
+
+- `/auth/login`
+- `/dashboard/summary`
+- `/dashboard/notifications`
+- `/users`
+- `/customers`
+- `/companies`
+- `/partners`
+- `/marketing`
+- `/internet-services`
+- `/finance`
+- `/reports`
+- `/settings`
+- `/service-packages`
+
+## Validasi
+
+```bash
+npm run lint
+npm run build
+```
+
+Catatan: Next.js dapat menampilkan warning multiple lockfile jika ada `package-lock.json` di parent directory. Warning ini tidak menghalangi build.

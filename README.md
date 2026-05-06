@@ -70,6 +70,7 @@ NEXT_PUBLIC_API=http://localhost:3000/api
 - Fallback data otomatis untuk mencegah blank screen/crash ketika request API backend gagal.
 - Custom dropdown (`SelectInput`) UI yang elegan dan interaktif sebagai pengganti select native.
 - Konfigurasi Docker (`Dockerfile`, `.dockerignore`) siap pakai untuk kontainerisasi dan deployment frontend.
+- Redirect otomatis ke halaman login apabila session (token) telah habis atau tidak valid.
 
 ## Struktur Penting
 

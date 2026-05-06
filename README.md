@@ -27,7 +27,7 @@ Buka aplikasi di:
 http://localhost:3001
 ```
 
-Panduan migrasi dan deployment VPS tersedia di [DEPLOYMENT.md](/Users/macbookpro/development/ringnet/my-ringnet-frontend/DEPLOYMENT.md).
+Panduan migrasi dan deployment VPS dikelola di repository backend: `my-ringnet-backend/DEPLOYMENT.md`.
 
 Credential seed yang tersedia:
 
@@ -64,6 +64,12 @@ NEXT_PUBLIC_API=http://localhost:3000/api
 - Dropdown paket di form pelanggan dan invoice mengambil data dari tabel `service_packages`.
 - Shimmer loading dan empty state tabel.
 - Favicon/browser icon memakai logo RingNet.
+- Pagination, pencarian data lokal (client-side search), dan state management pada tabel.
+- Custom UI modal dialog untuk konfirmasi penghapusan data, menggantikan fungsi alert() bawaan browser.
+- Integrasi penanganan error server-side validation yang ditampilkan secara inline pada form dan melalui toast notification.
+- Fallback data otomatis untuk mencegah blank screen/crash ketika request API backend gagal.
+- Custom dropdown (`SelectInput`) UI yang elegan dan interaktif sebagai pengganti select native.
+- Konfigurasi Docker (`Dockerfile`, `.dockerignore`) siap pakai untuk kontainerisasi dan deployment frontend.
 
 ## Struktur Penting
 

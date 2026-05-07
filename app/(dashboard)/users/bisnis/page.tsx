@@ -1,0 +1,1 @@
+import { CompaniesPage } from "@/components/pages/ListPages"; export default CompaniesPage;

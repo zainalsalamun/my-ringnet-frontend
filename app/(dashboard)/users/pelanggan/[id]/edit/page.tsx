@@ -1,0 +1,1 @@
+import { CustomerForm } from "@/components/pages/FormPages"; export default async function Page({ params }: { params: Promise<{ id: string }> }){ const { id } = await params; return <CustomerForm edit id={id} />; }

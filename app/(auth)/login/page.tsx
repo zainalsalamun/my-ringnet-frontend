@@ -4,20 +4,25 @@ import { useState } from "react";
 import api from "@/lib/api";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/hooks/useAuth";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [imgError, setImgError] = useState(false);
   const router = useRouter();
+  const setSession = useAuthStore((state) => state.setSession);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post("/auth/login", {
+      const res = await api.post("/auth/login", {
         email,
         password,
       });
+      
+      const { token, user } = res.data.data;
+      setSession(token, user);
       
       router.push("/dashboard");
     } catch (error) {

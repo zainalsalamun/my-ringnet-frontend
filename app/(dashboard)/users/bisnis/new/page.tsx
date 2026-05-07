@@ -1,0 +1,1 @@
+import { CompanyForm } from "@/components/pages/FormPages"; export default function Page(){ return <CompanyForm />; }

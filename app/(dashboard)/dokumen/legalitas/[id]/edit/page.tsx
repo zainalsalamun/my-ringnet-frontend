@@ -1,0 +1,6 @@
+import { LegalitasFormPage } from "@/components/pages/DocumentPages";
+
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <LegalitasFormPage edit id={id} />;
+}

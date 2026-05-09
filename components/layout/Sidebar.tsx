@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { BarChart3, ChevronDown, FileText, Globe2, Megaphone, Settings, UserRoundCog, Wallet } from "lucide-react";
+import { BarChart3, ChevronDown, FileStack, FileText, Globe2, Megaphone, Settings, UserRoundCog, Wallet } from "lucide-react";
 import { useState } from "react";
 
 const groups = [
@@ -26,12 +26,19 @@ const settingChildren = [
   { label: "Paket Layanan", href: "/pengaturan/paket-layanan" },
 ];
 
+const documentChildren = [
+  { label: "Legalitas", href: "/dokumen/legalitas" },
+  { label: "Legalitas Mitra", href: "/dokumen/legalitas-mitra" },
+];
+
 export default function Sidebar() {
   const pathname = usePathname();
   const userMenuActive = pathname === "/users" || pathname.startsWith("/users/");
   const settingMenuActive = pathname === "/pengaturan" || pathname.startsWith("/pengaturan/");
+  const documentMenuActive = pathname.startsWith("/dokumen");
   const [userMenuOpen, setUserMenuOpen] = useState(userMenuActive);
   const [settingMenuOpen, setSettingMenuOpen] = useState(settingMenuActive);
+  const [documentMenuOpen, setDocumentMenuOpen] = useState(documentMenuActive);
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-[264px] flex-col bg-[#0F172A] text-slate-300 shadow-2xl lg:flex">
@@ -112,6 +119,37 @@ export default function Sidebar() {
               <div className="space-y-1 border-l border-white/10 pl-4">
                 {settingChildren.map((item) => {
                   const active = item.href === "/pengaturan" ? pathname === "/pengaturan" : pathname === item.href || pathname.startsWith(item.href + "/");
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={"block rounded-lg px-3 py-2 text-sm font-medium transition " + (active ? "bg-white/10 text-white" : "text-slate-500 hover:bg-white/5 hover:text-slate-200")}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+        </div>
+        <div className={documentMenuOpen ? "rounded-xl bg-white/5" : ""}>
+          <button
+            type="button"
+            onClick={() => setDocumentMenuOpen((open) => !open)}
+            className={"flex w-full items-center justify-between rounded-lg px-4 py-2.5 text-sm font-semibold transition " + (documentMenuActive ? "text-white" : "text-slate-400 hover:bg-white/5 hover:text-white")}
+          >
+            <span className="flex items-center gap-3">
+              <FileStack size={18} />
+              Dokumen
+            </span>
+            <ChevronDown size={17} className={"transition-transform " + (documentMenuOpen ? "rotate-180 text-slate-300" : "text-slate-500")} />
+          </button>
+          {documentMenuOpen ? (
+            <div className="pb-3 pl-[50px] pr-3 pt-1">
+              <div className="space-y-1 border-l border-white/10 pl-4">
+                {documentChildren.map((item) => {
+                  const active = pathname === item.href || pathname.startsWith(item.href + "/");
                   return (
                     <Link
                       key={item.href}

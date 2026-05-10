@@ -1,3 +1,5 @@
-import { LegalitasPage } from "@/components/pages/DocumentPages";
+import { DocumentListPage } from "@/components/pages/DocumentPages";
 
-export default LegalitasPage;
+export default function Page() {
+  return <DocumentListPage />;
+}

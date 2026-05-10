@@ -35,7 +35,7 @@ function formatRupiahInput(value: string) {
 export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string }) {
   const [error, setError] = useState("");
   const [packageOptions, setPackageOptions] = useState<{ label: string; value: string }[]>([]);
-  const [form, setForm] = useState({ name: "", phone: "", email: "", city: "Jakarta", area: "Jakarta", customerType: "Individu", packageName: "Mega 50Mbps", status: "active", notes: "" });
+  const [form, setForm] = useState({ name: "", phone: "", email: "", city: "Jakarta", area: "Jakarta", address: "", ktp: "", npwp: "", customerType: "Individu", packageName: "Mega 50Mbps", status: "active", notes: "" });
   const submit = useSubmit(edit ? "/customers/" + id : "/customers", "/users/pelanggan", edit ? "put" : "post");
 
   useEffect(() => {
@@ -72,6 +72,9 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
         phone: form.phone,
         city: form.city,
         area: form.area,
+        address: form.address,
+        ktp: form.ktp,
+        npwp: form.npwp,
         customerType: form.customerType,
         packageName: form.packageName,
         status: form.status,
@@ -87,7 +90,10 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
     <TextInput label="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@contoh.com" />
     <SelectInput label="Kota" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} options={[{ label: "Jakarta", value: "Jakarta" }, { label: "Bekasi", value: "Bekasi" }, { label: "Depok", value: "Depok" }, { label: "Tangerang", value: "Tangerang" }]} />
     <TextInput label="Area" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} />
-    <SelectInput label="Tipe Pelanggan" value={form.customerType} onChange={(e) => setForm({ ...form, customerType: e.target.value })} options={[{ label: "Individu", value: "Individu" }, { label: "Rumahan", value: "Rumahan" }]} />
+    <div className="lg:col-span-2"><TextInput label="Alamat" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Alamat lengkap" /></div>
+    <TextInput label="Nomor KTP" value={form.ktp} onChange={(e) => setForm({ ...form, ktp: e.target.value })} placeholder="NIK KTP" />
+    <TextInput label="NPWP" value={form.npwp} onChange={(e) => setForm({ ...form, npwp: e.target.value })} placeholder="Nomor NPWP" />
+    <SelectInput label="Tipe Pelanggan" value={form.customerType} onChange={(e) => setForm({ ...form, customerType: e.target.value })} options={[{ label: "Individu", value: "Individu" }, { label: "Rumahan", value: "Rumahan" }, { label: "Perusahaan", value: "Perusahaan" }]} />
     <SelectInput label="Paket Internet" value={form.packageName} onChange={(e) => setForm({ ...form, packageName: e.target.value })} options={packageOptions.length ? packageOptions : [{ label: "Belum ada paket", value: "" }]} disabled={!packageOptions.length} />
     <SelectInput label="Status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} options={statusOptions} />
     <div className="lg:col-span-2"><TextArea label="Catatan" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Catatan tambahan opsional" /></div>

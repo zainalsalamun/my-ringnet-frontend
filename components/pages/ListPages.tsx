@@ -5,6 +5,7 @@
 import api from "@/lib/api";
 import { Badge, DataTable, PageHeader, TableSkeleton } from "@/components/ui/AdminUI";
 import { currency, date, monthName } from "@/lib/format";
+import Link from "next/link";
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useState } from "react";
 
@@ -73,8 +74,7 @@ export function CustomersPage() {
       {loading ? <TableSkeleton columns={6} /> :
       <DataTable data={rows as any[]} editBasePath="/users/pelanggan" onDelete={(row) => deleteRow("/customers", row, setRows as any, setToast, "Pelanggan berhasil dihapus.")}
         columns={[
-          { key: "name", header: "Nama", render: (row: any) => <span className="font-semibold text-slate-900">{row.name}</span> },
-          { key: "phone", header: "Kontak" },
+          { key: "name", header: "Nama", render: (row: any) => <Link href={`/users/pelanggan/${row.id}`} className="font-semibold text-indigo-600 hover:underline">{row.name}</Link> },
           { key: "area", header: "Area" },
           { key: "packageName", header: "Paket", render: (row: any) => row.packageName || "-" },
           { key: "status", header: "Status", render: (row: any) => <Badge value={row.status} /> },

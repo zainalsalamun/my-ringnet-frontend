@@ -1,3 +1,5 @@
-import { LegalitasMitraPage } from "@/components/pages/DocumentPages";
+import { DocumentListPage } from "@/components/pages/DocumentPages";
 
-export default LegalitasMitraPage;
+export default function Page() {
+  return <DocumentListPage categorySlug="legalitas-mitra" />;
+}

@@ -5,7 +5,7 @@
 import api from "@/lib/api";
 import { Badge, Card, PageHeader, ShimmerBlock, StatCard } from "@/components/ui/AdminUI";
 import { currency } from "@/lib/format";
-import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Receipt, TrendingUp, Users, Wallet } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -22,6 +22,7 @@ const emptySummary = {
   ],
   popularPackages: [] as { name: string; value: number }[],
   recentActivities: [] as any[],
+  dailyUsage: [] as { time: string; download: number; upload: number }[],
 };
 
 export default function DashboardPage() {
@@ -76,6 +77,61 @@ export default function DashboardPage() {
         </div>
       )}
 
+      <div className="mt-6">
+        <Card className="overflow-hidden p-0">
+          <div className="bg-slate-600 px-5 py-3">
+            <h2 className="font-medium text-white">Penggunaan Harian</h2>
+          </div>
+          <div className="p-5">
+            <div className="h-80 w-full">
+              {loading || !ready ? <ShimmerBlock className="h-full rounded-xl" /> : (
+                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                  <AreaChart data={summary.dailyUsage} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorDownload" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#d946ef" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#d946ef" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorUpload" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="time" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `${v} Mbps`} />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
+                      labelStyle={{ color: '#64748b', marginBottom: '4px', fontWeight: 'bold' }}
+                      formatter={(value: number, name: string) => [
+                        <span key={name} className="font-semibold text-slate-800">{value} Mbps</span>, 
+                        <span key={name + "label"} className={name === "Unduh" ? "text-fuchsia-600 font-medium" : "text-emerald-500 font-medium"}>{name}</span>
+                      ]}
+                    />
+                    <Area type="monotone" dataKey="download" name="Unduh" stroke="#d946ef" strokeWidth={2} fillOpacity={1} fill="url(#colorDownload)" />
+                    <Area type="monotone" dataKey="upload" name="Unggah" stroke="#22c55e" strokeWidth={2} fillOpacity={1} fill="url(#colorUpload)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+            <div className="mt-6 flex flex-wrap justify-center gap-2">
+              {['03 Mei 2026', '04 Mei 2026', '05 Mei 2026', '06 Mei 2026', '07 Mei 2026', '08 Mei 2026', '09 Mei 2026'].map((date, i) => (
+                <button 
+                  key={date} 
+                  className={`px-4 py-1.5 text-sm rounded-md transition-colors border ${
+                    i === 6 
+                      ? 'border-rose-400 text-rose-500 bg-white hover:bg-rose-50' 
+                      : 'border-sky-300 text-sky-500 bg-white hover:bg-sky-50'
+                  }`}
+                >
+                  {date}
+                </button>
+              ))}
+            </div>
+          </div>
+        </Card>
+      </div>
+
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.5fr_0.9fr]">
         <Card className="p-5">
           <div className="mb-4 flex items-center justify-between">
@@ -84,7 +140,7 @@ export default function DashboardPage() {
           </div>
           <div className="h-80">
             {loading || !ready ? <ShimmerBlock className="h-full rounded-xl" /> : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                 <LineChart data={summary.revenue}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="month" stroke="#64748b" fontSize={12} />
@@ -100,7 +156,7 @@ export default function DashboardPage() {
           <h2 className="mb-4 font-bold text-slate-950">Status Invoice</h2>
           <div className="h-64">
             {loading || !ready ? <ShimmerBlock className="h-full rounded-xl" /> : hasPieData ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                 <PieChart>
                   <Pie data={summary.invoiceStatus} innerRadius={62} outerRadius={95} paddingAngle={4} dataKey="value">
                     {summary.invoiceStatus.map((item) => <Cell key={item.name} fill={item.color} />)}
@@ -129,7 +185,7 @@ export default function DashboardPage() {
           <h2 className="mb-4 font-bold text-slate-950">Paket Terlaris</h2>
           <div className="h-64">
             {loading || !ready ? <ShimmerBlock className="h-full rounded-xl" /> : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                 <BarChart data={summary.popularPackages}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="name" fontSize={12} />

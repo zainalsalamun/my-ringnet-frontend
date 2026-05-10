@@ -140,7 +140,7 @@ export function TextInput(props: React.InputHTMLAttributes<HTMLInputElement> & {
   return (
     <label className="block">
       {label ? <span className="mb-2 block text-sm font-semibold text-slate-700">{label}</span> : null}
-      <input {...rest} className={"h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 " + className} />
+      <input {...rest} value={rest.value ?? ""} className={"h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 " + className} />
     </label>
   );
 }
@@ -216,7 +216,7 @@ export function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement
   return (
     <label className="block">
       {label ? <span className="mb-2 block text-sm font-semibold text-slate-700">{label}</span> : null}
-      <textarea {...rest} className={"min-h-28 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 " + className} />
+      <textarea {...rest} value={rest.value ?? ""} className={"min-h-28 w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 " + className} />
     </label>
   );
 }

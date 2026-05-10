@@ -14,11 +14,10 @@ const groups = [
 ];
 
 const userChildren = [
-  { label: "Admin", href: "/users/admin" },
+  { label: "User Management", href: "/users" },
   { label: "Pelanggan", href: "/users/pelanggan" },
   { label: "Bisnis / Perusahaan", href: "/users/bisnis" },
   { label: "Mitra Bisnis", href: "/users/mitra" },
-  { label: "User Management", href: "/users" },
 ];
 
 const settingChildren = [

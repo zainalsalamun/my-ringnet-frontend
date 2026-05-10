@@ -50,7 +50,7 @@ NEXT_PUBLIC_API=http://localhost:3000/api
 - Header dengan pencarian global visual, tombol logout, dropdown profil, dan panel notifikasi.
 - Notifikasi real dari backend untuk invoice jatuh tempo, pembayaran diterima, dan lead baru.
 - Sidebar dengan menu turunan `Pengguna` dan `Pengaturan`.
-- Dashboard ringkasan real dari backend: pelanggan, invoice, pendapatan, tunggakan, chart revenue, chart status invoice, aktivitas terbaru.
+- Dashboard ringkasan real dari backend: pelanggan, invoice, pendapatan, tunggakan, chart revenue, chart status invoice, grafik trafik internet harian (download/upload), aktivitas terbaru.
 - User Management dengan filter role/status dan default menyembunyikan role `pelanggan` dari daftar akun akses panel.
 - Proteksi super admin agar tidak bisa dihapus.
 - CRUD Admin, Pelanggan, Bisnis/Perusahaan, Mitra Bisnis.
@@ -61,6 +61,8 @@ NEXT_PUBLIC_API=http://localhost:3000/api
 - CRUD Laporan.
 - Pengaturan umum termasuk panel pajak inline edit.
 - CRUD Paket Layanan di menu `Pengaturan > Paket Layanan`.
+- CRUD Kategori Dokumen di menu `Pengaturan > Kategori Dokumen`.
+- Manajemen Dokumen (Legal/Kontrak) dengan menu `Dokumen`, mendukung upload file dan custom metadata (Nomor, Expired Date).
 - Dropdown paket di form pelanggan dan invoice mengambil data dari tabel `service_packages`.
 - Shimmer loading dan empty state tabel.
 - Favicon/browser icon memakai logo RingNet.
@@ -78,11 +80,13 @@ NEXT_PUBLIC_API=http://localhost:3000/api
 app/
 ├── (dashboard)/
 │   ├── dashboard/
+│   ├── dokumen/
 │   ├── internet-services/
 │   ├── keuangan/
 │   ├── laporan/
 │   ├── marketing/
 │   ├── pengaturan/
+│   │   ├── kategori-dokumen/
 │   │   └── paket-layanan/
 │   └── users/
 ├── layout.tsx
@@ -126,6 +130,8 @@ Endpoint utama yang dipakai frontend:
 - `/reports`
 - `/settings`
 - `/service-packages`
+- `/documents`
+- `/document-categories`
 
 ## Validasi
 

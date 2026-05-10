@@ -55,7 +55,7 @@ function initials(name?: string) {
   return (words[0]?.[0] || "A") + (words[1]?.[0] || "R");
 }
 
-export default function Header() {
+export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: boolean) => void }) {
   const router = useRouter();
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
@@ -121,7 +121,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-20 flex h-[72px] items-center justify-between border-b border-slate-200 bg-white/95 px-5 backdrop-blur lg:ml-[264px] lg:px-7">
       <div className="flex flex-1 items-center gap-4">
-        <button className="grid h-10 w-10 place-items-center rounded-lg border border-slate-200 text-slate-600 lg:hidden"><Menu size={20} /></button>
+        <button onClick={() => setSidebarOpen?.(true)} className="grid h-10 w-10 place-items-center rounded-lg border border-slate-200 text-slate-600 lg:hidden"><Menu size={20} /></button>
         <div className="relative hidden w-full max-w-xl md:block">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
           <input className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100" placeholder="Cari pelanggan, invoice, layanan..." />

@@ -103,7 +103,7 @@ export default function DashboardPage() {
                     <Tooltip 
                       contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
                       labelStyle={{ color: '#64748b', marginBottom: '4px', fontWeight: 'bold' }}
-                      formatter={(value: number, name: string) => [
+                      formatter={(value: any, name: any) => [
                         <span key={name} className="font-semibold text-slate-800">{value} Mbps</span>, 
                         <span key={name + "label"} className={name === "Unduh" ? "text-fuchsia-600 font-medium" : "text-emerald-500 font-medium"}>{name}</span>
                       ]}

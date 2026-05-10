@@ -69,7 +69,7 @@ function formatDate(dateStr: string) {
 }
 
 // ─── Document List Page with Tabs ───
-export function DocumentListPage() {
+export function DocumentListPage({ categorySlug }: { categorySlug?: string } = {}) {
   const [activeTab, setActiveTab] = useState<string>("SEMUA");
   const categories = useDocumentCategories();
   const { rows, toast, remove, loading } = useDocuments(activeTab);
@@ -298,7 +298,7 @@ export function LegalitasViewPage({ id, backHref }: { id: string; backHref?: str
 }
 
 // ─── Tambah / Edit Dokumen Form Page ───
-export function LegalitasFormPage({ edit = false, id }: { edit?: boolean; id?: string }) {
+export function LegalitasFormPage({ edit = false, id, category }: { edit?: boolean; id?: string; category?: string }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [form, setForm] = useState({ name: "", documentNo: "", expiredDate: "", partnerId: "", categoryId: "" });

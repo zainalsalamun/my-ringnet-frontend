@@ -3,20 +3,30 @@
 
 import api from "@/lib/api";
 import Link from "next/link";
-import { Card, DataTable, PageHeader, TableSkeleton } from "@/components/ui/AdminUI";
+import { Card, DataTable, PageHeader, TableSkeleton, SelectInput } from "@/components/ui/AdminUI";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Calendar, Download, Eye, FileText, HardDrive, Layers, Upload, Users } from "lucide-react";
+import { ArrowLeft, Calendar, Download, Eye, FileText, Upload, Users, FileBadge } from "lucide-react";
 
 function Toast({ message }: { message: string }) {
   if (!message) return null;
   return <div className="mb-4 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-700">{message}</div>;
 }
 
-function useDocuments(endpoint: string) {
+export function useDocumentCategories() {
+  const [categories, setCategories] = useState<{ id: string, name: string, slug: string }[]>([]);
+  useEffect(() => {
+    api.get("/document-categories").then(res => setCategories(res.data.data)).catch(() => {});
+  }, []);
+  return categories;
+}
+
+function useDocuments(categoryId?: string) {
   const [rows, setRows] = useState<any[]>([]);
   const [toast, setToast] = useState("");
   const [loading, setLoading] = useState(true);
+
+  const endpoint = categoryId && categoryId !== "SEMUA" ? `/documents?categoryId=${categoryId}` : "/documents";
 
   useEffect(() => {
     setLoading(true);
@@ -43,54 +53,65 @@ function useDocuments(endpoint: string) {
   return { rows, toast, remove, loading };
 }
 
-// ─── Legalitas (Company-Level) List Page ───
-export function LegalitasPage() {
-  const { rows, toast, remove, loading } = useDocuments("/documents");
-
+// ─── Dynamic Category Badge ───
+function CategoryBadge({ category }: { category: any }) {
+  if (!category) return <span className="text-slate-400">-</span>;
   return (
-    <div>
-      <PageHeader title="Dokumen Legalitas" subtitle="Kelola dokumen legalitas perusahaan." actionHref="/dokumen/legalitas/new" actionLabel="Tambah" />
-      <Toast message={toast} />
-      {loading ? <TableSkeleton columns={4} /> :
-      <DataTable
-        data={rows}
-        editBasePath="/dokumen/legalitas"
-        onDelete={(row) => remove(row, "Dokumen berhasil dihapus.")}
-        columns={[
-          { key: "name", header: "Nama Dokumen", render: (row: any) => (
-            <Link href={"/dokumen/legalitas/" + row.id} className="font-semibold text-indigo-600 hover:underline">
-              {row.name}
-            </Link>
-          )},
-          { key: "fileSize", header: "Ukuran Berkas", render: (row: any) => row.fileSizeFormatted || "-" },
-          { key: "pageCount", header: "Jumlah Halaman", render: (row: any) => String(row.pageCount || 1) },
-        ]}
-      />
-      }
-    </div>
+    <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
+      {category.name}
+    </span>
   );
 }
 
-// ─── Legalitas Mitra (Partner-linked) List Page ───
-export function LegalitasMitraPage() {
-  const { rows, toast, loading } = useDocuments("/documents/mitra");
+function formatDate(dateStr: string) {
+  if (!dateStr) return "-";
+  return new Date(dateStr).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+}
+
+// ─── Document List Page with Tabs ───
+export function DocumentListPage() {
+  const [activeTab, setActiveTab] = useState<string>("SEMUA");
+  const categories = useDocumentCategories();
+  const { rows, toast, remove, loading } = useDocuments(activeTab);
+
+  const tabs = [
+    { label: "Semua", value: "SEMUA" },
+    ...categories.map(c => ({ label: c.name, value: c.id }))
+  ];
 
   return (
     <div>
-      <PageHeader title="Legalitas Mitra" subtitle="Dokumen legalitas dari mitra bisnis." />
+      <PageHeader title="Daftar Dokumen" subtitle="Kelola seluruh dokumen perusahaan dan mitra." actionHref={`/dokumen/legalitas/new`} actionLabel="Tambah" />
       <Toast message={toast} />
+      
+      {/* Category Tabs */}
+      <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
+        {tabs.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => setActiveTab(tab.value)}
+            className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold transition ${activeTab === tab.value ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {loading ? <TableSkeleton columns={5} /> :
       <DataTable
         data={rows}
+        editBasePath={`/dokumen/legalitas`}
+        onDelete={(row) => remove(row, "Dokumen berhasil dihapus.")}
         columns={[
-          { key: "partnerName", header: "Mitra", render: (row: any) => <span className="font-semibold text-slate-900">{row.partnerName || row.partner?.name || "-"}</span> },
-          { key: "name", header: "Nama Dokumen", render: (row: any) => (
-            <Link href={"/dokumen/legalitas/" + row.id} className="font-semibold text-indigo-600 hover:underline">
+          { key: "name", header: "Nama", render: (row: any) => (
+            <Link href={`/dokumen/legalitas/${row.id}`} className="font-semibold text-indigo-600 hover:underline">
               {row.name}
             </Link>
           )},
-          { key: "fileSize", header: "Ukuran Berkas", render: (row: any) => row.fileSizeFormatted || "-" },
-          { key: "pageCount", header: "Jumlah Halaman", render: (row: any) => String(row.pageCount || 1) },
+          { key: "documentNo", header: "Nomor", render: (row: any) => <span className="text-slate-600">{row.documentNo || "-"}</span> },
+          { key: "category", header: "Kategori", render: (row: any) => <CategoryBadge category={row.category} /> },
+          { key: "partnerName", header: "Mitra", render: (row: any) => <span className="text-slate-600">{row.partnerName || row.partner?.name || "-"}</span> },
+          { key: "expiredDate", header: "Expired Date", render: (row: any) => <span className="text-slate-600">{formatDate(row.expiredDate)}</span> },
         ]}
       />
       }
@@ -98,8 +119,8 @@ export function LegalitasMitraPage() {
   );
 }
 
-// ─── View / Detail Dokumen Legalitas Page ───
-export function LegalitasViewPage({ id }: { id: string }) {
+// ─── View / Detail Dokumen Page ───
+export function LegalitasViewPage({ id, backHref }: { id: string; backHref?: string }) {
   const router = useRouter();
   const [doc, setDoc] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -142,30 +163,23 @@ export function LegalitasViewPage({ id }: { id: string }) {
     );
   }
 
-  // Build the full PDF URL for preview
   const apiBase = (process.env.NEXT_PUBLIC_API || "").replace(/\/api\/?$/, "");
   const pdfUrl = apiBase + doc.filePath;
-
-  function formatDate(dateStr: string) {
-    if (!dateStr) return "-";
-    return new Date(dateStr).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
-  }
+  const resolvedBackHref = backHref || `/dokumen/legalitas`;
 
   return (
     <div>
-      {/* Header with Back Button */}
       <div className="mb-6">
-        <button
-          onClick={() => router.back()}
+        <Link
+          href={resolvedBackHref}
           className="mb-3 inline-flex items-center gap-2 rounded-lg text-sm font-medium text-slate-500 transition hover:text-slate-900"
         >
           <ArrowLeft size={16} /> Kembali
-        </button>
+        </Link>
         <h1 className="text-2xl font-bold tracking-tight text-slate-950">{doc.name}</h1>
-        <p className="mt-1 text-sm text-slate-500">Detail dan preview dokumen legalitas</p>
+        <p className="mt-1 text-sm text-slate-500">Detail dan preview dokumen</p>
       </div>
 
-      {/* Info Cards */}
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="p-4">
           <div className="flex items-center gap-3">
@@ -181,22 +195,22 @@ export function LegalitasViewPage({ id }: { id: string }) {
         <Card className="p-4">
           <div className="flex items-center gap-3">
             <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-600">
-              <HardDrive size={18} />
+              <FileBadge size={18} />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Ukuran</p>
-              <p className="mt-0.5 text-sm font-bold text-slate-900">{doc.fileSizeFormatted || "-"}</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Nomor</p>
+              <p className="mt-0.5 text-sm font-bold text-slate-900">{doc.documentNo || "-"}</p>
             </div>
           </div>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
             <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-600">
-              <Layers size={18} />
+              <Calendar size={18} />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Halaman</p>
-              <p className="mt-0.5 text-sm font-bold text-slate-900">{doc.pageCount || 1}</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Expired Date</p>
+              <p className="mt-0.5 text-sm font-bold text-slate-900">{formatDate(doc.expiredDate)}</p>
             </div>
           </div>
         </Card>
@@ -213,22 +227,33 @@ export function LegalitasViewPage({ id }: { id: string }) {
         </Card>
       </div>
 
-      {/* Partner info if exists */}
-      {doc.partner ? (
-        <Card className="mb-6 p-4">
+      <div className="mb-6 flex flex-wrap gap-4">
+        <Card className="flex-1 p-4">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cyan-100 text-cyan-600">
-              <Users size={18} />
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-indigo-100 text-indigo-600">
+              <FileText size={18} />
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Mitra</p>
-              <p className="mt-0.5 text-sm font-bold text-slate-900">{doc.partner.name}</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Kategori</p>
+              <div className="mt-1"><CategoryBadge category={doc.category} /></div>
             </div>
           </div>
         </Card>
-      ) : null}
+        {doc.partner ? (
+          <Card className="flex-1 p-4">
+            <div className="flex items-center gap-3">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cyan-100 text-cyan-600">
+                <Users size={18} />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Mitra</p>
+                <p className="mt-0.5 text-sm font-bold text-slate-900">{doc.partner.name}</p>
+              </div>
+            </div>
+          </Card>
+        ) : null}
+      </div>
 
-      {/* PDF Preview */}
       <Card className="overflow-hidden">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
@@ -254,27 +279,37 @@ export function LegalitasViewPage({ id }: { id: string }) {
           </div>
         </div>
         <div className="bg-slate-100 p-1">
-          <iframe
-            src={pdfUrl + "#toolbar=1&navpanes=0"}
-            title={"Preview: " + doc.name}
-            className="h-[700px] w-full rounded-lg border-0 bg-white"
-          />
+          {pdfUrl.toLowerCase().match(/\.(jpeg|jpg|png)$/) ? (
+            <div className="flex min-h-[500px] items-center justify-center rounded-lg bg-white p-8">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={pdfUrl} alt={doc.name} className="max-h-[700px] max-w-full rounded-md object-contain shadow-sm border border-slate-100" />
+            </div>
+          ) : (
+            <iframe
+              src={pdfUrl + "#toolbar=1&navpanes=0"}
+              title={"Preview: " + doc.name}
+              className="h-[700px] w-full rounded-lg border-0 bg-white"
+            />
+          )}
         </div>
       </Card>
     </div>
   );
 }
 
-// ─── Tambah / Edit Dokumen Legalitas Form Page ───
+// ─── Tambah / Edit Dokumen Form Page ───
 export function LegalitasFormPage({ edit = false, id }: { edit?: boolean; id?: string }) {
   const router = useRouter();
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ name: "", pageCount: "1", partnerId: "" });
+  const [form, setForm] = useState({ name: "", documentNo: "", expiredDate: "", partnerId: "", categoryId: "" });
   const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState("");
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const categories = useDocumentCategories();
   const [partnerOptions, setPartnerOptions] = useState<{ label: string; value: string }[]>([]);
   const [isPartnerDoc, setIsPartnerDoc] = useState(false);
+  const [hasExpiredDate, setHasExpiredDate] = useState(false);
 
   useEffect(() => {
     api.get("/partners?limit=100")
@@ -289,10 +324,22 @@ export function LegalitasFormPage({ edit = false, id }: { edit?: boolean; id?: s
     if (!edit || !id) return;
     api.get("/documents/" + id).then((res) => {
       const data = res.data.data;
+      
+      let formattedDate = "";
+      if (data.expiredDate) {
+        const d = new Date(data.expiredDate);
+        formattedDate = d.toISOString().split('T')[0];
+        setHasExpiredDate(true);
+      } else {
+        setHasExpiredDate(false);
+      }
+
       setForm({
         name: data.name || "",
-        pageCount: String(data.pageCount || 1),
+        documentNo: data.documentNo || "",
+        expiredDate: formattedDate,
         partnerId: data.partnerId || "",
+        categoryId: data.categoryId || ""
       });
       if (data.partnerId) setIsPartnerDoc(true);
       if (data.filePath) setFileName(data.filePath.split("/").pop() || "");
@@ -302,8 +349,9 @@ export function LegalitasFormPage({ edit = false, id }: { edit?: boolean; id?: s
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = e.target.files?.[0];
     if (selected) {
-      if (selected.type !== "application/pdf") {
-        setError("Hanya file PDF yang diizinkan.");
+      const allowed = ["application/pdf", "image/jpeg", "image/png", "image/jpg"];
+      if (!allowed.includes(selected.type)) {
+        setError("Hanya file PDF, JPG, atau PNG yang diizinkan.");
         return;
       }
       setFile(selected);
@@ -315,20 +363,34 @@ export function LegalitasFormPage({ edit = false, id }: { edit?: boolean; id?: s
   async function submit() {
     setError("");
     if (!form.name.trim()) {
-      setError("Nama dokumen wajib diisi.");
+      setError("Nama wajib diisi.");
+      return;
+    }
+    if (!form.categoryId) {
+      setError("Kategori dokumen wajib dipilih.");
       return;
     }
     if (!edit && !file) {
-      setError("Berkas PDF wajib diunggah.");
+      setError("Berkas dokumen wajib diunggah.");
       return;
     }
 
     try {
       const formData = new FormData();
       formData.append("name", form.name);
-      formData.append("pageCount", form.pageCount || "1");
+      formData.append("categoryId", form.categoryId);
+      if (form.documentNo) formData.append("documentNo", form.documentNo);
+      
+      if (hasExpiredDate && form.expiredDate) {
+        formData.append("expiredDate", form.expiredDate);
+      } else {
+        formData.append("expiredDate", "");
+      }
+      
       if (isPartnerDoc && form.partnerId) {
         formData.append("partnerId", form.partnerId);
+      } else if (edit && !isPartnerDoc) {
+        formData.append("partnerId", "");
       }
       if (file) {
         formData.append("file", file);
@@ -344,7 +406,7 @@ export function LegalitasFormPage({ edit = false, id }: { edit?: boolean; id?: s
         });
       }
 
-      router.push(isPartnerDoc ? "/dokumen/legalitas-mitra" : "/dokumen/legalitas");
+      router.push("/dokumen/legalitas");
     } catch (err: any) {
       setError(err.response?.data?.message || "Gagal menyimpan dokumen.");
     }
@@ -352,13 +414,24 @@ export function LegalitasFormPage({ edit = false, id }: { edit?: boolean; id?: s
 
   return (
     <div>
-      <PageHeader title={(edit ? "Edit" : "Tambah") + " Dokumen Legalitas"} subtitle="Upload dokumen legalitas perusahaan atau mitra." />
+      <PageHeader title={(edit ? "Edit" : "Tambah") + ` Dokumen`} subtitle={`Upload dokumen perusahaan atau mitra.`} />
       <Card className="p-6">
         {error ? <div className="mb-5 rounded-lg bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div> : null}
         <form onSubmit={(e) => { e.preventDefault(); submit(); }} className="space-y-6">
           <div className="grid gap-5 lg:grid-cols-2">
+            
+            {/* Kategori */}
+            <div className="lg:col-span-2">
+              <SelectInput
+                label="Kategori*"
+                value={form.categoryId}
+                onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+                options={[{ label: "Pilih kategori...", value: "" }, ...categories.map(cat => ({ label: cat.name, value: cat.id }))]}
+              />
+            </div>
+
             {/* Nama */}
-            <label className="block">
+            <label className="block lg:col-span-2">
               <span className="mb-2 block text-sm font-semibold text-slate-700">Nama<span className="text-rose-500">*</span></span>
               <input
                 value={form.name}
@@ -368,17 +441,39 @@ export function LegalitasFormPage({ edit = false, id }: { edit?: boolean; id?: s
               />
             </label>
 
-            {/* Jumlah Halaman */}
+            {/* Nomor */}
             <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-slate-700">Jumlah Halaman</span>
+              <span className="mb-2 block text-sm font-semibold text-slate-700">Nomor</span>
               <input
-                type="number"
-                min="1"
-                value={form.pageCount}
-                onChange={(e) => setForm({ ...form, pageCount: e.target.value })}
+                type="text"
+                value={form.documentNo}
+                onChange={(e) => setForm({ ...form, documentNo: e.target.value })}
+                placeholder="Contoh: 001/SK/2026"
                 className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
               />
             </label>
+
+            {/* Expired Date */}
+            <div className="block">
+              <div className="mb-2 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setHasExpiredDate(!hasExpiredDate)}
+                  className={"relative h-6 w-11 shrink-0 rounded-full transition-colors " + (hasExpiredDate ? "bg-indigo-500" : "bg-slate-300")}
+                >
+                  <span className={"absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform " + (hasExpiredDate ? "translate-x-5" : "")} />
+                </button>
+                <span className="text-sm font-semibold text-slate-700">Ada Expired Date?</span>
+              </div>
+              {hasExpiredDate && (
+                <input
+                  type="date"
+                  value={form.expiredDate}
+                  onChange={(e) => setForm({ ...form, expiredDate: e.target.value })}
+                  className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                />
+              )}
+            </div>
 
             {/* Dokumen Mitra toggle */}
             <div className="flex items-center gap-3 lg:col-span-2">
@@ -394,24 +489,19 @@ export function LegalitasFormPage({ edit = false, id }: { edit?: boolean; id?: s
 
             {/* Pilih Mitra */}
             {isPartnerDoc ? (
-              <label className="block lg:col-span-2">
-                <span className="mb-2 block text-sm font-semibold text-slate-700">Mitra<span className="text-rose-500">*</span></span>
-                <select
+              <div className="lg:col-span-2">
+                <SelectInput
+                  label="Mitra*"
                   value={form.partnerId}
                   onChange={(e) => setForm({ ...form, partnerId: e.target.value })}
-                  className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                >
-                  <option value="">Pilih mitra...</option>
-                  {partnerOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </label>
+                  options={[{ label: "Pilih mitra...", value: "" }, ...partnerOptions]}
+                />
+              </div>
             ) : null}
 
             {/* File Upload */}
             <div className="lg:col-span-2">
-              <span className="mb-2 block text-sm font-semibold text-slate-700">Berkas (PDF)<span className="text-rose-500">*</span></span>
+              <span className="mb-2 block text-sm font-semibold text-slate-700">Berkas (PDF/JPG/PNG)<span className="text-rose-500">*</span></span>
               <div
                 onClick={() => fileInputRef.current?.click()}
                 className="flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 transition hover:border-indigo-400 hover:bg-indigo-50/40"
@@ -419,7 +509,7 @@ export function LegalitasFormPage({ edit = false, id }: { edit?: boolean; id?: s
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".pdf,application/pdf"
+                  accept=".pdf,application/pdf,.png,image/png,.jpg,.jpeg,image/jpeg"
                   onChange={handleFileChange}
                   className="hidden"
                 />
@@ -435,7 +525,7 @@ export function LegalitasFormPage({ edit = false, id }: { edit?: boolean; id?: s
                       <Upload size={20} />
                     </div>
                     <p className="mt-1 text-sm font-semibold text-emerald-600">+ Pilih Berkas</p>
-                    <p className="text-xs text-slate-400">Hanya file PDF, maks 10MB</p>
+                    <p className="text-xs text-slate-400">Format didukung: PDF, JPG, PNG</p>
                   </div>
                 )}
               </div>

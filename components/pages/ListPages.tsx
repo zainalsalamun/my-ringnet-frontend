@@ -73,14 +73,17 @@ export function CustomersPage() {
     <div>
       <PageHeader title="Pelanggan" subtitle="Data pelanggan individu beserta paket dan status layanan." actionHref="/users/pelanggan/new" actionLabel="Tambah Pelanggan" />
       <Toast message={toast} />
-      {loading ? <TableSkeleton columns={6} /> :
+      {loading ? <TableSkeleton columns={8} /> :
       <DataTable data={rows as any[]} editBasePath="/users/pelanggan" onDelete={(row) => deleteRow("/customers", row, setRows as any, setToast, "Pelanggan berhasil dihapus.")}
         columns={[
-          { key: "name", header: "Nama", render: (row: any) => <Link href={`/users/pelanggan/${row.id}`} className="font-semibold text-indigo-600 hover:underline">{row.name}</Link> },
-          { key: "area", header: "Area" },
-          { key: "packageName", header: "Paket", render: (row: any) => row.packageName || "-" },
-          { key: "source", header: "Terdaftar Di", render: (row: any) => row.company ? <Link href={`/users/bisnis/${row.company.id}`} className="font-semibold text-indigo-600 hover:underline">{row.company.name}</Link> : row.partner ? <Link href={`/users/mitra/${row.partner.id}`} className="font-semibold text-indigo-600 hover:underline">{row.partner.name}</Link> : "Mandiri" },
           { key: "status", header: "Status", render: (row: any) => <Badge value={row.status} /> },
+          { key: "customerCode", header: "ID Pelanggan", render: (row: any) => <Link href={`/users/pelanggan/${row.id}`} className="font-semibold text-indigo-600 hover:underline">{row.customerCode || row.id.slice(0, 8)}</Link> },
+          { key: "name", header: "Nama", render: (row: any) => <span className="font-semibold text-slate-800">{row.name}</span> },
+          { key: "phone", header: "Nomor Telepon", render: (row: any) => row.phone || "-" },
+          { key: "area", header: "Area", render: (row: any) => row.area || "-" },
+          { key: "city", header: "Kota", render: (row: any) => row.city || "-" },
+          { key: "customerType", header: "Jenis Pelanggan", render: (row: any) => row.customerType || "-" },
+          { key: "lastActivity", header: "Aktivitas", render: (row: any) => row.lastActivity ? date(row.lastActivity) : "-" },
         ]}
       />
       }

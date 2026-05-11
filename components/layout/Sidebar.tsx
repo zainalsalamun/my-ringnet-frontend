@@ -22,7 +22,9 @@ const userChildren = [
 
 const settingChildren = [
   { label: "Pengaturan Umum", href: "/pengaturan" },
+  { label: "Profil Perusahaan", href: "/pengaturan/profil-perusahaan" },
   { label: "Paket Layanan", href: "/pengaturan/paket-layanan" },
+  { label: "Metode Pembayaran", href: "/pengaturan/metode-pembayaran" },
   { label: "Kategori Dokumen", href: "/pengaturan/kategori-dokumen" },
 ];
 

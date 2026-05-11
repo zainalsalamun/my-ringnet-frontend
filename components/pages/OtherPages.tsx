@@ -1,15 +1,36 @@
 "use client";
 
 import { Badge, Card, PageHeader, StatCard } from "@/components/ui/AdminUI";
+import api from "@/lib/api";
 import { currency, date, monthName } from "@/lib/format";
+import { downloadInvoicePdf } from "@/lib/invoice-pdf";
 import { invoices } from "@/lib/fallback-data";
 import { Building2, Download, FileText, Receipt, Settings, Shield, Wallet } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export function InvoiceDetailPage({ id }: { id: string }) {
-  const invoice = invoices.find((item) => String(item.id) === String(id)) || invoices[0];
+  const [invoice, setInvoice] = useState<any>(invoices.find((item) => String(item.id) === String(id)) || invoices[0]);
+  const [settings, setSettings] = useState<any[]>([]);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    api.get("/internet-services/" + id)
+      .then((res) => setInvoice(res.data.data))
+      .catch(() => setMessage("Menampilkan data fallback. Pastikan backend aktif dan sesi login valid."));
+    api.get("/settings?limit=100&search=company_")
+      .then((res) => setSettings(res.data.data || []))
+      .catch(() => setSettings([]));
+  }, [id]);
+
+  async function download() {
+    await downloadInvoicePdf(invoice, settings);
+    setMessage("PDF invoice berhasil diunduh.");
+  }
+
   return (
     <div>
       <PageHeader title="Detail Invoice" subtitle="Rincian invoice dan status pembayaran pelanggan." />
+      {message ? <div className="mb-4 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-700">{message}</div> : null}
       <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
         <Card className="p-6">
           <div className="flex items-start justify-between border-b border-slate-100 pb-6">
@@ -33,7 +54,7 @@ export function InvoiceDetailPage({ id }: { id: string }) {
           <h2 className="font-bold text-slate-950">Aksi Invoice</h2>
           <div className="mt-4 space-y-3">
             <a href={"/internet-services/" + invoice.id + "/edit"} className="flex h-11 items-center justify-center rounded-lg bg-[#6366F1] text-sm font-bold text-white">Edit Invoice</a>
-            <button className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 text-sm font-bold text-slate-700"><Download size={16} /> Unduh PDF</button>
+            <button onClick={download} className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 text-sm font-bold text-slate-700"><Download size={16} /> Unduh PDF</button>
           </div>
         </Card>
       </div>

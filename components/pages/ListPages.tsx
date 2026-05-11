@@ -5,7 +5,9 @@
 import api from "@/lib/api";
 import { Badge, DataTable, PageHeader, TableSkeleton } from "@/components/ui/AdminUI";
 import { currency, date, monthName } from "@/lib/format";
+import { downloadInvoicePdf } from "@/lib/invoice-pdf";
 import Link from "next/link";
+import { Download } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useState } from "react";
 
@@ -150,14 +152,35 @@ export function LeadsPage() {
 
 export function InternetServicesPage() {
   const { rows, setRows, toast, setToast, loading } = useRows<any>("/internet-services");
+
+  async function download(row: any) {
+    try {
+      const settings = await api.get("/settings?limit=100&search=company_").then((res) => res.data.data).catch(() => []);
+      await downloadInvoicePdf(row, settings);
+      setToast("PDF invoice berhasil diunduh.");
+    } catch {
+      setToast("Gagal mengunduh PDF invoice.");
+    }
+  }
+
   return (
     <div>
       <PageHeader title="Layanan Internet" subtitle="Kelola tagihan bulanan, status invoice, dan periode layanan." actionHref="/internet-services/new" actionLabel="Tambah Layanan" />
       <Toast message={toast} />
       {loading ? <TableSkeleton columns={8} /> :
       <DataTable data={rows as any[]} editBasePath="/internet-services" onDelete={(row) => deleteRow("/internet-services", row, setRows as any, setToast, "Invoice berhasil dihapus.")}
+        extraActions={(row) => (
+          <button
+            type="button"
+            onClick={() => download(row)}
+            className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 text-slate-600 hover:border-indigo-200 hover:text-indigo-600"
+            title="Unduh PDF"
+          >
+            <Download size={15} />
+          </button>
+        )}
         columns={[
-          { key: "noInvoice", header: "No Invoice", render: (row: any) => <a className="font-semibold text-indigo-600" href={"/internet-services/" + row.id}>{row.noInvoice}</a> },
+          { key: "noInvoice", header: "No Invoice", render: (row: any) => <Link className="font-semibold text-indigo-600 hover:underline" href={"/internet-services/" + row.id}>{row.noInvoice}</Link> },
           { key: "customerName", header: "Pelanggan" },
           { key: "serviceType", header: "Paket" },
           { key: "periodMonth", header: "Periode", render: (row: any) => monthName(row.periodMonth) + " " + row.periodYear },

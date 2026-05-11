@@ -2,7 +2,6 @@
 
 import api from "@/lib/api";
 import { Badge, Card, DataTable, PageHeader } from "@/components/ui/AdminUI";
-import * as fallback from "@/lib/fallback-data";
 import { currency, date } from "@/lib/format";
 import { Edit, FileText, Map as MapIcon } from "lucide-react";
 import Link from "next/link";
@@ -11,20 +10,29 @@ import { useEffect, useState } from "react";
 export function CustomerDetailPage({ id }: { id: string }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [customer, setCustomer] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [invoices, setInvoices] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get("/customers/" + id)
-      .then((res) => setCustomer(res.data.data))
-      .catch(() => {
-        const data = fallback.customers.find((row) => String(row.id) === String(id));
-        if (data) setCustomer(data);
+    setLoading(true);
+    setError("");
+    api.get("/customers/" + id + "/detail")
+      .then((res) => {
+        const data = res.data.data;
+        setCustomer(data);
+        setInvoices(data.invoices || []);
+        setTickets(data.tickets || []);
       })
+      .catch((err) => setError(err.response?.data?.message || "Gagal memuat detail pelanggan dari database."))
       .finally(() => setLoading(false));
   }, [id]);
 
   if (loading) return <div className="p-10 text-center font-medium text-slate-500">Memuat detail pelanggan...</div>;
-  if (!customer) return <div className="p-10 text-center font-medium text-slate-500">Pelanggan tidak ditemukan.</div>;
+  if (!customer) return <div className="p-10 text-center font-medium text-slate-500">{error || "Pelanggan tidak ditemukan."}</div>;
 
   return (
     <div>
@@ -90,7 +98,7 @@ export function CustomerDetailPage({ id }: { id: string }) {
 
       <div className="mt-6 space-y-6">
          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-         <DataTable title="Faktur & Tagihan" data={fallback.invoices.filter((i: any) => String(i.customerId) === String(id) || i.customerName === customer.name)} 
+         <DataTable title="Faktur & Tagihan" data={invoices} 
             columns={[
                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                { key: "noInvoice", header: "Nomor Tagihan", render: (row: any) => <Link href={`/internet-services/${row.id}`} className="text-indigo-600 font-medium">{row.noInvoice}</Link> },
@@ -106,11 +114,11 @@ export function CustomerDetailPage({ id }: { id: string }) {
          />
 
          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-         <DataTable title="Tiket" data={[{ id: "5053000", name: customer.name, status: "Selesai" }]} 
+         <DataTable title="Tiket" data={tickets} 
             columns={[
                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-               { key: "id", header: "Nomor Tiket", render: (row: any) => <span className="text-[#6366F1] font-medium">{row.id}</span> },
-               { key: "name", header: "Nama" },
+               { key: "ticketNo", header: "Nomor Tiket", render: (row: any) => <span className="text-[#6366F1] font-medium">{row.ticketNo}</span> },
+               { key: "title", header: "Nama" },
                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                { key: "status", header: "Status", render: (row: any) => <Badge value={row.status} /> }
             ]} 

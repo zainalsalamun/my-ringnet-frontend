@@ -40,6 +40,13 @@ export const payments = [
   { id: "60000000-0000-4000-8000-000000000002", referenceNo: "PAY-2026-05002", customerName: "Siti Rahmawati", invoiceNo: "INV/2026/05/0630", amount: 450000, method: "Virtual Account", status: "pending", paidAt: "2026-05-02", notes: "Menunggu verifikasi" },
 ];
 
+export const paymentMethods = [
+  { id: "70000000-0000-4000-8000-000000000001", name: "Transfer Bank", code: "transfer_bank", description: "Pembayaran melalui transfer rekening bank", status: "active" },
+  { id: "70000000-0000-4000-8000-000000000002", name: "Virtual Account", code: "virtual_account", description: "Pembayaran melalui nomor virtual account", status: "active" },
+  { id: "70000000-0000-4000-8000-000000000003", name: "Cash", code: "cash", description: "Pembayaran tunai di kantor atau petugas", status: "active" },
+  { id: "70000000-0000-4000-8000-000000000004", name: "QRIS", code: "qris", description: "Pembayaran melalui QRIS", status: "active" },
+];
+
 export const reports = [
   { id: "70000000-0000-4000-8000-000000000001", title: "Pendapatan Bulanan", category: "Keuangan", period: "Mei 2026", status: "published", generatedAt: "2026-05-01", notes: "Ringkasan revenue bulanan" },
   { id: "70000000-0000-4000-8000-000000000002", title: "Aging Tunggakan", category: "Invoice", period: "Mei 2026", status: "draft", generatedAt: "2026-05-02", notes: "Daftar invoice jatuh tempo" },

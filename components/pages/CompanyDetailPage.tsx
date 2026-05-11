@@ -86,6 +86,22 @@ export default function CompanyDetailPage({ id }: { id: string }) {
 
       <div className="mt-6 space-y-6">
         <DataTable
+          title="Pelanggan Terdaftar"
+          data={company.customers || []}
+          searchPlaceholder="Cari pelanggan perusahaan..."
+          columns={[
+            { key: "name", header: "Nama", render: (row: any) => <Link href={`/users/pelanggan/${row.id}`} className="font-semibold text-indigo-600 hover:underline">{row.name}</Link> },
+            { key: "phone", header: "Kontak", render: (row: any) => row.phone || "-" },
+            { key: "area", header: "Area", render: (row: any) => row.area || "-" },
+            { key: "city", header: "Kota", render: (row: any) => row.city || "-" },
+            { key: "packageName", header: "Paket", render: (row: any) => row.packageName || "-" },
+            { key: "invoiceCount", header: "Invoice", render: (row: any) => row.invoiceCount || 0 },
+            { key: "outstandingAmount", header: "Tunggakan", render: (row: any) => currency(row.outstandingAmount || 0) },
+            { key: "status", header: "Status", render: (row: any) => <Badge value={row.status} /> },
+          ]}
+        />
+
+        <DataTable
           title="Produk"
           data={company.products || []}
           searchPlaceholder="Cari produk perusahaan..."

@@ -68,7 +68,7 @@ export function UsersPage({ role, title }: { role: string; title: string }) {
 }
 
 export function CustomersPage() {
-  const { rows, setRows, toast, setToast, loading } = useRows<any>("/customers");
+  const { rows, setRows, toast, setToast, loading } = useRows<any>("/customers?limit=2000");
   return (
     <div>
       <PageHeader title="Pelanggan" subtitle="Data pelanggan individu beserta paket dan status layanan." actionHref="/users/pelanggan/new" actionLabel="Tambah Pelanggan" />
@@ -79,6 +79,7 @@ export function CustomersPage() {
           { key: "name", header: "Nama", render: (row: any) => <Link href={`/users/pelanggan/${row.id}`} className="font-semibold text-indigo-600 hover:underline">{row.name}</Link> },
           { key: "area", header: "Area" },
           { key: "packageName", header: "Paket", render: (row: any) => row.packageName || "-" },
+          { key: "source", header: "Terdaftar Di", render: (row: any) => row.company ? <Link href={`/users/bisnis/${row.company.id}`} className="font-semibold text-indigo-600 hover:underline">{row.company.name}</Link> : row.partner ? <Link href={`/users/mitra/${row.partner.id}`} className="font-semibold text-indigo-600 hover:underline">{row.partner.name}</Link> : "Mandiri" },
           { key: "status", header: "Status", render: (row: any) => <Badge value={row.status} /> },
         ]}
       />

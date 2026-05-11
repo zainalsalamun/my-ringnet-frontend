@@ -6,9 +6,41 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { Lock, Mail, RadioTower, Wifi } from "lucide-react";
 
+function getLoginErrorMessage(err: any) {
+  if (!err.response) {
+    return "Server tidak merespons. Pastikan backend aktif dan koneksi API benar.";
+  }
+
+  const status = err.response.status;
+  const rawMessage = String(err.response?.data?.message || "").toLowerCase();
+
+  if (rawMessage.includes("wrong password") || rawMessage.includes("password salah")) {
+    return "Password salah. Masukkan password yang sesuai untuk akun ini.";
+  }
+
+  if (rawMessage.includes("user not found") || rawMessage.includes("email tidak terdaftar")) {
+    return "Email tidak terdaftar. Periksa kembali alamat email Anda.";
+  }
+
+  if (status === 401) {
+    return "Email atau password tidak sesuai. Periksa kembali data login Anda.";
+  }
+
+  if (status === 404) {
+    return "Akun tidak ditemukan. Pastikan email sudah terdaftar.";
+  }
+
+  if (status >= 500) {
+    return "Server sedang bermasalah. Coba beberapa saat lagi atau hubungi administrator.";
+  }
+
+  return err.response?.data?.message || "Login gagal. Periksa email dan password Anda.";
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const setSession = useAuthStore((state) => state.setSession);
+  const logout = useAuthStore((state) => state.logout);
   const [email, setEmail] = useState("admin@ringnet.com");
   const [password, setPassword] = useState("password123");
   const [loading, setLoading] = useState(false);
@@ -22,9 +54,9 @@ export default function LoginPage() {
       const res = await api.post("/auth/login", { email, password });
       setSession(res.data.data.token, res.data.data.user);
       router.push("/dashboard");
-    } catch {
-      setSession("demo-token", { id: "demo-admin", name: "Admin RingNet", email, role: "admin" });
-      router.push("/dashboard");
+    } catch (err: any) {
+      logout();
+      setError(getLoginErrorMessage(err));
     } finally {
       setLoading(false);
     }

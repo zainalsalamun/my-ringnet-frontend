@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { BarChart3, ChevronDown, FileStack, FileText, Globe2, Megaphone, Settings, UserRoundCog, Wallet } from "lucide-react";
+import { BarChart3, ChevronDown, FileStack, FileText, Globe2, Megaphone, Network, Settings, UserRoundCog, Wallet } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const groups = [
@@ -28,14 +28,24 @@ const settingChildren = [
   { label: "Kategori Dokumen", href: "/pengaturan/kategori-dokumen" },
 ];
 
+const radiusChildren = [
+  { label: "NAS / Router", href: "/radius/nas-router" },
+  { label: "Autentikasi", href: "/radius/autentikasi" },
+  { label: "Grup Profil", href: "/radius/grup-profil" },
+  { label: "Sesi Pengguna", href: "/radius/sesi-pengguna" },
+  { label: "Riwayat", href: "/radius/riwayat" },
+];
+
 
 
 export default function Sidebar({ sidebarOpen, setSidebarOpen }: { sidebarOpen?: boolean; setSidebarOpen?: (val: boolean) => void }) {
   const pathname = usePathname();
   const userMenuActive = pathname === "/users" || pathname.startsWith("/users/");
+  const radiusMenuActive = pathname === "/radius" || pathname.startsWith("/radius/");
   const settingMenuActive = pathname === "/pengaturan" || pathname.startsWith("/pengaturan/");
   const documentMenuActive = pathname.startsWith("/dokumen");
   const [userMenuOpen, setUserMenuOpen] = useState(userMenuActive);
+  const [radiusMenuOpen, setRadiusMenuOpen] = useState(radiusMenuActive);
   const [settingMenuOpen, setSettingMenuOpen] = useState(settingMenuActive);
 
   useEffect(() => {
@@ -97,6 +107,37 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: { sidebarOpen?:
               <div className="space-y-1 border-l border-white/10 pl-4">
                 {userChildren.map((item) => {
                   const active = item.href === "/users" ? pathname === "/users" : pathname === item.href || pathname.startsWith(item.href + "/");
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={"block rounded-lg px-3 py-2 text-sm font-medium transition " + (active ? "bg-white/10 text-white" : "text-slate-500 hover:bg-white/5 hover:text-slate-200")}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+        </div>
+        <div className={radiusMenuOpen ? "rounded-xl bg-white/5" : ""}>
+          <button
+            type="button"
+            onClick={() => setRadiusMenuOpen((open) => !open)}
+            className={"flex w-full items-center justify-between rounded-lg px-4 py-2.5 text-sm font-semibold transition " + (radiusMenuActive ? "text-white" : "text-slate-400 hover:bg-white/5 hover:text-white")}
+          >
+            <span className="flex items-center gap-3">
+              <Network size={18} />
+              Radius Server
+            </span>
+            <ChevronDown size={17} className={"transition-transform " + (radiusMenuOpen ? "rotate-180 text-slate-300" : "text-slate-500")} />
+          </button>
+          {radiusMenuOpen ? (
+            <div className="pb-3 pl-[50px] pr-3 pt-1">
+              <div className="space-y-1 border-l border-white/10 pl-4">
+                {radiusChildren.map((item) => {
+                  const active = pathname === item.href || pathname.startsWith(item.href + "/");
                   return (
                     <Link
                       key={item.href}

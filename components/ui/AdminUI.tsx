@@ -221,7 +221,7 @@ export function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement
   );
 }
 
-export function DataTable<T extends { id: string }>({ title, data, columns, searchPlaceholder = "Cari data...", editBasePath, onDelete, canDelete }: { title?: string; data: T[]; columns: Column<T>[]; searchPlaceholder?: string; editBasePath?: string; onDelete?: (row: T) => void; canDelete?: (row: T) => boolean }) {
+export function DataTable<T extends { id: string }>({ title, data, columns, searchPlaceholder = "Cari data...", editBasePath, onDelete, canDelete, extraActions }: { title?: string; data: T[]; columns: Column<T>[]; searchPlaceholder?: string; editBasePath?: string; onDelete?: (row: T) => void; canDelete?: (row: T) => boolean; extraActions?: (row: T) => ReactNode }) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [confirm, setConfirm] = useState<T | null>(null);
@@ -259,9 +259,10 @@ export function DataTable<T extends { id: string }>({ title, data, columns, sear
               <tr key={row.id} className="hover:bg-slate-50/80">
                 <td className="px-4 py-3 text-slate-500">{(page - 1) * pageSize + index + 1}</td>
                 {columns.map((column) => <td key={String(column.key)} className={"px-4 py-3 text-slate-700 " + (column.className || "")}>{column.render ? column.render(row) : String((row as any)[column.key] ?? "-")}</td>)}
-                {(editBasePath || onDelete) ? (
+                {(editBasePath || onDelete || extraActions) ? (
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
+                      {extraActions ? extraActions(row) : null}
                       {editBasePath ? <Link href={editBasePath + "/" + row.id + "/edit"} className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 text-slate-600 hover:border-indigo-200 hover:text-indigo-600" title="Edit"><Edit size={15} /></Link> : null}
                       {onDelete && (canDelete ? canDelete(row) : true) ? <button onClick={() => setConfirm(row)} className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 text-rose-500 hover:border-rose-200 hover:bg-rose-50" title="Hapus"><Trash2 size={15} /></button> : null}
                     </div>

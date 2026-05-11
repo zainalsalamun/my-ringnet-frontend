@@ -20,8 +20,8 @@ api.interceptors.response.use(
       if (typeof window !== "undefined") {
         localStorage.removeItem("ringnet_token");
         localStorage.removeItem("ringnet_user");
-        if (window.location.pathname !== "/login") {
-          window.location.href = "/login";
+        if (window.location.pathname !== "/") {
+          window.location.href = "/";
         }
       }
     }

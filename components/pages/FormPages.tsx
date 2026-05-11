@@ -47,21 +47,15 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
         setForm((current) => current.packageName || !options[0] ? current : { ...current, packageName: options[0].value });
       })
       .catch(() => {
-        const options = [
-          { label: "Mega 20Mbps", value: "Mega 20Mbps" },
-          { label: "Mega 50Mbps", value: "Mega 50Mbps" },
-          { label: "Ultra 100Mbps", value: "Ultra 100Mbps" },
-        ];
-        setPackageOptions(options);
+        setPackageOptions([]);
       });
   }, []);
 
   useEffect(() => {
     if (!edit || !id) return;
-    api.get("/customers/" + id).then((res) => setForm((current) => ({ ...current, ...res.data.data }))).catch(() => {
-      const data = fallback.customers.find((row) => String(row.id) === String(id));
-      if (data) setForm((current) => ({ ...current, ...data }));
-    });
+    api.get("/customers/" + id)
+      .then((res) => setForm((current) => ({ ...current, ...res.data.data })))
+      .catch((err) => setError(err.response?.data?.message || "Gagal memuat data pelanggan dari database."));
   }, [edit, id]);
 
   async function save() {
@@ -70,6 +64,7 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
       await submit({
         name: form.name,
         phone: form.phone,
+        email: form.email,
         city: form.city,
         area: form.area,
         address: form.address,
@@ -102,28 +97,36 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
 
 export function CompanyForm({ edit = false, id }: { edit?: boolean; id?: string }) {
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ name: "", email: "", phone: "", city: "Jakarta", area: "Jakarta", status: "active" });
+  const [form, setForm] = useState({ companyCode: "", name: "", email: "", phone: "", city: "Jakarta", area: "Jakarta", status: "active" });
   const submit = useSubmit(edit ? "/companies/" + id : "/companies", "/users/bisnis", edit ? "put" : "post");
 
   useEffect(() => {
     if (!edit || !id) return;
-    api.get("/companies/" + id).then((res) => setForm((current) => ({ ...current, ...res.data.data }))).catch(() => {
-      const data = fallback.companies.find((row) => String(row.id) === String(id));
-      if (data) setForm((current) => ({ ...current, ...data }));
-    });
+    api.get("/companies/" + id)
+      .then((res) => setForm((current) => ({ ...current, ...res.data.data })))
+      .catch((err) => setError(err.response?.data?.message || "Gagal memuat data bisnis dari database."));
   }, [edit, id]);
 
   async function save() {
     setError("");
     try {
-      await submit(form);
+      await submit({
+        companyCode: form.companyCode,
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        area: form.area,
+        city: form.city,
+        status: form.status,
+      });
     } catch (err: any) {
       setError(err.response?.data?.message || "Gagal menyimpan bisnis.");
     }
   }
 
-  return <FormShell title={(edit ? "Edit" : "Tambah") + " Bisnis"} subtitle="Data perusahaan atau pelanggan enterprise." onSubmit={save} backHref="/users/bisnis">{error ? <div className="rounded-lg bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div> : null}<div className="grid gap-5 lg:grid-cols-2">
-    <TextInput label="Nama Bisnis" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+  return <FormShell title={(edit ? "Edit" : "Tambah") + " Bisnis / Perusahaan"} subtitle="Data PT, CV, instansi, kantor, atau pelanggan enterprise." onSubmit={save} backHref="/users/bisnis">{error ? <div className="rounded-lg bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div> : null}<div className="grid gap-5 lg:grid-cols-2">
+    <TextInput label="ID Mitra" value={form.companyCode} onChange={(e) => setForm({ ...form, companyCode: e.target.value })} placeholder="Otomatis jika kosong" />
+    <TextInput label="Nama Perusahaan / Instansi" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
     <TextInput label="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
     <TextInput label="No Telepon" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
     <TextInput label="Area" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} />
@@ -134,28 +137,36 @@ export function CompanyForm({ edit = false, id }: { edit?: boolean; id?: string 
 
 export function PartnerForm({ edit = false, id }: { edit?: boolean; id?: string }) {
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ name: "", phone: "", email: "", city: "Jakarta", area: "Jakarta", status: "active" });
+  const [form, setForm] = useState({ partnerCode: "", name: "", phone: "", email: "", city: "Jakarta", area: "Jakarta", status: "active" });
   const submit = useSubmit(edit ? "/partners/" + id : "/partners", "/users/mitra", edit ? "put" : "post");
 
   useEffect(() => {
     if (!edit || !id) return;
-    api.get("/partners/" + id).then((res) => setForm((current) => ({ ...current, ...res.data.data }))).catch(() => {
-      const data = fallback.partners.find((row) => String(row.id) === String(id));
-      if (data) setForm((current) => ({ ...current, ...data }));
-    });
+    api.get("/partners/" + id)
+      .then((res) => setForm((current) => ({ ...current, ...res.data.data })))
+      .catch((err) => setError(err.response?.data?.message || "Gagal memuat data mitra dari database."));
   }, [edit, id]);
 
   async function save() {
     setError("");
     try {
-      await submit(form);
+      await submit({
+        partnerCode: form.partnerCode,
+        name: form.name,
+        phone: form.phone,
+        email: form.email,
+        area: form.area,
+        city: form.city,
+        status: form.status,
+      });
     } catch (err: any) {
       setError(err.response?.data?.message || "Gagal menyimpan mitra.");
     }
   }
 
-  return <FormShell title={(edit ? "Edit" : "Tambah") + " Mitra"} subtitle="Informasi mitra bisnis dan channel sales." onSubmit={save} backHref="/users/mitra">{error ? <div className="rounded-lg bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div> : null}<div className="grid gap-5 lg:grid-cols-2">
-    <TextInput label="Nama Mitra" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+  return <FormShell title={(edit ? "Edit" : "Tambah") + " Mitra"} subtitle="Informasi mitra perseorangan atau individual sebagai channel sales." onSubmit={save} backHref="/users/mitra">{error ? <div className="rounded-lg bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div> : null}<div className="grid gap-5 lg:grid-cols-2">
+    <TextInput label="ID Mitra" value={form.partnerCode} onChange={(e) => setForm({ ...form, partnerCode: e.target.value })} placeholder="Otomatis jika kosong" />
+    <TextInput label="Nama Mitra Individual" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
     <TextInput label="Area" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} />
     <TextInput label="No Telepon" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
     <TextInput label="Kota" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
@@ -179,9 +190,7 @@ export function LeadForm({ edit = false, id }: { edit?: boolean; id?: string }) 
         setForm((current) => current.mitraId || !options[0] ? current : { ...current, mitraId: options[0].value });
       })
       .catch(() => {
-        const options = fallback.partners.map((item) => ({ label: item.name, value: item.id }));
-        setPartnerOptions(options);
-        setForm((current) => current.mitraId || !options[0] ? current : { ...current, mitraId: options[0].value });
+        setPartnerOptions([]);
       });
   }, []);
 
@@ -239,12 +248,7 @@ export function InvoiceForm({ edit = false, id }: { edit?: boolean; id?: string 
         setCustomerOptions(options);
       })
       .catch(() => {
-        const options = fallback.customers.map((item) => ({
-          label: [item.name, item.phone, item.packageName].filter(Boolean).join(" - "),
-          value: item.id,
-          customer: item,
-        }));
-        setCustomerOptions(options);
+        setCustomerOptions([]);
       });
   }, []);
 

@@ -91,12 +91,13 @@ export function CompaniesPage() {
   const { rows, setRows, toast, setToast, loading } = useRows<any>("/companies");
   return (
     <div>
-      <PageHeader title="Bisnis" subtitle="Kelola pelanggan bisnis, kantor, dan enterprise." actionHref="/users/bisnis/new" actionLabel="Tambah Bisnis" />
+      <PageHeader title="Bisnis / Perusahaan" subtitle="Kelola data PT, CV, instansi, kantor, dan pelanggan enterprise." actionHref="/users/bisnis/new" actionLabel="Tambah Bisnis" />
       <Toast message={toast} />
       {loading ? <TableSkeleton columns={6} /> :
       <DataTable data={rows as any[]} editBasePath="/users/bisnis" onDelete={(row) => deleteRow("/companies", row, setRows as any, setToast, "Bisnis berhasil dihapus.")}
         columns={[
-          { key: "name", header: "Nama Bisnis", render: (row: any) => <span className="font-semibold text-slate-900">{row.name}</span> },
+          { key: "companyCode", header: "ID Mitra", render: (row: any) => <Link href={`/users/bisnis/${row.id}`} className="font-semibold text-indigo-600 hover:underline">{row.companyCode || "-"}</Link> },
+          { key: "name", header: "Nama Perusahaan / Instansi", render: (row: any) => <span className="font-semibold text-slate-900">{row.name}</span> },
           { key: "email", header: "Email" },
           { key: "phone", header: "Kontak" },
           { key: "area", header: "Area" },
@@ -112,13 +113,15 @@ export function PartnersPage() {
   const { rows, setRows, toast, setToast, loading } = useRows<any>("/partners");
   return (
     <div>
-      <PageHeader title="Mitra Bisnis" subtitle="Kelola mitra dan channel penjualan MyRingNet." actionHref="/users/mitra/new" actionLabel="Tambah Mitra" />
+      <PageHeader title="Mitra Bisnis" subtitle="Kelola mitra perseorangan atau individual sebagai channel penjualan MyRingNet." actionHref="/users/mitra/new" actionLabel="Tambah Mitra" />
       <Toast message={toast} />
       {loading ? <TableSkeleton columns={6} /> :
       <DataTable data={rows as any[]} editBasePath="/users/mitra" onDelete={(row) => deleteRow("/partners", row, setRows as any, setToast, "Mitra berhasil dihapus.")}
         columns={[
+          { key: "partnerCode", header: "ID Mitra", render: (row: any) => <Link href={`/users/mitra/${row.id}`} className="font-semibold text-indigo-600 hover:underline">{row.partnerCode || "-"}</Link> },
           { key: "name", header: "Nama Mitra", render: (row: any) => <span className="font-semibold text-slate-900">{row.name}</span> },
           { key: "phone", header: "Kontak" },
+          { key: "email", header: "Email", render: (row: any) => row.email || "-" },
           { key: "area", header: "Area" },
           { key: "city", header: "Kota" },
           { key: "status", header: "Status", render: (row: any) => <Badge value={row.status} /> },

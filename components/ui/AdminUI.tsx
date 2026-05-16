@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import Link from "next/link";
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, ChevronLeft, ChevronRight, Edit, Plus, Search, Trash2, X } from "lucide-react";
 
 type Column<T> = {
@@ -149,21 +149,41 @@ type SelectInputProps = Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "onC
   label?: string;
   options: { label: string; value: string }[];
   onChange?: (event: { target: { value: string } }) => void;
+  searchable?: boolean;
+  searchPlaceholder?: string;
 };
 
 export function SelectInput(props: SelectInputProps) {
-  const { label, options, className = "", value, defaultValue, onChange, disabled, ...rest } = props;
+  const { label, options, className = "", value, defaultValue, onChange, disabled, searchable = false, searchPlaceholder = "Cari data...", ...rest } = props;
+  const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const selectedValue = String(value ?? defaultValue ?? "");
   const selected = options.find((item) => item.value === selectedValue) || options[0];
+  const visibleOptions = searchable && query.trim()
+    ? options.filter((item) => item.label.toLowerCase().includes(query.trim().toLowerCase()))
+    : options;
 
   function choose(nextValue: string) {
     onChange?.({ target: { value: nextValue } });
     setOpen(false);
+    setQuery("");
   }
 
+  useEffect(() => {
+    if (!open) return;
+    function closeOnOutside(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+        setQuery("");
+      }
+    }
+    document.addEventListener("mousedown", closeOnOutside);
+    return () => document.removeEventListener("mousedown", closeOnOutside);
+  }, [open]);
+
   return (
-    <div className={"relative " + className}>
+    <div ref={rootRef} className={"relative " + className}>
       {label ? <span className="mb-2 block text-sm font-semibold text-slate-700">{label}</span> : null}
       <select
         {...rest}
@@ -180,7 +200,6 @@ export function SelectInput(props: SelectInputProps) {
         type="button"
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
-        onBlur={() => window.setTimeout(() => setOpen(false), 120)}
         className={"flex h-11 w-full items-center justify-between rounded-lg border bg-white px-3 text-left text-sm text-slate-900 shadow-sm transition " + (open ? "border-indigo-500 ring-4 ring-indigo-100" : "border-slate-200 hover:border-slate-300") + (disabled ? " cursor-not-allowed bg-slate-50 text-slate-400" : "")}
       >
         <span className="truncate">{selected?.label || "Pilih opsi"}</span>
@@ -188,8 +207,19 @@ export function SelectInput(props: SelectInputProps) {
       </button>
       {open && !disabled ? (
         <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/12">
+          {searchable ? (
+            <div className="relative mb-1.5">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={searchPlaceholder}
+                className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100"
+              />
+            </div>
+          ) : null}
           <div className="max-h-64 overflow-y-auto">
-            {options.map((item) => {
+            {visibleOptions.length ? visibleOptions.map((item) => {
               const active = item.value === selectedValue;
               return (
                 <button
@@ -203,7 +233,9 @@ export function SelectInput(props: SelectInputProps) {
                   {active ? <Check size={16} className="text-indigo-600" /> : null}
                 </button>
               );
-            })}
+            }) : (
+              <div className="px-3 py-6 text-center text-sm font-semibold text-slate-400">Data tidak ditemukan</div>
+            )}
           </div>
         </div>
       ) : null}

@@ -3,7 +3,7 @@
 import api from "@/lib/api";
 import { Badge, Card, DataTable, PageHeader } from "@/components/ui/AdminUI";
 import { currency, date } from "@/lib/format";
-import { Edit, FileText, Map as MapIcon } from "lucide-react";
+import { Edit, FileText, MapPin } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -46,11 +46,14 @@ export function CustomerDetailPage({ id }: { id: string }) {
             <InfoRow label="Alamat" value={customer.address || `${customer.area || ''}, ${customer.city || ''}`} />
             <InfoRow label="Area" value={customer.area || "-"} />
             <InfoRow label="Kota" value={customer.city || "-"} />
+            <InfoRow label="Koordinat" value={customer.coordinate || "-"} />
             <InfoRow label="Nomor Telepon" value={customer.phone || "-"} />
             <InfoRow label="Alamat Surel" value={customer.email || "-"} />
             <InfoRow label="KTP" value={customer.ktp || "-"} />
             <InfoRow label="NPWP" value={customer.npwp || "-"} />
             <InfoRow label="Jenis Pelanggan" value={customer.customerType || "Perumahan / Apartemen / Kos"} />
+            <InfoRow label="Dukungan Pembayaran" value={customer.supportPayment || "-"} />
+            <InfoRow label="Dukungan Teknis" value={customer.supportTechnical || "-"} />
             <InfoRow label="Dompet" value={currency(customer.walletBalance || 0)} />
             <InfoRow label="Tanggal" value={date(customer.createdAt || new Date().toISOString())} />
           </div>
@@ -61,14 +64,8 @@ export function CustomerDetailPage({ id }: { id: string }) {
           </div>
         </Card>
 
-        <Card className="relative overflow-hidden bg-slate-100 p-0 min-h-[400px]">
-          <div className="absolute inset-0 bg-slate-200 bg-cover bg-center opacity-50" />
-          <div className="absolute inset-0 grid place-items-center">
-             <div className="flex flex-col items-center gap-3">
-               <div className="grid h-12 w-12 place-items-center rounded-full bg-white shadow-xl text-emerald-600"><MapIcon size={24} /></div>
-               <p className="font-semibold text-slate-600 bg-white/80 px-4 py-1.5 rounded-full backdrop-blur-sm">Peta Lokasi Tersedia</p>
-             </div>
-          </div>
+        <Card className="h-full min-h-[400px] overflow-hidden bg-slate-100 p-0">
+          <OpenStreetMap coordinate={customer.coordinate} label={customer.name} />
         </Card>
       </div>
 
@@ -124,6 +121,65 @@ export function CustomerDetailPage({ id }: { id: string }) {
             ]} 
          />
       </div>
+    </div>
+  );
+}
+
+function parseCoordinate(value?: string | null) {
+  if (!value) return null;
+  const [latRaw, lngRaw] = value.split(",").map((part) => Number(part.trim()));
+  if (!Number.isFinite(latRaw) || !Number.isFinite(lngRaw)) return null;
+  if (Math.abs(latRaw) > 90 || Math.abs(lngRaw) > 180) return null;
+  return { lat: latRaw, lng: lngRaw };
+}
+
+function OpenStreetMap({ coordinate, label }: { coordinate?: string | null; label?: string }) {
+  const point = parseCoordinate(coordinate);
+  if (!point) {
+    return (
+      <div className="grid min-h-[400px] place-items-center p-6 text-center">
+        <div>
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-white text-slate-400 shadow-sm">
+            <MapPin size={24} />
+          </div>
+          <p className="mt-3 font-semibold text-slate-700">Koordinat belum tersedia</p>
+          <p className="mt-1 text-sm text-slate-500">Tambahkan koordinat pelanggan agar peta OpenStreetMap tampil di sini.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const delta = 0.012;
+  const bbox = [
+    point.lng - delta,
+    point.lat - delta,
+    point.lng + delta,
+    point.lat + delta,
+  ].join(",");
+  const marker = `${point.lat},${point.lng}`;
+  const src = `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&layer=mapnik&marker=${encodeURIComponent(marker)}`;
+  const viewUrl = `https://www.openstreetmap.org/?mlat=${encodeURIComponent(String(point.lat))}&mlon=${encodeURIComponent(String(point.lng))}#map=16/${encodeURIComponent(String(point.lat))}/${encodeURIComponent(String(point.lng))}`;
+
+  return (
+    <div className="relative h-full min-h-[400px]">
+      <iframe
+        title={`Peta lokasi ${label || "pelanggan"}`}
+        src={src}
+        className="absolute inset-0 h-full w-full border-0"
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+      />
+      <div className="absolute left-4 top-4 rounded-lg border border-white/70 bg-white/90 px-3 py-2 text-xs font-semibold text-slate-700 shadow-lg backdrop-blur">
+        {coordinate}
+      </div>
+      <a
+        href={viewUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="absolute bottom-4 right-4 rounded-lg bg-white/95 px-3 py-2 text-xs font-bold text-indigo-600 shadow-lg hover:bg-indigo-50"
+      >
+        Buka OpenStreetMap
+      </a>
     </div>
   );
 }

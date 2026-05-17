@@ -6,7 +6,6 @@ import { Card, FormShell, SelectInput, TextArea, TextInput } from "@/components/
 import CoordinatePicker from "@/components/ui/CoordinatePicker";
 import { customerTypeOptions } from "@/lib/customer-options";
 import { useAuthStore } from "@/hooks/useAuth";
-import * as fallback from "@/lib/fallback-data";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -344,10 +343,7 @@ export function LeadForm({ edit = false, id }: { edit?: boolean; id?: string }) 
         mitraId: String(data.partnerId || data.mitraId || ""),
         notes: data.notes || "",
       });
-    }).catch(() => {
-      const data = fallback.leads.find((row) => String(row.id) === String(id));
-      if (data) setForm({ name: data.customerName || data.name, phone: data.phone, status: data.status, mitraId: String(data.mitraId), notes: "" });
-    });
+    }).catch((err) => setError(err.response?.data?.message || "Gagal memuat data lead dari database."));
   }, [edit, id]);
 
   async function save() {
@@ -423,11 +419,7 @@ export function InvoiceForm({ edit = false, id }: { edit?: boolean; id?: string 
         setPackageOptions(options);
       })
       .catch(() => {
-        setPackageOptions([
-          { label: "Mega 20Mbps", value: "Mega 20Mbps", price: 250000 },
-          { label: "Mega 50Mbps", value: "Mega 50Mbps", price: 500000 },
-          { label: "Ultra 100Mbps", value: "Ultra 100Mbps", price: 850000 },
-        ]);
+        setPackageOptions([]);
       });
   }, []);
 
@@ -517,27 +509,7 @@ export function InvoiceForm({ edit = false, id }: { edit?: boolean; id?: string 
           total: amount,
         }]);
       }
-    }).catch(() => {
-      const data = fallback.invoices.find((row) => String(row.id) === String(id));
-      if (data) setForm({
-        customer_id: "",
-        customer_name: data.customerName,
-        authentication_id: "",
-        invoice_name: "",
-        invoice_type: "pelanggan",
-        no_faktur: data.noFaktur,
-        no_invoice: data.noInvoice,
-        service_type: data.serviceType,
-        period_month: String(data.periodMonth),
-        period_year: String(data.periodYear),
-        amount: String(data.amount),
-        status: data.status,
-        due_date: toInputDate(data.dueDate),
-        tax_percent: "0",
-        notes: "",
-        disable_auth_on_due: false,
-      });
-    });
+    }).catch((err) => setError(err.response?.data?.message || "Gagal memuat faktur dari database."));
   }, [edit, id]);
 
   async function save() {

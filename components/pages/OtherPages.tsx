@@ -1,27 +1,58 @@
 "use client";
 
-import { Badge, Card, PageHeader, StatCard } from "@/components/ui/AdminUI";
+import { Badge, Card, PageHeader, ShimmerBlock, StatCard } from "@/components/ui/AdminUI";
 import api from "@/lib/api";
 import { currency, date, monthName } from "@/lib/format";
-import { invoices } from "@/lib/fallback-data";
 import { Ban, Building2, CreditCard, FileText, Mail, MapPin, MessageCircle, Phone, Printer, Receipt, Settings, Shield, Wallet } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { ReactNode, useEffect, useState } from "react";
 
 export function InvoiceDetailPage({ id }: { id: string }) {
-  const [invoice, setInvoice] = useState<any>(invoices.find((item) => String(item.id) === String(id)) || invoices[0]);
+  const [invoice, setInvoice] = useState<any | null>(null);
   const [settings, setSettings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
+    setLoading(true);
+    setMessage("");
     api.get("/internet-services/" + id)
       .then((res) => setInvoice(res.data.data))
-      .catch(() => setMessage("Menampilkan data fallback. Pastikan backend aktif dan sesi login valid."));
+      .catch((err) => {
+        setInvoice(null);
+        setMessage(err.response?.data?.message || "Gagal memuat detail faktur dari database.");
+      })
+      .finally(() => setLoading(false));
     api.get("/settings?limit=100&search=company_")
       .then((res) => setSettings(res.data.data || []))
       .catch(() => setSettings([]));
   }, [id]);
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <ShimmerBlock className="h-14 rounded-xl" />
+        <Card className="p-6">
+          <ShimmerBlock className="h-12 w-56" />
+          <div className="mt-8 grid gap-6 lg:grid-cols-2">
+            <ShimmerBlock className="h-48 rounded-xl" />
+            <ShimmerBlock className="h-48 rounded-xl" />
+          </div>
+          <ShimmerBlock className="mt-8 h-72 rounded-xl" />
+        </Card>
+      </div>
+    );
+  }
+
+  if (!invoice) {
+    return (
+      <div className="space-y-4">
+        <PageHeader title="Detail Faktur" subtitle="Data faktur tidak dapat dimuat dari backend." />
+        <div className="rounded-xl border border-rose-100 bg-rose-50 px-5 py-4 text-sm font-semibold text-rose-700">{message || "Faktur tidak ditemukan."}</div>
+      </div>
+    );
+  }
 
   const customer = invoice.customer || {};
   const items = normalizeInvoiceItems(invoice);
@@ -176,9 +207,9 @@ function IconLine({ icon, value, accent = "text-rose-500" }: { icon: ReactNode; 
   return <div className="flex items-start gap-3"><span className={accent}>{icon}</span><span>{value || "-"}</span></div>;
 }
 
-function settingValue(settings: any[], key: string, fallback: string) {
-  const item = settings.find((setting) => setting.key === key);
-  return item?.value || fallback;
+function settingValue(settings: any[], key: string, defaultValue: string) {
+  const item = settings.find((setting) => setting.settingKey === key || setting.key === key);
+  return item?.settingValue || item?.value || defaultValue;
 }
 
 function numberValue(value: unknown) {
@@ -237,7 +268,69 @@ function DigitalQr({ value }: { value: string }) {
 }
 
 export function FinancePage() {
-  return <div><PageHeader title="Keuangan" subtitle="Monitoring pembayaran, tunggakan, dan cashflow." /><div className="grid gap-4 md:grid-cols-3"><StatCard icon={<Wallet size={22} />} label="Pembayaran Masuk" value={currency(1248750000)} trend="+16.3% bulan ini" /><StatCard icon={<Receipt size={22} />} label="Belum Lunas" value={currency(235450000)} trend="455 invoice terbuka" accent="amber" /><StatCard icon={<Building2 size={22} />} label="Mitra Dibayar" value={currency(154000000)} trend="32 mitra aktif" accent="emerald" /></div><Card className="mt-6 p-5"><h2 className="mb-4 font-bold text-slate-950">Rekonsiliasi Terbaru</h2><div className="space-y-3">{invoices.map((item) => <div key={item.id} className="flex items-center justify-between rounded-lg bg-slate-50 p-3"><div><p className="font-semibold">{item.customerName}</p><p className="text-sm text-slate-500">{item.noInvoice}</p></div><div className="text-right"><p className="font-bold">{currency(item.amount)}</p><Badge value={item.status} /></div></div>)}</div></Card></div>;
+  const [payments, setPayments] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [partners, setPartners] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    setLoading(true);
+    setError("");
+    Promise.all([
+      api.get("/finance?limit=10"),
+      api.get("/internet-services?limit=500"),
+      api.get("/partners?limit=500"),
+    ])
+      .then(([paymentRes, invoiceRes, partnerRes]) => {
+        setPayments(Array.isArray(paymentRes.data.data) ? paymentRes.data.data : []);
+        setInvoices(Array.isArray(invoiceRes.data.data) ? invoiceRes.data.data : []);
+        setPartners(Array.isArray(partnerRes.data.data) ? partnerRes.data.data : []);
+      })
+      .catch((err) => {
+        setPayments([]);
+        setInvoices([]);
+        setPartners([]);
+        setError(err.response?.data?.message || "Gagal memuat data keuangan dari database.");
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const paidPayments = payments.filter((item) => String(item.status || "").toLowerCase() === "verified");
+  const unpaidInvoices = invoices.filter((item) => String(item.status || "").toUpperCase() !== "PAID");
+  const paymentTotal = paidPayments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const outstandingTotal = unpaidInvoices.reduce((sum, item) => sum + Number(item.amount || item.grandTotal || 0), 0);
+
+  return (
+    <div>
+      <PageHeader title="Keuangan" subtitle="Monitoring pembayaran, tunggakan, dan cashflow." />
+      {error ? <div className="mb-4 rounded-lg border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div> : null}
+      {loading ? (
+        <div className="grid gap-4 md:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => <ShimmerBlock key={index} className="h-28 rounded-xl" />)}
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-3">
+          <StatCard icon={<Wallet size={22} />} label="Pembayaran Masuk" value={currency(paymentTotal)} trend={`${paidPayments.length} pembayaran verified`} />
+          <StatCard icon={<Receipt size={22} />} label="Belum Lunas" value={currency(outstandingTotal)} trend={`${unpaidInvoices.length} invoice terbuka`} accent="amber" />
+          <StatCard icon={<Building2 size={22} />} label="Mitra Aktif" value={String(partners.filter((item) => item.status === "active").length)} trend={`${partners.length} total mitra`} accent="emerald" />
+        </div>
+      )}
+      <Card className="mt-6 p-5">
+        <h2 className="mb-4 font-bold text-slate-950">Rekonsiliasi Terbaru</h2>
+        {loading ? <div className="space-y-3">{Array.from({ length: 5 }).map((_, index) => <ShimmerBlock key={index} className="h-16 rounded-lg" />)}</div> : (
+          <div className="space-y-3">
+            {payments.length ? payments.map((item) => (
+              <div key={item.id} className="flex items-center justify-between rounded-lg bg-slate-50 p-3">
+                <div><p className="font-semibold">{item.customerName}</p><p className="text-sm text-slate-500">{item.invoiceNo || item.referenceNo}</p></div>
+                <div className="text-right"><p className="font-bold">{currency(item.amount)}</p><Badge value={item.status} /></div>
+              </div>
+            )) : <div className="rounded-lg bg-slate-50 p-6 text-center text-sm font-semibold text-slate-500">Belum ada data pembayaran.</div>}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
 }
 
 export function ReportsPage() {

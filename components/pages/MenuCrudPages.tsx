@@ -3,7 +3,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import api from "@/lib/api";
-import * as fallback from "@/lib/fallback-data";
 import { Badge, Card, DataTable, PageHeader, SelectInput, StatSkeleton, TableSkeleton, TextArea, TextInput } from "@/components/ui/AdminUI";
 import { currency, date } from "@/lib/format";
 import { useRouter } from "next/navigation";
@@ -462,13 +461,8 @@ export function PaymentMethodsCrudPage() {
 export function FinanceFormPage({ edit = false, id }: { edit?: boolean; id?: string }) {
   const router = useRouter();
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ referenceNo: "", customerName: "", invoiceNo: "", amount: "", method: "Transfer Bank", status: "verified", paidAt: "", notes: "" });
-  const [paymentMethodOptions, setPaymentMethodOptions] = useState([
-    { label: "Transfer Bank", value: "Transfer Bank" },
-    { label: "Virtual Account", value: "Virtual Account" },
-    { label: "Cash", value: "Cash" },
-    { label: "QRIS", value: "QRIS" },
-  ]);
+  const [form, setForm] = useState({ referenceNo: "", customerName: "", invoiceNo: "", amount: "", method: "", status: "verified", paidAt: "", notes: "" });
+  const [paymentMethodOptions, setPaymentMethodOptions] = useState<{ label: string; value: string }[]>([]);
 
   useEffect(() => {
     api.get("/payment-methods?limit=100")
@@ -476,9 +470,10 @@ export function FinanceFormPage({ edit = false, id }: { edit?: boolean; id?: str
         const activeMethods = (res.data.data || [])
           .filter((item: any) => item.status === "active")
           .map((item: any) => ({ label: item.name, value: item.name }));
-        if (activeMethods.length) setPaymentMethodOptions(activeMethods);
+        setPaymentMethodOptions(activeMethods);
+        setForm((current) => current.method || !activeMethods[0] ? current : { ...current, method: activeMethods[0].value });
       })
-      .catch(() => setPaymentMethodOptions(fallback.paymentMethods.filter((item) => item.status === "active").map((item) => ({ label: item.name, value: item.name }))));
+      .catch(() => setPaymentMethodOptions([]));
   }, []);
 
   const methodOptions = useMemo(() => {
@@ -490,11 +485,8 @@ export function FinanceFormPage({ edit = false, id }: { edit?: boolean; id?: str
     if (!edit || !id) return;
     api.get("/finance/" + id).then((res) => {
       const data = res.data.data;
-      setForm({ referenceNo: data.referenceNo || "", customerName: data.customerName || "", invoiceNo: data.invoiceNo || "", amount: String(data.amount || ""), method: data.method || "Transfer Bank", status: data.status || "verified", paidAt: toInputDate(data.paidAt), notes: data.notes || "" });
-    }).catch(() => {
-      const data = fallback.payments.find((row) => String(row.id) === String(id));
-      if (data) setForm({ ...data, amount: String(data.amount), paidAt: toInputDate(data.paidAt) });
-    });
+      setForm({ referenceNo: data.referenceNo || "", customerName: data.customerName || "", invoiceNo: data.invoiceNo || "", amount: String(data.amount || ""), method: data.method || "", status: data.status || "verified", paidAt: toInputDate(data.paidAt), notes: data.notes || "" });
+    }).catch((err) => setError(err.response?.data?.message || "Gagal memuat pembayaran dari database."));
   }, [edit, id]);
 
   async function submit() {
@@ -520,7 +512,7 @@ export function FinanceFormPage({ edit = false, id }: { edit?: boolean; id?: str
         <input inputMode="numeric" value={formatRupiahInput(form.amount)} onChange={(e) => setForm({ ...form, amount: parseRupiah(e.target.value) })} placeholder="0" className="h-full min-w-0 flex-1 bg-transparent outline-none placeholder:text-slate-400" />
       </div>
     </label>
-    <SelectInput label="Metode" value={form.method} onChange={(e) => setForm({ ...form, method: e.target.value })} options={methodOptions} />
+    <SelectInput label="Metode" value={form.method} onChange={(e) => setForm({ ...form, method: e.target.value })} options={methodOptions.length ? methodOptions : [{ label: "Belum ada metode pembayaran", value: "" }]} disabled={!methodOptions.length} />
     <SelectInput label="Status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} options={[{ label: "Verified", value: "verified" }, { label: "Pending", value: "pending" }, { label: "Rejected", value: "rejected" }]} />
     <TextInput label="Tanggal Bayar" type="date" value={form.paidAt} onChange={(e) => setForm({ ...form, paidAt: e.target.value })} />
     <div className="lg:col-span-2"><TextArea label="Catatan" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
@@ -537,10 +529,7 @@ export function ReportFormPage({ edit = false, id }: { edit?: boolean; id?: stri
     api.get("/reports/" + id).then((res) => {
       const data = res.data.data;
       setForm({ title: data.title || "", category: data.category || "Keuangan", period: data.period || "", status: data.status || "draft", generatedAt: toInputDate(data.generatedAt), notes: data.notes || "" });
-    }).catch(() => {
-      const data = fallback.reports.find((row) => String(row.id) === String(id));
-      if (data) setForm({ ...data, generatedAt: toInputDate(data.generatedAt) });
-    });
+    }).catch((err) => setError(err.response?.data?.message || "Gagal memuat laporan dari database."));
   }, [edit, id]);
 
   async function submit() {
@@ -572,10 +561,9 @@ export function SettingFormPage({ edit = false, id }: { edit?: boolean; id?: str
 
   useEffect(() => {
     if (!edit || !id) return;
-    api.get("/settings/" + id).then((res) => setForm(res.data.data)).catch(() => {
-      const data = fallback.settings.find((row) => String(row.id) === String(id));
-      if (data) setForm(data);
-    });
+    api.get("/settings/" + id)
+      .then((res) => setForm(res.data.data))
+      .catch((err) => setError(err.response?.data?.message || "Gagal memuat pengaturan dari database."));
   }, [edit, id]);
 
   async function submit() {

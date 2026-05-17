@@ -3,7 +3,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import api from "@/lib/api";
-import { users as fallbackUsers } from "@/lib/fallback-data";
 import { Badge, Card, DataTable, PageHeader, SelectInput, StatSkeleton, TableSkeleton, TextInput } from "@/components/ui/AdminUI";
 import { date } from "@/lib/format";
 import { useRouter } from "next/navigation";
@@ -67,12 +66,7 @@ export function UserManagementPage() {
     api.get("/users?" + params.toString())
       .then((res) => setRows(res.data.data))
       .catch(() => {
-        const filtered = fallbackUsers.filter((row) => {
-          const roleMatch = roleFilter === "all" ? true : roleFilter === "panel" ? row.role !== "pelanggan" : row.role === roleFilter;
-          const statusMatch = statusFilter === "all" ? true : row.status === statusFilter;
-          return roleMatch && statusMatch;
-        });
-        setRows(filtered);
+        setRows([]);
         setToast("Gagal memuat data user. Pastikan backend aktif dan sesi login valid.");
       })
       .finally(() => setLoading(false));
@@ -194,8 +188,7 @@ export function UserFormPage({ edit = false, id, backHref = "/users", defaultRol
         });
       })
       .catch(() => {
-        const user = fallbackUsers.find((item) => String(item.id) === String(id));
-        if (user) setForm({ name: user.name, email: user.email, password: "", role: user.role, status: user.status });
+        setError("Gagal memuat data user dari database.");
       })
       .finally(() => setLoading(false));
   }, [edit, id]);

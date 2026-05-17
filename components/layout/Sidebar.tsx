@@ -84,9 +84,9 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: { sidebarOpen?:
               />
             </div>
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h1 className="text-[23px] font-black leading-7 tracking-tight text-white">My<span className="text-indigo-400">Ring</span>Net</h1>
-            <p className="mt-0.5 truncate text-xs font-medium text-slate-500">ISP Management System</p>
+            <p className="mt-0.5 whitespace-nowrap text-[10px] font-medium leading-4 text-slate-500">ISP Management System</p>
           </div>
         </div>
       </div>

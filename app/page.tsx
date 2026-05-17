@@ -3,7 +3,7 @@
 import api from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Lock, Mail, RadioTower, Wifi } from "lucide-react";
 
 function getLoginErrorMessage(err: any) {
@@ -41,10 +41,19 @@ export default function LoginPage() {
   const router = useRouter();
   const setSession = useAuthStore((state) => state.setSession);
   const logout = useAuthStore((state) => state.logout);
-  const [email, setEmail] = useState("admin@ringnet.com");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [rememberEmail, setRememberEmail] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const savedEmail = window.localStorage.getItem("ringnet_saved_login_email") || "";
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberEmail(true);
+    }
+  }, []);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -52,6 +61,11 @@ export default function LoginPage() {
     setError("");
     try {
       const res = await api.post("/auth/login", { email, password });
+      if (rememberEmail) {
+        window.localStorage.setItem("ringnet_saved_login_email", email);
+      } else {
+        window.localStorage.removeItem("ringnet_saved_login_email");
+      }
       setSession(res.data.data.token, res.data.data.user);
       router.push("/dashboard");
     } catch (err: any) {
@@ -87,15 +101,24 @@ export default function LoginPage() {
             <span className="mb-2 block text-sm font-semibold text-slate-700">Email</span>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <input value={email} onChange={(event) => setEmail(event.target.value)} className="h-11 w-full rounded-lg border border-slate-200 pl-10 pr-3 text-sm text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+              <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="email@ringnet.com" className="h-11 w-full rounded-lg border border-slate-200 pl-10 pr-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
             </div>
           </label>
           <label className="mt-4 block">
             <span className="mb-2 block text-sm font-semibold text-slate-700">Password</span>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" className="h-11 w-full rounded-lg border border-slate-200 pl-10 pr-3 text-sm text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+              <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" placeholder="Masukkan password" className="h-11 w-full rounded-lg border border-slate-200 pl-10 pr-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
             </div>
+          </label>
+          <label className="mt-4 flex items-center gap-3 text-sm font-semibold text-slate-600">
+            <input
+              type="checkbox"
+              checked={rememberEmail}
+              onChange={(event) => setRememberEmail(event.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            Simpan email login
           </label>
           <button disabled={loading} className="mt-6 h-11 w-full rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 text-sm font-bold text-white shadow-lg shadow-indigo-200 disabled:opacity-70">{loading ? "Memproses..." : "Masuk"}</button>
           <p className="mt-6 text-center text-xs text-slate-400">© 2026 MyRingNet. All rights reserved.</p>

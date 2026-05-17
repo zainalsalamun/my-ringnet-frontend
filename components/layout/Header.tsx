@@ -224,7 +224,7 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
                   <div className="grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-base font-black uppercase text-white">{initials(displayName)}</div>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-black text-slate-950">{displayName}</p>
-                    <p className="truncate text-xs text-slate-500">{user?.email || "admin@ringnet.com"}</p>
+                    <p className="truncate text-xs text-slate-500">{user?.email || "Email belum tersedia"}</p>
                   </div>
                 </div>
                 <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">

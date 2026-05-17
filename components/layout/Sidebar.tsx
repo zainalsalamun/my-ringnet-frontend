@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useAuthStore } from "@/hooks/useAuth";
 import { BarChart3, ChevronDown, FileStack, FileText, Network, Settings, UserRoundCog, Wallet } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -43,6 +44,8 @@ const financeChildren = [
 
 export default function Sidebar({ sidebarOpen, setSidebarOpen }: { sidebarOpen?: boolean; setSidebarOpen?: (val: boolean) => void }) {
   const pathname = usePathname();
+  const user = useAuthStore((state) => state.user);
+  const isAdmin = user?.role === "admin";
   const userMenuActive = pathname === "/users" || pathname.startsWith("/users/");
   const radiusMenuActive = pathname === "/radius" || pathname.startsWith("/radius/");
   const financeMenuActive = pathname === "/keuangan" || pathname.startsWith("/keuangan/") || pathname === "/internet-services" || pathname.startsWith("/internet-services/");
@@ -52,6 +55,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: { sidebarOpen?:
   const [radiusMenuOpen, setRadiusMenuOpen] = useState(radiusMenuActive);
   const [financeMenuOpen, setFinanceMenuOpen] = useState(financeMenuActive);
   const [settingMenuOpen, setSettingMenuOpen] = useState(settingMenuActive);
+  const visibleUserChildren = userChildren.filter((item) => !(isAdmin && item.href === "/users/pop"));
 
   useEffect(() => {
     setSidebarOpen?.(false);
@@ -110,7 +114,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: { sidebarOpen?:
           {userMenuOpen ? (
             <div className="pb-3 pl-[50px] pr-3 pt-1">
               <div className="space-y-1 border-l border-white/10 pl-4">
-                {userChildren.map((item) => {
+                {visibleUserChildren.map((item) => {
                   const active = item.href === "/users" ? pathname === "/users" : pathname === item.href || pathname.startsWith(item.href + "/");
                   return (
                     <Link
@@ -126,7 +130,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: { sidebarOpen?:
             </div>
           ) : null}
         </div>
-        <div className={radiusMenuOpen ? "rounded-xl bg-white/5" : ""}>
+        {!isAdmin ? <div className={radiusMenuOpen ? "rounded-xl bg-white/5" : ""}>
           <button
             type="button"
             onClick={() => setRadiusMenuOpen((open) => !open)}
@@ -156,7 +160,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: { sidebarOpen?:
               </div>
             </div>
           ) : null}
-        </div>
+        </div> : null}
         {groups.map((item) => {
           const Icon = item.icon;
           const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));

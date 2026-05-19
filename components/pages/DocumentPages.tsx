@@ -26,7 +26,7 @@ function useDocuments(categoryId?: string) {
   const [toast, setToast] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const endpoint = categoryId && categoryId !== "SEMUA" ? `/documents?categoryId=${categoryId}` : "/documents";
+  const endpoint = categoryId && categoryId !== "SEMUA" ? `/documents?categoryId=${categoryId}&limit=5000` : "/documents?limit=5000";
 
   useEffect(() => {
     setLoading(true);

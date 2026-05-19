@@ -33,7 +33,8 @@ function useRows(endpoint: string) {
 
   async function remove(row: any, successMessage: string) {
     try {
-      await api.delete(endpoint + "/" + row.id);
+      const baseEndpoint = endpoint.split("?")[0];
+      await api.delete(baseEndpoint + "/" + row.id);
       setRows((current) => current.filter((item) => item.id !== row.id));
       setToast(successMessage);
     } catch (err: any) {
@@ -60,7 +61,7 @@ function formatRupiahInput(value: string) {
 }
 
 export function FinanceCrudPage() {
-  const { rows, toast, remove, loading } = useRows("/finance");
+  const { rows, toast, remove, loading } = useRows("/finance?limit=5000");
   const stats = useMemo(() => ({
     total: rows.reduce((sum, item) => sum + Number(item.amount || 0), 0),
     verified: rows.filter((item) => item.status === "verified").length,
@@ -97,7 +98,7 @@ export function FinanceCrudPage() {
 }
 
 export function ReportsCrudPage() {
-  const { rows, toast, remove, loading } = useRows("/reports");
+  const { rows, toast, remove, loading } = useRows("/reports?limit=5000");
   return (
     <div>
       <PageHeader title="Laporan" subtitle="Template laporan, periode, status publikasi, dan catatan." actionHref="/laporan/new" actionLabel="Tambah Laporan" />
@@ -462,6 +463,7 @@ export function FinanceFormPage({ edit = false, id, invoiceQuery = "" }: { edit?
   const router = useRouter();
   const [error, setError] = useState("");
   const [form, setForm] = useState({ referenceNo: "", customerName: "", invoiceNo: "", amount: "", method: "", status: "verified", paidAt: "", notes: "" });
+  const [existingPaymentId, setExistingPaymentId] = useState("");
   const [paymentMethodOptions, setPaymentMethodOptions] = useState<{ label: string; value: string }[]>([]);
 
   useEffect(() => {
@@ -493,17 +495,24 @@ export function FinanceFormPage({ edit = false, id, invoiceQuery = "" }: { edit?
     if (edit || !invoiceQuery) return;
     const encodedInvoice = encodeURIComponent(invoiceQuery);
     api.get(`/internet-services?limit=1&search=${encodedInvoice}`)
-      .then((res) => {
+      .then(async (res) => {
         const invoice = Array.isArray(res.data.data) ? res.data.data[0] : null;
         if (!invoice) return;
         const invoiceNo = invoice.noInvoice || invoice.noFaktur || invoiceQuery;
+        const referenceNo = `PAY-${invoiceNo.replace(/[^A-Za-z0-9]/g, "-")}`;
+        const paymentRes = await api.get(`/finance?limit=1&search=${encodeURIComponent(invoiceNo)}`).catch(() => null);
+        const existingPayment = Array.isArray(paymentRes?.data?.data) ? paymentRes.data.data[0] : null;
+        if (existingPayment?.id) setExistingPaymentId(existingPayment.id);
         setForm((current) => ({
           ...current,
-          referenceNo: current.referenceNo || `PAY-${invoiceNo.replace(/[^A-Za-z0-9]/g, "-")}`,
-          customerName: current.customerName || invoice.customerName || invoice.customer?.name || "",
-          invoiceNo,
-          amount: current.amount || String(invoice.amount || invoice.grandTotal || 0),
-          paidAt: current.paidAt || new Date().toISOString().slice(0, 10),
+          referenceNo: current.referenceNo || existingPayment?.referenceNo || referenceNo,
+          customerName: current.customerName || existingPayment?.customerName || invoice.customerName || invoice.customer?.name || "",
+          invoiceNo: existingPayment?.invoiceNo || invoiceNo,
+          amount: current.amount || String(existingPayment?.amount || invoice.amount || invoice.grandTotal || 0),
+          method: existingPayment?.method || current.method || "",
+          status: existingPayment?.status || current.status || "verified",
+          paidAt: current.paidAt || toInputDate(existingPayment?.paidAt) || new Date().toISOString().slice(0, 10),
+          notes: current.notes || existingPayment?.notes || "",
         }));
       })
       .catch((err) => setError(err.response?.data?.message || "Gagal memuat data faktur untuk pembayaran."));
@@ -514,6 +523,7 @@ export function FinanceFormPage({ edit = false, id, invoiceQuery = "" }: { edit?
     try {
       const payload = { ...form, amount: Number(parseRupiah(form.amount)), paidAt: form.paidAt || null };
       if (edit) await api.put("/finance/" + id, payload);
+      else if (existingPaymentId) await api.put("/finance/" + existingPaymentId, payload);
       else await api.post("/finance", payload);
       router.push("/keuangan");
     } catch (err: any) {

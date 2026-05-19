@@ -262,7 +262,7 @@ export function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement
   );
 }
 
-export function DataTable<T extends { id: string }>({ title, data, columns, searchPlaceholder = "Cari data...", editBasePath, onDelete, canDelete, extraActions }: { title?: string; data: T[]; columns: Column<T>[]; searchPlaceholder?: string; editBasePath?: string; onDelete?: (row: T) => void; canDelete?: (row: T) => boolean; extraActions?: (row: T) => ReactNode }) {
+export function DataTable<T extends { id: string }>({ title, data, columns, searchPlaceholder = "Cari data...", editBasePath, onDelete, canDelete, extraActions, headerAction }: { title?: string; data: T[]; columns: Column<T>[]; searchPlaceholder?: string; editBasePath?: string; onDelete?: (row: T) => void; canDelete?: (row: T) => boolean; extraActions?: (row: T) => ReactNode; headerAction?: ReactNode }) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [confirm, setConfirm] = useState<T | null>(null);
@@ -278,7 +278,10 @@ export function DataTable<T extends { id: string }>({ title, data, columns, sear
     <Card className="overflow-hidden">
       <div className="flex flex-col gap-3 border-b border-slate-200 p-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          {title ? <h2 className="text-base font-bold text-slate-950">{title}</h2> : null}
+          <div className="flex flex-wrap items-center gap-3">
+            {title ? <h2 className="text-base font-bold text-slate-950">{title}</h2> : null}
+            {headerAction ? headerAction : null}
+          </div>
           <p className="text-sm text-slate-500">Menampilkan {rows.length} dari {filtered.length} data</p>
         </div>
         <div className="relative w-full lg:w-80">

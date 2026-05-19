@@ -3,7 +3,7 @@
 import { Badge, Card, PageHeader, ShimmerBlock, StatCard } from "@/components/ui/AdminUI";
 import api from "@/lib/api";
 import { currency, date, monthName } from "@/lib/format";
-import { Ban, Building2, CreditCard, FileText, Mail, MapPin, MessageCircle, Phone, Printer, Receipt, Settings, Shield, Wallet } from "lucide-react";
+import { Ban, Building2, CheckCircle2, CreditCard, FileText, Mail, MapPin, MessageCircle, Phone, Printer, Receipt, Settings, Shield, Wallet } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { ReactNode, useEffect, useState } from "react";
@@ -11,22 +11,56 @@ import { ReactNode, useEffect, useState } from "react";
 export function InvoiceDetailPage({ id }: { id: string }) {
   const [invoice, setInvoice] = useState<any | null>(null);
   const [settings, setSettings] = useState<any[]>([]);
+  const [payment, setPayment] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    setLoading(true);
-    setMessage("");
-    api.get("/internet-services/" + id)
-      .then((res) => setInvoice(res.data.data))
-      .catch((err) => {
+    let active = true;
+
+    async function loadDetail() {
+      setLoading(true);
+      setMessage("");
+      setPayment(null);
+
+      try {
+        const [invoiceRes, settingsRes] = await Promise.all([
+          api.get("/internet-services/" + id),
+          api.get("/settings?limit=100&search=company_").catch(() => ({ data: { data: [] } })),
+        ]);
+
+        if (!active) return;
+
+        const invoiceData = invoiceRes.data.data;
+        setInvoice(invoiceData);
+        setSettings(settingsRes.data.data || []);
+
+        const invoiceKeys = [invoiceData?.noInvoice, invoiceData?.noFaktur].filter(Boolean);
+        if (invoiceKeys.length) {
+          try {
+            let foundPayment = null;
+            for (const invoiceKey of invoiceKeys) {
+              const paymentRes = await api.get(`/finance?limit=1&search=${encodeURIComponent(invoiceKey)}`);
+              foundPayment = Array.isArray(paymentRes.data.data) ? paymentRes.data.data[0] || null : null;
+              if (foundPayment) break;
+            }
+            if (active) setPayment(foundPayment);
+          } catch {
+            if (active) setPayment(null);
+          }
+        }
+      } catch (err: any) {
+        if (!active) return;
         setInvoice(null);
+        setSettings([]);
         setMessage(err.response?.data?.message || "Gagal memuat detail faktur dari database.");
-      })
-      .finally(() => setLoading(false));
-    api.get("/settings?limit=100&search=company_")
-      .then((res) => setSettings(res.data.data || []))
-      .catch(() => setSettings([]));
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    loadDetail();
+    return () => { active = false; };
   }, [id]);
 
   if (loading) {
@@ -68,6 +102,9 @@ export function InvoiceDetailPage({ id }: { id: string }) {
   const companyAddress = settingValue(settings, "company_address", "Jl. Wuluh No. 1 Papringan, RT. 13, RW. 05, Caturtunggal, Depok, Sleman, DI Yogyakarta 55281.");
   const companyEmail = settingValue(settings, "company_email", "billing@ring.net.id");
   const companyPhone = settingValue(settings, "company_phone", "+6287747963000");
+  const isPaid = String(invoice.status || "").toUpperCase() === "PAID";
+  const paymentMethod = payment?.method || "-";
+  const paymentDate = payment?.paidAt || invoice.updatedAt || invoice.createdAt;
 
   return (
     <div className="space-y-6">
@@ -100,25 +137,53 @@ export function InvoiceDetailPage({ id }: { id: string }) {
             </div>
           </div>
 
-          <div className="grid gap-8 lg:grid-cols-2">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-950">{companyName}</h2>
-              <div className="mt-5 space-y-3 text-sm font-semibold text-slate-600">
-                <IconLine icon={<MapPin size={18} />} value={companyAddress} />
-                <IconLine icon={<Mail size={18} />} value={companyEmail} accent="text-cyan-500" />
-                <IconLine icon={<Phone size={18} />} value={companyPhone} accent="text-emerald-500" />
+          {isPaid ? (
+            <div className="grid gap-6 border-y border-slate-200 py-6 lg:grid-cols-[1.05fr_1fr]">
+              <div className="space-y-2 text-sm font-semibold text-slate-700">
+                <InvoiceInfoLine label="ID Pelanggan" value={customer.customerCode || "-"} />
+                <InvoiceInfoLine label="Nomor Tagihan" value={String(invoiceNumber || "-")} />
+                <InvoiceInfoLine label="Metode Pembayaran" value={paymentMethod} />
+                <InvoiceInfoLine label="Tanggal Pembayaran" value={date(paymentDate)} />
+                <InvoiceInfoLine label="Nama Tagihan" value={invoiceTitle} />
+              </div>
+              <div className="flex flex-col justify-between gap-5 text-left lg:text-right">
+                <div>
+                  <div className="ml-auto inline-flex items-center gap-2 rounded-xl bg-emerald-100 px-6 py-3 text-sm font-black text-emerald-700">
+                    <CheckCircle2 size={18} /> Pembayaran Berhasil
+                  </div>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-950">{invoice.customerName || customer.name || "Faktur Umum"}</h2>
+                  <p className="mt-2 text-sm font-semibold text-slate-500">ID Pelanggan : <span className="text-slate-800">{customer.customerCode || "-"}</span></p>
+                  <div className="mt-4 space-y-2 text-sm font-semibold text-slate-600">
+                    <p>{customer.address || "-"} <MapPin className="inline text-rose-500" size={16} /></p>
+                    <p>{customer.email || "-"} <Mail className="inline text-cyan-500" size={16} /></p>
+                    <p>{customer.phone || "-"} <Phone className="inline text-emerald-500" size={16} /></p>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="text-left lg:text-right">
-              <h2 className="text-2xl font-bold text-slate-950">{invoice.customerName || customer.name || "Faktur Umum"}</h2>
-              <p className="mt-2 text-sm font-semibold text-slate-500">ID Pelanggan : <span className="text-slate-800">{customer.customerCode || "-"}</span></p>
-              <div className="mt-4 space-y-2 text-sm font-semibold text-slate-600">
-                <p>{customer.address || "-"}</p>
-                <p>{customer.email || "-"}</p>
-                <p>{customer.phone || "-"}</p>
+          ) : (
+            <div className="grid gap-8 lg:grid-cols-2">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-950">{companyName}</h2>
+                <div className="mt-5 space-y-3 text-sm font-semibold text-slate-600">
+                  <IconLine icon={<MapPin size={18} />} value={companyAddress} />
+                  <IconLine icon={<Mail size={18} />} value={companyEmail} accent="text-cyan-500" />
+                  <IconLine icon={<Phone size={18} />} value={companyPhone} accent="text-emerald-500" />
+                </div>
+              </div>
+              <div className="text-left lg:text-right">
+                <h2 className="text-2xl font-bold text-slate-950">{invoice.customerName || customer.name || "Faktur Umum"}</h2>
+                <p className="mt-2 text-sm font-semibold text-slate-500">ID Pelanggan : <span className="text-slate-800">{customer.customerCode || "-"}</span></p>
+                <div className="mt-4 space-y-2 text-sm font-semibold text-slate-600">
+                  <p>{customer.address || "-"}</p>
+                  <p>{customer.email || "-"}</p>
+                  <p>{customer.phone || "-"}</p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           <section>
             <h2 className="mb-3 text-xl font-bold text-slate-950">Rincian Pembayaran :</h2>
@@ -172,14 +237,22 @@ export function InvoiceDetailPage({ id }: { id: string }) {
 
           {invoice.notes ? <div className="rounded-lg border border-slate-200 px-4 py-3 text-sm text-slate-600">{invoice.notes}</div> : null}
 
-          <div className="space-y-4 text-center">
-            <DigitalQr value={paymentUrl} />
-            <div className="rounded-lg bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-600">
-              Link Pembayaran : <a href={paymentUrl} className="text-blue-500 hover:underline" target="_blank" rel="noreferrer">{paymentUrl}</a>
+          {isPaid ? (
+            <div className="rounded-lg border border-slate-200 px-4 py-4 text-center">
+              <h3 className="text-lg font-bold text-slate-950">{companyName}</h3>
+              <p className="mt-1 text-xs font-semibold text-slate-500">{companyAddress}</p>
+              <p className="mt-1 text-xs font-semibold text-slate-500">{companyPhone}  •  {companyEmail}</p>
             </div>
-            <p className="font-bold text-slate-700">Faktur dibuat secara digital dan berlaku tanpa tanda tangan dan stempel</p>
-            <p className="text-sm font-semibold text-slate-500">{date(invoice.createdAt || new Date())}</p>
-          </div>
+          ) : (
+            <div className="space-y-4 text-center">
+              <DigitalQr value={paymentUrl} />
+              <div className="rounded-lg bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-600">
+                Link Pembayaran : <a href={paymentUrl} className="text-blue-500 hover:underline" target="_blank" rel="noreferrer">{paymentUrl}</a>
+              </div>
+              <p className="font-bold text-slate-700">Faktur dibuat secara digital dan berlaku tanpa tanda tangan dan stempel</p>
+              <p className="text-sm font-semibold text-slate-500">{date(invoice.createdAt || new Date())}</p>
+            </div>
+          )}
 
           {invoice.disableAuthOnDue ? (
             <div className="rounded-lg bg-rose-50 px-4 py-4 text-center font-semibold text-rose-700">
@@ -187,12 +260,14 @@ export function InvoiceDetailPage({ id }: { id: string }) {
             </div>
           ) : null}
 
-          <div className="flex flex-wrap justify-center gap-3 border-t border-slate-100 pt-6">
-            <Link href={`/keuangan/new?invoice=${encodeURIComponent(invoice.noInvoice || invoice.noFaktur || invoiceNumber)}`} className="inline-flex h-11 items-center gap-2 rounded-lg bg-cyan-500 px-5 text-sm font-bold text-white shadow-sm shadow-cyan-100"><CreditCard size={18} /> Tambah Pembayaran</Link>
-            <Link href={`/internet-services/${invoice.id}/edit`} className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#5B9CE5] px-5 text-sm font-bold text-white shadow-sm shadow-blue-100"><FileText size={18} /> Ubah Tagihan</Link>
-            <button type="button" onClick={() => setMessage("Fitur pembatalan tagihan akan memakai status khusus pada tahap berikutnya.")} className="inline-flex h-11 items-center gap-2 rounded-lg bg-rose-500 px-5 text-sm font-bold text-white shadow-sm shadow-rose-100"><Ban size={18} /> Batalkan Tagihan</button>
-            <a href={`https://wa.me/${String(customer.phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(`Halo ${invoice.customerName || customer.name || ""}, berikut link pembayaran faktur ${invoiceNumber}: ${paymentUrl}`)}`} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center gap-2 rounded-lg bg-emerald-500 px-5 text-sm font-bold text-white shadow-sm shadow-emerald-100"><MessageCircle size={18} /> Kirim Pesan</a>
-          </div>
+          {!isPaid ? (
+            <div className="flex flex-wrap justify-center gap-3 border-t border-slate-100 pt-6">
+              <Link href={`/keuangan/new?invoice=${encodeURIComponent(invoice.noInvoice || invoice.noFaktur || invoiceNumber)}`} className="inline-flex h-11 items-center gap-2 rounded-lg bg-cyan-500 px-5 text-sm font-bold text-white shadow-sm shadow-cyan-100"><CreditCard size={18} /> Tambah Pembayaran</Link>
+              <Link href={`/internet-services/${invoice.id}/edit`} className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#5B9CE5] px-5 text-sm font-bold text-white shadow-sm shadow-blue-100"><FileText size={18} /> Ubah Tagihan</Link>
+              <button type="button" onClick={() => setMessage("Fitur pembatalan tagihan akan memakai status khusus pada tahap berikutnya.")} className="inline-flex h-11 items-center gap-2 rounded-lg bg-rose-500 px-5 text-sm font-bold text-white shadow-sm shadow-rose-100"><Ban size={18} /> Batalkan Tagihan</button>
+              <a href={`https://wa.me/${String(customer.phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(`Halo ${invoice.customerName || customer.name || ""}, berikut link pembayaran faktur ${invoiceNumber}: ${paymentUrl}`)}`} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center gap-2 rounded-lg bg-emerald-500 px-5 text-sm font-bold text-white shadow-sm shadow-emerald-100"><MessageCircle size={18} /> Kirim Pesan</a>
+            </div>
+          ) : null}
         </div>
       </Card>
       </div>
@@ -205,6 +280,15 @@ function Info({ label, value }: { label: string; value: string }) {
 
 function IconLine({ icon, value, accent = "text-rose-500" }: { icon: ReactNode; value: string; accent?: string }) {
   return <div className="flex items-start gap-3"><span className={accent}>{icon}</span><span>{value || "-"}</span></div>;
+}
+
+function InvoiceInfoLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid grid-cols-[150px_1fr] gap-2">
+      <span className="text-slate-500">{label}</span>
+      <span className="font-bold text-slate-800">: {value || "-"}</span>
+    </div>
+  );
 }
 
 function settingValue(settings: any[], key: string, defaultValue: string) {

@@ -67,7 +67,7 @@ export function UsersPage({ role, title }: { role: string; title: string }) {
 }
 
 export function CustomersPage() {
-  const { rows, setRows, toast, setToast, loading } = useRows<any>("/customers?limit=2000");
+  const { rows, setRows, toast, setToast, loading } = useRows<any>("/customers?limit=5000");
   return (
     <div>
       <PageHeader title="Pelanggan" subtitle="Data pelanggan individu beserta paket dan status layanan." actionHref="/users/pelanggan/new" actionLabel="Tambah Pelanggan" />
@@ -91,7 +91,7 @@ export function CustomersPage() {
 }
 
 export function CompaniesPage() {
-  const { rows, setRows, toast, setToast, loading } = useRows<any>("/companies");
+  const { rows, setRows, toast, setToast, loading } = useRows<any>("/companies?limit=5000");
   return (
     <div>
       <PageHeader title="Bisnis / Perusahaan" subtitle="Kelola data PT, CV, instansi, kantor, dan pelanggan enterprise." actionHref="/users/bisnis/new" actionLabel="Tambah Bisnis" />
@@ -113,7 +113,7 @@ export function CompaniesPage() {
 }
 
 export function PartnersPage() {
-  const { rows, setRows, toast, setToast, loading } = useRows<any>("/partners");
+  const { rows, setRows, toast, setToast, loading } = useRows<any>("/partners?limit=5000");
   return (
     <div>
       <PageHeader title="Mitra Bisnis" subtitle="Kelola mitra perseorangan atau individual sebagai channel penjualan MyRingNet." actionHref="/users/mitra/new" actionLabel="Tambah Mitra" />
@@ -136,7 +136,7 @@ export function PartnersPage() {
 }
 
 export function LeadsPage() {
-  const { rows, setRows, toast, setToast, loading } = useRows<any>("/marketing");
+  const { rows, setRows, toast, setToast, loading } = useRows<any>("/marketing?limit=5000");
   return (
     <div>
       <PageHeader title="Leads" subtitle="Pipeline marketing dari prospect sampai deal/lost." actionHref="/marketing/leads/new" actionLabel="Tambah Lead" />
@@ -236,6 +236,24 @@ function filterInvoices(rows: any[], search: string) {
   ].some((value) => String(value || "").toLowerCase().includes(keyword)));
 }
 
+function invoicePeriodValue(row: any) {
+  const year = Number(row.periodYear || row.period_year || 0);
+  const month = Number(row.periodMonth || row.period_month || 0);
+  if (year && month) return year * 100 + month;
+  const fallbackDate = new Date(row.dueDate || row.createdAt || row.updatedAt || 0).getTime();
+  return Number.isNaN(fallbackDate) ? 0 : fallbackDate;
+}
+
+function sortInvoicesByLatest(rows: any[]) {
+  return [...rows].sort((a, b) => {
+    const periodDiff = invoicePeriodValue(b) - invoicePeriodValue(a);
+    if (periodDiff !== 0) return periodDiff;
+    const createdDiff = new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    if (createdDiff !== 0) return createdDiff;
+    return String(b.noFaktur || b.noInvoice || "").localeCompare(String(a.noFaktur || a.noInvoice || ""));
+  });
+}
+
 function pageNumbers(page: number, totalPages: number) {
   const start = Math.max(1, Math.min(page - 2, totalPages - 4));
   const end = Math.min(totalPages, start + 4);
@@ -244,13 +262,13 @@ function pageNumbers(page: number, totalPages: number) {
 
 export function InternetServicesPage() {
   const pageSize = 10;
-  const { rows, toast, loading } = useRows<any>("/internet-services?limit=500");
+  const { rows, toast, loading } = useRows<any>("/internet-services?limit=5000");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [now, setNow] = useState<Date | null>(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
-  const filteredRows = useMemo(() => filterInvoices(rows, search), [rows, search]);
+  const filteredRows = useMemo(() => sortInvoicesByLatest(filterInvoices(rows, search)), [rows, search]);
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
   const visibleRows = filteredRows.slice((page - 1) * pageSize, page * pageSize);
   const showingStart = filteredRows.length === 0 ? 0 : (page - 1) * pageSize + 1;

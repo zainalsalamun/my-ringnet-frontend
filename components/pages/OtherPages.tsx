@@ -107,28 +107,33 @@ export function InvoiceDetailPage({ id }: { id: string }) {
   const paymentDate = payment?.paidAt || invoice.updatedAt || invoice.createdAt;
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+    <div className="invoice-detail-page space-y-6">
+      <div className="rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm print:hidden">
         <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-500">
           <span>Dashboard</span><span>/</span><Link href="/keuangan" className="hover:text-indigo-600">Keuangan</Link><span>/</span><Link href="/internet-services" className="text-indigo-600 hover:underline">Faktur & Tagihan</Link><span>/</span><span className="text-slate-800">{invoiceNumber}</span>
         </div>
       </div>
-      {message ? <div className="mb-4 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-700">{message}</div> : null}
+      {message ? <div className="mb-4 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-700 print:hidden">{message}</div> : null}
 
-      <Card className="overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#5B9CE5] px-5 py-4 text-white">
+      <Card className="invoice-print-card overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#5B9CE5] px-5 py-4 text-white print:hidden">
           <h1 className="text-lg font-bold">{invoiceHeader}</h1>
           <button type="button" onClick={() => window.print()} className="inline-flex h-10 items-center gap-2 rounded-lg bg-white/15 px-4 text-sm font-bold transition hover:bg-white/25">
             <Printer size={17} /> Cetak
           </button>
         </div>
 
-        <div className="space-y-8 p-5 lg:p-8">
-          <div className="flex flex-col gap-6 border-y border-slate-200 py-6 md:flex-row md:items-center md:justify-between">
-            <div className="relative h-28 w-52">
+        <div className="invoice-print-body space-y-8 p-5 lg:p-8">
+          <div className="invoice-print-logo-row flex flex-col gap-6 border-y border-slate-200 py-6 md:flex-row md:items-center md:justify-between">
+            <div className="relative h-28 w-52 invoice-print-logo">
               <Image src="/assets/logo.png" alt="RingNet" fill sizes="208px" className="object-contain object-left" priority />
             </div>
-            <div className="text-left md:text-right">
+            {isPaid ? (
+              <div className="invoice-print-success hidden items-center gap-3 rounded-2xl bg-emerald-100 px-10 py-4 text-xl font-black text-slate-900 print:inline-flex">
+                <CheckCircle2 size={22} className="text-emerald-600" /> Pembayaran Berhasil
+              </div>
+            ) : null}
+            <div className="invoice-title-block text-left md:text-right">
               <p className="text-2xl font-black text-slate-950">#{invoiceNumber}</p>
               <p className="mt-1 text-xl font-bold text-slate-800">{invoiceTitle}</p>
               <span className="mt-3 inline-flex rounded-md bg-amber-400 px-3 py-1 text-sm font-black uppercase text-white">
@@ -138,7 +143,7 @@ export function InvoiceDetailPage({ id }: { id: string }) {
           </div>
 
           {isPaid ? (
-            <div className="grid gap-6 border-y border-slate-200 py-6 lg:grid-cols-[1.05fr_1fr]">
+            <div className="invoice-paid-detail grid gap-6 border-y border-slate-200 py-6 lg:grid-cols-[1.05fr_1fr]">
               <div className="space-y-2 text-sm font-semibold text-slate-700">
                 <InvoiceInfoLine label="ID Pelanggan" value={customer.customerCode || "-"} />
                 <InvoiceInfoLine label="Nomor Tagihan" value={String(invoiceNumber || "-")} />
@@ -148,7 +153,7 @@ export function InvoiceDetailPage({ id }: { id: string }) {
               </div>
               <div className="flex flex-col justify-between gap-5 text-left lg:text-right">
                 <div>
-                  <div className="ml-auto inline-flex items-center gap-2 rounded-xl bg-emerald-100 px-6 py-3 text-sm font-black text-emerald-700">
+                  <div className="invoice-paid-status-screen ml-auto inline-flex items-center gap-2 rounded-xl bg-emerald-100 px-6 py-3 text-sm font-black text-emerald-700">
                     <CheckCircle2 size={18} /> Pembayaran Berhasil
                   </div>
                 </div>
@@ -238,7 +243,7 @@ export function InvoiceDetailPage({ id }: { id: string }) {
           {invoice.notes ? <div className="rounded-lg border border-slate-200 px-4 py-3 text-sm text-slate-600">{invoice.notes}</div> : null}
 
           {isPaid ? (
-            <div className="rounded-lg border border-slate-200 px-4 py-4 text-center">
+            <div className="invoice-print-footer rounded-lg border border-slate-200 px-4 py-4 text-center">
               <h3 className="text-lg font-bold text-slate-950">{companyName}</h3>
               <p className="mt-1 text-xs font-semibold text-slate-500">{companyAddress}</p>
               <p className="mt-1 text-xs font-semibold text-slate-500">{companyPhone}  •  {companyEmail}</p>
@@ -362,9 +367,9 @@ export function FinancePage() {
     setLoading(true);
     setError("");
     Promise.all([
-      api.get("/finance?limit=10"),
-      api.get("/internet-services?limit=500"),
-      api.get("/partners?limit=500"),
+      api.get("/finance?limit=5000"),
+      api.get("/internet-services?limit=5000"),
+      api.get("/partners?limit=5000"),
     ])
       .then(([paymentRes, invoiceRes, partnerRes]) => {
         setPayments(Array.isArray(paymentRes.data.data) ? paymentRes.data.data : []);

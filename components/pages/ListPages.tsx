@@ -236,12 +236,36 @@ function filterInvoices(rows: any[], search: string) {
   ].some((value) => String(value || "").toLowerCase().includes(keyword)));
 }
 
+const invoiceMonthMap: Record<string, number> = {
+  januari: 1,
+  februari: 2,
+  maret: 3,
+  april: 4,
+  mei: 5,
+  juni: 6,
+  juli: 7,
+  agustus: 8,
+  september: 9,
+  oktober: 10,
+  november: 11,
+  desember: 12,
+};
+
 function invoicePeriodValue(row: any) {
-  const year = Number(row.periodYear || row.period_year || 0);
-  const month = Number(row.periodMonth || row.period_month || 0);
-  if (year && month) return year * 100 + month;
-  const fallbackDate = new Date(row.dueDate || row.createdAt || row.updatedAt || 0).getTime();
-  return Number.isNaN(fallbackDate) ? 0 : fallbackDate;
+  const fieldYear = Number(row.periodYear || row.period_year || 0);
+  const fieldMonth = Number(row.periodMonth || row.period_month || 0);
+  if (fieldYear && fieldMonth) return fieldYear * 100 + fieldMonth;
+
+  const text = String([row.invoiceName, row.noFaktur, row.noInvoice].filter(Boolean).join(" "));
+  const textLower = text.toLowerCase();
+  const textYear = Number(text.match(/20\d{2}/)?.[0] || 0);
+  const textMonth = Object.entries(invoiceMonthMap).find(([name]) => textLower.includes(name))?.[1] || 0;
+  if (textYear && textMonth) return textYear * 100 + textMonth;
+
+  const invoiceNumberPeriod = String(row.noFaktur || row.noInvoice || "").match(/\/(0?[1-9]|1[0-2])\/(20\d{2})/);
+  if (invoiceNumberPeriod) return Number(invoiceNumberPeriod[2]) * 100 + Number(invoiceNumberPeriod[1]);
+
+  return 0;
 }
 
 function sortInvoicesByLatest(rows: any[]) {

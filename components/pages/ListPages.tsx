@@ -3,10 +3,11 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import api from "@/lib/api";
+import { useAuthStore } from "@/hooks/useAuth";
 import { Badge, Card, DataTable, PageHeader, TableSkeleton } from "@/components/ui/AdminUI";
 import { currency, date, monthName } from "@/lib/format";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, FileText, Filter, MinusCircle, PlusCircle, Power, RefreshCw, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileText, Filter, MinusCircle, PlusCircle, Power, RefreshCw, Search, Trash2 } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 
@@ -286,17 +287,22 @@ function pageNumbers(page: number, totalPages: number) {
 
 export function InternetServicesPage() {
   const pageSize = 10;
-  const { rows, toast, loading } = useRows<any>("/internet-services?limit=5000&sort=latest");
+  const { rows, setRows, toast, setToast, loading } = useRows<any>("/internet-services?limit=5000&sort=latest");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [now, setNow] = useState<Date | null>(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
+  const user = useAuthStore((state) => state.user);
+  const canDeleteInvoice = user?.role === "super_admin";
 
   const filteredRows = useMemo(() => sortInvoicesByLatest(filterInvoices(rows, search)), [rows, search]);
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
   const visibleRows = filteredRows.slice((page - 1) * pageSize, page * pageSize);
   const showingStart = filteredRows.length === 0 ? 0 : (page - 1) * pageSize + 1;
   const showingEnd = Math.min(page * pageSize, filteredRows.length);
+  const tableHeaders = canDeleteInvoice ? ["Status", "Nomor Faktur", "Jenis", "Tujuan", "Total Tagihan", "Nama Faktur", "Dukungan Pembayaran", "Aksi"] : ["Status", "Nomor Faktur", "Jenis", "Tujuan", "Total Tagihan", "Nama Faktur", "Dukungan Pembayaran"];
+  const detailColSpan = tableHeaders.length;
 
   useEffect(() => {
     setNow(new Date());
@@ -322,8 +328,32 @@ export function InternetServicesPage() {
         <AddInvoiceMenu />
       </div>
       <Toast message={toast} />
+      {deleteConfirm ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 px-4">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-950/20">
+            <h2 className="text-lg font-bold text-slate-950">Hapus faktur?</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Faktur <span className="font-bold text-slate-800">{deleteConfirm.noFaktur || deleteConfirm.noInvoice}</span> akan dihapus permanen. Aksi ini hanya tersedia untuk superadmin.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" onClick={() => setDeleteConfirm(null)} className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-bold text-slate-600 hover:bg-slate-50">Batal</button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const target = deleteConfirm;
+                  setDeleteConfirm(null);
+                  await deleteRow("/internet-services", target, setRows as any, setToast, "Faktur berhasil dihapus.");
+                }}
+                className="h-10 rounded-lg bg-rose-500 px-4 text-sm font-bold text-white shadow-sm shadow-rose-100 hover:bg-rose-600"
+              >
+                Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {loading ? (
-        <TableSkeleton columns={7} />
+        <TableSkeleton columns={canDeleteInvoice ? 8 : 7} />
       ) : (
         <Card className="overflow-visible">
           <div className="flex flex-col gap-4 border-b border-slate-200 p-4 lg:flex-row lg:items-center lg:justify-between">
@@ -355,7 +385,7 @@ export function InternetServicesPage() {
             <table className="w-full min-w-[1180px] border-separate border-spacing-0 text-left text-sm">
               <thead className="bg-slate-50">
                 <tr className="text-slate-500">
-                  {["Status", "Nomor Faktur", "Jenis", "Tujuan", "Total Tagihan", "Nama Faktur", "Dukungan Pembayaran"].map((header) => (
+                  {tableHeaders.map((header) => (
                     <th key={header} className="border-b border-slate-200 px-4 py-3 text-xs font-bold uppercase tracking-wide">
                       {header}
                     </th>
@@ -385,10 +415,22 @@ export function InternetServicesPage() {
                         <td className="border-b border-slate-100 px-4 py-4 font-semibold">{currency(row.amount)}</td>
                         <td className="border-b border-slate-100 px-4 py-4">{invoiceName(row)}</td>
                         <td className="border-b border-slate-100 px-4 py-4">{row.customer?.supportPayment || row.supportPayment || "-"}</td>
+                        {canDeleteInvoice ? (
+                          <td className="border-b border-slate-100 px-4 py-4">
+                            <button
+                              type="button"
+                              onClick={() => setDeleteConfirm(row)}
+                              className="grid h-9 w-9 place-items-center rounded-lg border border-rose-100 text-rose-500 transition hover:border-rose-200 hover:bg-rose-50"
+                              title="Hapus faktur"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        ) : null}
                       </tr>
                       {expanded ? (
                         <tr key={`${row.id}-detail`}>
-                          <td colSpan={7} className="border-b border-slate-200 bg-indigo-50/50 px-6 py-5 text-slate-700">
+                          <td colSpan={detailColSpan} className="border-b border-slate-200 bg-indigo-50/50 px-6 py-5 text-slate-700">
                             <div className="grid gap-4 md:grid-cols-4">
                               <div>
                                 <div className="text-xs font-bold uppercase tracking-wide text-slate-400">Autentikasi</div>

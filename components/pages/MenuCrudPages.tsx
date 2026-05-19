@@ -458,7 +458,7 @@ export function PaymentMethodsCrudPage() {
   );
 }
 
-export function FinanceFormPage({ edit = false, id }: { edit?: boolean; id?: string }) {
+export function FinanceFormPage({ edit = false, id, invoiceQuery = "" }: { edit?: boolean; id?: string; invoiceQuery?: string }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [form, setForm] = useState({ referenceNo: "", customerName: "", invoiceNo: "", amount: "", method: "", status: "verified", paidAt: "", notes: "" });
@@ -488,6 +488,26 @@ export function FinanceFormPage({ edit = false, id }: { edit?: boolean; id?: str
       setForm({ referenceNo: data.referenceNo || "", customerName: data.customerName || "", invoiceNo: data.invoiceNo || "", amount: String(data.amount || ""), method: data.method || "", status: data.status || "verified", paidAt: toInputDate(data.paidAt), notes: data.notes || "" });
     }).catch((err) => setError(err.response?.data?.message || "Gagal memuat pembayaran dari database."));
   }, [edit, id]);
+
+  useEffect(() => {
+    if (edit || !invoiceQuery) return;
+    const encodedInvoice = encodeURIComponent(invoiceQuery);
+    api.get(`/internet-services?limit=1&search=${encodedInvoice}`)
+      .then((res) => {
+        const invoice = Array.isArray(res.data.data) ? res.data.data[0] : null;
+        if (!invoice) return;
+        const invoiceNo = invoice.noInvoice || invoice.noFaktur || invoiceQuery;
+        setForm((current) => ({
+          ...current,
+          referenceNo: current.referenceNo || `PAY-${invoiceNo.replace(/[^A-Za-z0-9]/g, "-")}`,
+          customerName: current.customerName || invoice.customerName || invoice.customer?.name || "",
+          invoiceNo,
+          amount: current.amount || String(invoice.amount || invoice.grandTotal || 0),
+          paidAt: current.paidAt || new Date().toISOString().slice(0, 10),
+        }));
+      })
+      .catch((err) => setError(err.response?.data?.message || "Gagal memuat data faktur untuk pembayaran."));
+  }, [edit, invoiceQuery]);
 
   async function submit() {
     setError("");

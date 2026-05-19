@@ -368,6 +368,8 @@ export function InvoiceForm({ edit = false, id }: { edit?: boolean; id?: string 
   const router = useRouter();
   const [error, setError] = useState("");
   const [customerOptions, setCustomerOptions] = useState<{ label: string; value: string; customer: any }[]>([]);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [customerLoading, setCustomerLoading] = useState(false);
   const [packageOptions, setPackageOptions] = useState<{ label: string; value: string; price: number }[]>([]);
   const [items, setItems] = useState<{ name: string; quantity: number; discount: number; unitPrice: number; total: number }[]>([]);
   const [itemDraft, setItemDraft] = useState({ name: "", quantity: "1", discount: "", unitPrice: "" });
@@ -395,21 +397,36 @@ export function InvoiceForm({ edit = false, id }: { edit?: boolean; id?: string 
   const taxAmount = Math.round(taxBase * (Number(form.tax_percent || 0) / 100));
   const grandTotal = taxBase + taxAmount;
 
+  function mapCustomerOptions(data: any[]) {
+    return data.map((item: any) => ({
+      label: [item.customerCode, item.name, item.phone].filter(Boolean).join(" - "),
+      value: item.id,
+      customer: item,
+    }));
+  }
+
   useEffect(() => {
-    api.get("/customers?limit=500")
-      .then((res) => {
-        const data = Array.isArray(res.data.data) ? res.data.data : [];
-        const options = data.map((item: any) => ({
-          label: [item.customerCode, item.name, item.phone].filter(Boolean).join(" - "),
-          value: item.id,
-          customer: item,
-        }));
-        setCustomerOptions(options);
-      })
-      .catch(() => {
-        setCustomerOptions([]);
-      });
-  }, []);
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      const params = new URLSearchParams({ limit: customerSearch.trim() ? "50" : "100" });
+      if (customerSearch.trim()) params.set("search", customerSearch.trim());
+      setCustomerLoading(true);
+      api.get(`/customers?${params.toString()}`, { signal: controller.signal })
+        .then((res) => {
+          const data = Array.isArray(res.data.data) ? res.data.data : [];
+          setCustomerOptions(mapCustomerOptions(data));
+        })
+        .catch((err) => {
+          if (err?.code !== "ERR_CANCELED" && err?.name !== "CanceledError") setCustomerOptions([]);
+        })
+        .finally(() => setCustomerLoading(false));
+    }, customerSearch.trim() ? 250 : 0);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [customerSearch]);
 
   useEffect(() => {
     api.get("/service-packages?limit=100")
@@ -491,6 +508,12 @@ export function InvoiceForm({ edit = false, id }: { edit?: boolean; id?: string 
         notes: data.notes || "",
         disable_auth_on_due: Boolean(data.disableAuthOnDue),
       });
+      if (data.customer?.id) {
+        setCustomerOptions((current) => {
+          if (current.some((item) => item.value === data.customer.id)) return current;
+          return [...mapCustomerOptions([data.customer]), ...current];
+        });
+      }
       if (Array.isArray(data.items)) {
         setItems(data.items.map((item: any) => ({
           name: item.name || "",
@@ -570,8 +593,8 @@ export function InvoiceForm({ edit = false, id }: { edit?: boolean; id?: string 
             <div className="grid gap-5 lg:grid-cols-2">
               <div className="lg:col-span-2"><TextInput label="Nama Tagihan" value={form.invoice_name} onChange={(e) => setForm({ ...form, invoice_name: e.target.value })} placeholder="Contoh: Periode Mei 2026" /></div>
               <SelectInput label="Jenis Faktur" value={form.invoice_type} onChange={(e) => setForm({ ...form, invoice_type: e.target.value })} options={[{ label: "Faktur Pelanggan", value: "pelanggan" }, { label: "Faktur Umum", value: "umum" }, { label: "Faktur Mitra & Bisnis", value: "mitra_bisnis" }]} />
-              <SelectInput label="Pelanggan" searchable searchPlaceholder="Cari ID pelanggan atau nama..." value={form.customer_id} onChange={(e) => chooseCustomer(e.target.value)} options={customerOptions.length ? [{ label: "Pilih pelanggan", value: "" }, ...customerOptions.map(({ label, value }) => ({ label, value }))] : [{ label: "Belum ada pelanggan", value: "" }]} disabled={!customerOptions.length} />
-              <SelectInput label="Autentikasi" searchable searchPlaceholder="Cari autentikasi..." value={form.authentication_id} onChange={(e) => setForm({ ...form, authentication_id: e.target.value })} options={customerOptions.length ? [{ label: "Pilih autentikasi", value: "" }, ...customerOptions.map(({ label, value }) => ({ label, value }))] : [{ label: "Belum ada autentikasi", value: "" }]} disabled={!customerOptions.length} />
+              <SelectInput label="Pelanggan" searchable searchPlaceholder="Cari ID pelanggan atau nama..." onSearchChange={setCustomerSearch} searching={customerLoading} value={form.customer_id} onChange={(e) => chooseCustomer(e.target.value)} options={customerOptions.length ? [{ label: "Pilih pelanggan", value: "" }, ...customerOptions.map(({ label, value }) => ({ label, value }))] : [{ label: customerLoading ? "Memuat pelanggan..." : "Belum ada pelanggan", value: "" }]} disabled={!customerOptions.length && !customerLoading} />
+              <SelectInput label="Autentikasi" searchable searchPlaceholder="Cari ID pelanggan atau autentikasi..." onSearchChange={setCustomerSearch} searching={customerLoading} value={form.authentication_id} onChange={(e) => setForm({ ...form, authentication_id: e.target.value })} options={customerOptions.length ? [{ label: "Pilih autentikasi", value: "" }, ...customerOptions.map(({ label, value }) => ({ label, value }))] : [{ label: customerLoading ? "Memuat autentikasi..." : "Belum ada autentikasi", value: "" }]} disabled={!customerOptions.length && !customerLoading} />
               <TextInput label="Tanggal Jatuh Tempo" type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
               <TextInput label="Pajak (%)" inputMode="decimal" value={form.tax_percent} onChange={(e) => setForm({ ...form, tax_percent: e.target.value })} placeholder="0" />
               <TextInput label="No Invoice" value={form.no_invoice} onChange={(e) => setForm({ ...form, no_invoice: e.target.value })} placeholder="Otomatis jika kosong" />

@@ -346,6 +346,14 @@ export function LegalitasFormPage({ edit = false, id, category }: { edit?: boole
     }).catch(() => setError("Gagal memuat data dokumen."));
   }, [edit, id]);
 
+  useEffect(() => {
+    if (edit || !category || form.categoryId || !categories.length) return;
+    const matchedCategory = categories.find((item) => item.slug === category);
+    if (matchedCategory) {
+      setForm((current) => ({ ...current, categoryId: matchedCategory.id }));
+    }
+  }, [categories, category, edit, form.categoryId]);
+
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = e.target.files?.[0];
     if (selected) {
@@ -374,6 +382,10 @@ export function LegalitasFormPage({ edit = false, id, category }: { edit?: boole
       setError("Berkas dokumen wajib diunggah.");
       return;
     }
+    if (isPartnerDoc && !form.partnerId) {
+      setError("Mitra wajib dipilih untuk dokumen milik mitra.");
+      return;
+    }
 
     try {
       const formData = new FormData();
@@ -397,18 +409,14 @@ export function LegalitasFormPage({ edit = false, id, category }: { edit?: boole
       }
 
       if (edit) {
-        await api.put("/documents/" + id, formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        await api.put("/documents/" + id, formData);
       } else {
-        await api.post("/documents", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        await api.post("/documents", formData);
       }
 
-      router.push("/dokumen/legalitas");
+      router.push(category ? `/dokumen/${category}` : "/dokumen/legalitas");
     } catch (err: any) {
-      setError(err.response?.data?.message || "Gagal menyimpan dokumen.");
+      setError(err.response?.data?.message || err.message || "Gagal menyimpan dokumen.");
     }
   }
 

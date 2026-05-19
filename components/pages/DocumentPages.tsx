@@ -312,7 +312,7 @@ export function LegalitasFormPage({ edit = false, id, category }: { edit?: boole
   const [hasExpiredDate, setHasExpiredDate] = useState(false);
 
   useEffect(() => {
-    api.get("/partners?limit=100")
+    api.get("/partners?limit=5000")
       .then((res) => {
         const data = Array.isArray(res.data.data) ? res.data.data : [];
         setPartnerOptions(data.map((item: any) => ({ label: item.name, value: item.id })));

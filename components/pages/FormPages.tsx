@@ -107,7 +107,7 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
   }, []);
 
   useEffect(() => {
-    api.get("/partners?limit=500")
+    api.get("/partners?limit=5000")
       .then((res) => {
         const data = Array.isArray(res.data.data) ? res.data.data : [];
         setPartnerOptions(data.map((item: any) => ({ label: item.partnerCode ? `${item.partnerCode} - ${item.name}` : item.name, value: item.id })));
@@ -320,7 +320,7 @@ export function LeadForm({ edit = false, id }: { edit?: boolean; id?: string }) 
   const submit = useSubmit(edit ? "/marketing/" + id : "/marketing", "/marketing/leads", edit ? "put" : "post");
 
   useEffect(() => {
-    api.get("/partners")
+    api.get("/partners?limit=5000")
       .then((res) => {
         const data = Array.isArray(res.data.data) ? res.data.data : [];
         const options = data.map((item: any) => ({ label: item.name, value: item.id }));

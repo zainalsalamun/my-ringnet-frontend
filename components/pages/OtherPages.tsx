@@ -188,7 +188,7 @@ export function InvoiceDetailPage({ id }: { id: string }) {
           ) : null}
 
           <div className="flex flex-wrap justify-center gap-3 border-t border-slate-100 pt-6">
-            <Link href="/payments/new" className="inline-flex h-11 items-center gap-2 rounded-lg bg-cyan-500 px-5 text-sm font-bold text-white shadow-sm shadow-cyan-100"><CreditCard size={18} /> Tambah Pembayaran</Link>
+            <Link href={`/keuangan/new?invoice=${encodeURIComponent(invoice.noInvoice || invoice.noFaktur || invoiceNumber)}`} className="inline-flex h-11 items-center gap-2 rounded-lg bg-cyan-500 px-5 text-sm font-bold text-white shadow-sm shadow-cyan-100"><CreditCard size={18} /> Tambah Pembayaran</Link>
             <Link href={`/internet-services/${invoice.id}/edit`} className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#5B9CE5] px-5 text-sm font-bold text-white shadow-sm shadow-blue-100"><FileText size={18} /> Ubah Tagihan</Link>
             <button type="button" onClick={() => setMessage("Fitur pembatalan tagihan akan memakai status khusus pada tahap berikutnya.")} className="inline-flex h-11 items-center gap-2 rounded-lg bg-rose-500 px-5 text-sm font-bold text-white shadow-sm shadow-rose-100"><Ban size={18} /> Batalkan Tagihan</button>
             <a href={`https://wa.me/${String(customer.phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(`Halo ${invoice.customerName || customer.name || ""}, berikut link pembayaran faktur ${invoiceNumber}: ${paymentUrl}`)}`} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center gap-2 rounded-lg bg-emerald-500 px-5 text-sm font-bold text-white shadow-sm shadow-emerald-100"><MessageCircle size={18} /> Kirim Pesan</a>

@@ -151,16 +151,19 @@ type SelectInputProps = Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "onC
   onChange?: (event: { target: { value: string } }) => void;
   searchable?: boolean;
   searchPlaceholder?: string;
+  onSearchChange?: (query: string) => void;
+  searching?: boolean;
 };
 
 export function SelectInput(props: SelectInputProps) {
-  const { label, options, className = "", value, defaultValue, onChange, disabled, searchable = false, searchPlaceholder = "Cari data...", ...rest } = props;
+  const { label, options, className = "", value, defaultValue, onChange, disabled, searchable = false, searchPlaceholder = "Cari data...", onSearchChange, searching = false, ...rest } = props;
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const selectedValue = String(value ?? defaultValue ?? "");
   const selected = options.find((item) => item.value === selectedValue) || options[0];
-  const visibleOptions = searchable && query.trim()
+  const serverSearch = Boolean(onSearchChange);
+  const visibleOptions = searchable && query.trim() && !serverSearch
     ? options.filter((item) => item.label.toLowerCase().includes(query.trim().toLowerCase()))
     : options;
 
@@ -212,14 +215,20 @@ export function SelectInput(props: SelectInputProps) {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
               <input
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(event) => {
+                  const nextQuery = event.target.value;
+                  setQuery(nextQuery);
+                  onSearchChange?.(nextQuery);
+                }}
                 placeholder={searchPlaceholder}
                 className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100"
               />
             </div>
           ) : null}
           <div className="max-h-64 overflow-y-auto">
-            {visibleOptions.length ? visibleOptions.map((item) => {
+            {searching ? (
+              <div className="px-3 py-6 text-center text-sm font-semibold text-slate-400">Mencari data...</div>
+            ) : visibleOptions.length ? visibleOptions.map((item) => {
               const active = item.value === selectedValue;
               return (
                 <button

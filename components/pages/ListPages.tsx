@@ -252,10 +252,6 @@ const invoiceMonthMap: Record<string, number> = {
 };
 
 function invoicePeriodValue(row: any) {
-  const fieldYear = Number(row.periodYear || row.period_year || 0);
-  const fieldMonth = Number(row.periodMonth || row.period_month || 0);
-  if (fieldYear && fieldMonth) return fieldYear * 100 + fieldMonth;
-
   const text = String([row.invoiceName, row.noFaktur, row.noInvoice].filter(Boolean).join(" "));
   const textLower = text.toLowerCase();
   const textYear = Number(text.match(/20\d{2}/)?.[0] || 0);
@@ -264,6 +260,10 @@ function invoicePeriodValue(row: any) {
 
   const invoiceNumberPeriod = String(row.noFaktur || row.noInvoice || "").match(/\/(0?[1-9]|1[0-2])\/(20\d{2})/);
   if (invoiceNumberPeriod) return Number(invoiceNumberPeriod[2]) * 100 + Number(invoiceNumberPeriod[1]);
+
+  const fieldYear = Number(row.periodYear || row.period_year || 0);
+  const fieldMonth = Number(row.periodMonth || row.period_month || 0);
+  if (fieldYear && fieldMonth) return fieldYear * 100 + fieldMonth;
 
   return 0;
 }
@@ -286,7 +286,7 @@ function pageNumbers(page: number, totalPages: number) {
 
 export function InternetServicesPage() {
   const pageSize = 10;
-  const { rows, toast, loading } = useRows<any>("/internet-services?limit=5000");
+  const { rows, toast, loading } = useRows<any>("/internet-services?limit=5000&sort=latest");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [now, setNow] = useState<Date | null>(null);
   const [search, setSearch] = useState("");
@@ -305,7 +305,7 @@ export function InternetServicesPage() {
   useEffect(() => {
     setPage(1);
     setExpandedId(null);
-  }, [search]);
+  }, [search, rows]);
 
   useEffect(() => {
     setPage((current) => Math.min(current, totalPages));

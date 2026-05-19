@@ -60,8 +60,29 @@ function formatRupiahInput(value: string) {
   return new Intl.NumberFormat("id-ID").format(Number(raw));
 }
 
+function paymentTimeValue(row: any) {
+  const paidTime = row.paidAt ? new Date(row.paidAt).getTime() : 0;
+  if (paidTime && !Number.isNaN(paidTime)) return paidTime;
+
+  const periodText = String([row.invoiceNo, row.referenceNo].filter(Boolean).join(" "));
+  const match = periodText.match(/[/-](0?[1-9]|1[0-2])[/-](20\d{2})/);
+  if (match) return new Date(Number(match[2]), Number(match[1]) - 1, 1).getTime();
+
+  const createdTime = row.createdAt ? new Date(row.createdAt).getTime() : 0;
+  return Number.isNaN(createdTime) ? 0 : createdTime;
+}
+
+function sortPaymentsByLatest(rows: any[]) {
+  return [...rows].sort((a, b) => {
+    const timeDiff = paymentTimeValue(b) - paymentTimeValue(a);
+    if (timeDiff !== 0) return timeDiff;
+    return String(b.referenceNo || "").localeCompare(String(a.referenceNo || ""));
+  });
+}
+
 export function FinanceCrudPage() {
-  const { rows, toast, remove, loading } = useRows("/finance?limit=5000");
+  const { rows, toast, remove, loading } = useRows("/finance?limit=5000&sort=latest");
+  const sortedRows = useMemo(() => sortPaymentsByLatest(rows), [rows]);
   const stats = useMemo(() => ({
     total: rows.reduce((sum, item) => sum + Number(item.amount || 0), 0),
     verified: rows.filter((item) => item.status === "verified").length,
@@ -79,7 +100,7 @@ export function FinanceCrudPage() {
       </div>}
       {loading ? <TableSkeleton columns={8} /> :
       <DataTable
-        data={rows}
+        data={sortedRows}
         editBasePath="/keuangan"
         onDelete={(row) => remove(row, "Pembayaran berhasil dihapus.")}
         columns={[

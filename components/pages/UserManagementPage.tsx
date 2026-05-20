@@ -5,6 +5,7 @@
 import api from "@/lib/api";
 import { Badge, Card, DataTable, PageHeader, SelectInput, StatSkeleton, TableSkeleton, TextInput } from "@/components/ui/AdminUI";
 import { date } from "@/lib/format";
+import { useAuthStore } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ShieldAlert, ShieldCheck, UserCog, Users } from "lucide-react";
@@ -49,6 +50,8 @@ const roleLabel = (role?: string) => {
 };
 
 export function UserManagementPage() {
+  const currentUser = useAuthStore((state) => state.user);
+  const isAdmin = currentUser?.role === "admin";
   const [rows, setRows] = useState<any[]>([]);
   const [toast, setToast] = useState("");
   const [loading, setLoading] = useState(true);
@@ -59,18 +62,26 @@ export function UserManagementPage() {
     setLoading(true);
     setToast("");
     const params = new URLSearchParams({ limit: "100" });
-    if (roleFilter === "panel") params.set("excludeRole", "pelanggan");
-    else if (roleFilter !== "all") params.set("role", roleFilter);
-    if (statusFilter !== "all") params.set("status", statusFilter);
+    if (!isAdmin) {
+      if (roleFilter === "panel") params.set("excludeRole", "pelanggan");
+      else if (roleFilter !== "all") params.set("role", roleFilter);
+      if (statusFilter !== "all") params.set("status", statusFilter);
+    }
 
     api.get("/users?" + params.toString())
-      .then((res) => setRows(res.data.data))
+      .then((res) => {
+        const data = Array.isArray(res.data.data) ? res.data.data : [];
+        const visibleRows = isAdmin
+          ? data.filter((row: any) => row.id === currentUser?.id || row.email === currentUser?.email)
+          : data;
+        setRows(visibleRows);
+      })
       .catch(() => {
         setRows([]);
         setToast("Gagal memuat data user. Pastikan backend aktif dan sesi login valid.");
       })
       .finally(() => setLoading(false));
-  }, [roleFilter, statusFilter]);
+  }, [currentUser?.email, currentUser?.id, isAdmin, roleFilter, statusFilter]);
 
   useEffect(() => {
     load();
@@ -83,6 +94,10 @@ export function UserManagementPage() {
   }, [rows]);
 
   async function handleDelete(row: any) {
+    if (isAdmin) {
+      setToast("Admin hanya dapat melihat dan mengubah profil sendiri.");
+      return;
+    }
     if (row.role === "super_admin") {
       setToast("Super admin tidak bisa dihapus.");
       return;
@@ -99,7 +114,12 @@ export function UserManagementPage() {
 
   return (
     <div>
-      <PageHeader title="User Management" subtitle="Kelola pendaftaran akun, role, status, dan akses panel admin." actionHref="/users/new" actionLabel="Tambah User" />
+      <PageHeader
+        title="User Management"
+        subtitle={isAdmin ? "Profil akun admin yang sedang login." : "Kelola pendaftaran akun, role, status, dan akses panel admin."}
+        actionHref={isAdmin ? undefined : "/users/new"}
+        actionLabel={isAdmin ? undefined : "Tambah User"}
+      />
 
       {toast ? (
         <div className="mb-4 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-700">
@@ -107,7 +127,7 @@ export function UserManagementPage() {
         </div>
       ) : null}
 
-      <Card className="mb-6 p-4">
+      {!isAdmin ? <Card className="mb-6 p-4">
         <div className="grid gap-4 xl:grid-cols-[1fr_260px_220px] xl:items-end">
           <div>
             <p className="text-sm font-bold text-slate-900">Filter akun</p>
@@ -118,13 +138,13 @@ export function UserManagementPage() {
           <SelectInput label="Role" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} options={managementRoleOptions} />
           <SelectInput label="Status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} options={managementStatusOptions} />
         </div>
-      </Card>
+      </Card> : null}
 
-      {loading ? <StatSkeleton count={3} /> : <div className="mb-6 grid gap-4 md:grid-cols-3">
+      {loading ? <StatSkeleton count={isAdmin ? 2 : 3} /> : <div className={"mb-6 grid gap-4 " + (isAdmin ? "md:grid-cols-2" : "md:grid-cols-3")}>
         <Card className="p-5">
           <div className="flex items-center gap-3">
             <div className="grid h-11 w-11 place-items-center rounded-xl bg-indigo-500 text-white"><Users size={20} /></div>
-            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Akun Ditampilkan</p><p className="text-2xl font-black">{rows.length}</p></div>
+            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{isAdmin ? "Profil Ditampilkan" : "Akun Ditampilkan"}</p><p className="text-2xl font-black">{rows.length}</p></div>
           </div>
         </Card>
         <Card className="p-5">
@@ -133,12 +153,12 @@ export function UserManagementPage() {
             <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">User Aktif</p><p className="text-2xl font-black">{stats.active}</p></div>
           </div>
         </Card>
-        <Card className="p-5">
+        {!isAdmin ? <Card className="p-5">
           <div className="flex items-center gap-3">
             <div className="grid h-11 w-11 place-items-center rounded-xl bg-rose-500 text-white"><ShieldAlert size={20} /></div>
             <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Super Admin</p><p className="text-2xl font-black">{stats.superAdmins}</p></div>
           </div>
-        </Card>
+        </Card> : null}
       </div>}
 
       {loading ? <TableSkeleton columns={7} /> :
@@ -146,7 +166,7 @@ export function UserManagementPage() {
         data={rows}
         editBasePath="/users"
         onDelete={handleDelete}
-        canDelete={(row: any) => row.role !== "super_admin"}
+        canDelete={(row: any) => !isAdmin && row.role !== "super_admin"}
         searchPlaceholder="Cari nama, email, role..."
         columns={[
           { key: "name", header: "Nama", render: (row: any) => <span className="font-semibold text-slate-900">{row.name}</span> },
@@ -164,6 +184,8 @@ export function UserManagementPage() {
 
 export function UserFormPage({ edit = false, id, backHref = "/users", defaultRole = "admin" }: { edit?: boolean; id?: string; backHref?: string; defaultRole?: string }) {
   const router = useRouter();
+  const currentUser = useAuthStore((state) => state.user);
+  const isAdmin = currentUser?.role === "admin";
   const [loading, setLoading] = useState(edit);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
@@ -221,10 +243,11 @@ export function UserFormPage({ edit = false, id, backHref = "/users", defaultRol
   }
 
   const isProtectedSuperAdmin = edit && form.role === "super_admin";
+  const isAdminProfileForm = isAdmin && edit;
 
   return (
     <div>
-      <PageHeader title={edit ? "Edit User" : "Tambah User"} subtitle="Atur identitas akun, role, password, dan status akses." />
+      <PageHeader title={edit ? "Edit User" : "Tambah User"} subtitle={isAdminProfileForm ? "Admin hanya dapat memperbarui nama, email, dan password akun sendiri." : "Atur identitas akun, role, password, dan status akses."} />
       <Card className="p-6">
         {error ? <div className="mb-5 rounded-lg bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div> : null}
         {isProtectedSuperAdmin ? (
@@ -237,13 +260,13 @@ export function UserFormPage({ edit = false, id, backHref = "/users", defaultRol
           <div className="grid gap-5 lg:grid-cols-2">
             <TextInput label="Nama Lengkap" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Contoh: Admin Operasional" />
             <TextInput label="Email" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} placeholder="admin@ringnet.com" />
-            <SelectInput label="Role" value={form.role} disabled={isProtectedSuperAdmin} onChange={(event) => setForm({ ...form, role: event.target.value })} options={roleOptions} />
-            <SelectInput label="Status" value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })} options={statusOptions} />
+            <SelectInput label="Role" value={form.role} disabled={isProtectedSuperAdmin || isAdminProfileForm} onChange={(event) => setForm({ ...form, role: event.target.value })} options={roleOptions} />
+            <SelectInput label="Status" value={form.status} disabled={isAdminProfileForm} onChange={(event) => setForm({ ...form, status: event.target.value })} options={statusOptions} />
             <TextInput label={edit ? "Password Baru (opsional)" : "Password"} type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} placeholder={edit ? "Kosongkan jika tidak diubah" : "Masukkan password"} />
           </div>
           <div className="flex justify-end gap-3 border-t border-slate-100 pt-5">
             <button type="button" onClick={() => router.push(backHref)} className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700">Batal</button>
-            <button className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#6366F1] px-5 text-sm font-semibold text-white shadow-sm shadow-indigo-200"><UserCog size={16} /> Simpan User</button>
+            <button className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#6366F1] px-5 text-sm font-semibold text-white shadow-sm shadow-indigo-200"><UserCog size={16} /> {isAdminProfileForm ? "Simpan Profil" : "Simpan User"}</button>
           </div>
         </form>
       </Card>

@@ -13,7 +13,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const adminRestricted = pathname.startsWith("/radius") || pathname === "/users/pop" || pathname.startsWith("/users/pop/");
+  const adminRestricted = pathname.startsWith("/radius")
+    || pathname === "/users/pop"
+    || pathname.startsWith("/users/pop/")
+    || pathname === "/laporan"
+    || pathname.startsWith("/laporan/")
+    || pathname === "/users/new";
 
   useEffect(() => {
     if (user?.role === "admin" && adminRestricted) {

@@ -4,6 +4,7 @@
 
 import api from "@/lib/api";
 import { Badge, Card, PageHeader, ShimmerBlock, StatCard } from "@/components/ui/AdminUI";
+import { useAuthStore } from "@/hooks/useAuth";
 import { currency } from "@/lib/format";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Receipt, TrendingUp, Users, Wallet } from "lucide-react";
@@ -26,6 +27,8 @@ const emptySummary = {
 };
 
 export default function DashboardPage() {
+  const user = useAuthStore((state) => state.user);
+  const isAdmin = user?.role === "admin";
   const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState(emptySummary);
@@ -77,7 +80,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="mt-6">
+      {!isAdmin ? <div className="mt-6">
         <Card className="overflow-hidden p-0">
           <div className="bg-slate-600 px-5 py-3">
             <h2 className="font-medium text-white">Penggunaan Harian</h2>
@@ -130,7 +133,7 @@ export default function DashboardPage() {
             </div>
           </div>
         </Card>
-      </div>
+      </div> : null}
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.5fr_0.9fr]">
         <Card className="p-5">

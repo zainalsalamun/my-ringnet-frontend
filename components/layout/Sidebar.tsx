@@ -56,6 +56,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: { sidebarOpen?:
   const [financeMenuOpen, setFinanceMenuOpen] = useState(financeMenuActive);
   const [settingMenuOpen, setSettingMenuOpen] = useState(settingMenuActive);
   const visibleUserChildren = userChildren.filter((item) => !(isAdmin && item.href === "/users/pop"));
+  const visibleGroups = groups.filter((item) => !(isAdmin && item.href === "/laporan"));
 
   useEffect(() => {
     setSidebarOpen?.(false);
@@ -161,7 +162,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: { sidebarOpen?:
             </div>
           ) : null}
         </div> : null}
-        {groups.map((item) => {
+        {visibleGroups.map((item) => {
           const Icon = item.icon;
           const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
           return (

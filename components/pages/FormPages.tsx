@@ -275,26 +275,50 @@ export function CompanyForm({ edit = false, id }: { edit?: boolean; id?: string 
 
 export function PartnerForm({ edit = false, id }: { edit?: boolean; id?: string }) {
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ partnerCode: "", name: "", phone: "", email: "", city: "Jakarta", area: "Jakarta", status: "active" });
+  const [form, setForm] = useState({ partnerCode: "", partnerType: "mitra", name: "", phone: "", email: "", loginEmail: "", accountPassword: "", address: "", city: "Jakarta", area: "Jakarta", coordinate: "", picName: "", picPhone: "", npwpNumber: "", nibNumber: "", certificateNumber: "", agreementNumber: "", agreementStart: "", agreementEnd: "", bandwidthFee: "0", profitSharePercent: "20", bhpUsoPercent: "1.75", ksoPercent: "3", status: "active" });
   const submit = useSubmit(edit ? "/partners/" + id : "/partners", "/users/mitra", edit ? "put" : "post");
 
   useEffect(() => {
     if (!edit || !id) return;
     api.get("/partners/" + id)
-      .then((res) => setForm((current) => mergeCleanForm(current, res.data.data || {})))
+      .then((res) => {
+        const data = res.data.data || {};
+        setForm((current) => mergeCleanForm(current, { ...data, loginEmail: data.user?.email || data.email || "", agreementStart: data.agreementStart ? String(data.agreementStart).slice(0, 10) : "", agreementEnd: data.agreementEnd ? String(data.agreementEnd).slice(0, 10) : "", accountPassword: "" }));
+      })
       .catch((err) => setError(err.response?.data?.message || "Gagal memuat data mitra dari database."));
   }, [edit, id]);
 
   async function save() {
     setError("");
+    if (!form.name || !form.loginEmail || (!edit && !form.accountPassword)) {
+      setError("Nama, email login, dan password portal wajib diisi untuk mitra baru.");
+      return;
+    }
     try {
       await submit({
         partnerCode: form.partnerCode,
+        partnerType: form.partnerType,
         name: form.name,
         phone: form.phone,
         email: form.email,
+        loginEmail: form.loginEmail,
+        accountPassword: form.accountPassword || undefined,
+        address: form.address,
         area: form.area,
         city: form.city,
+        coordinate: form.coordinate,
+        picName: form.picName,
+        picPhone: form.picPhone,
+        npwpNumber: form.npwpNumber,
+        nibNumber: form.nibNumber,
+        certificateNumber: form.certificateNumber,
+        agreementNumber: form.agreementNumber,
+        agreementStart: form.agreementStart,
+        agreementEnd: form.agreementEnd,
+        bandwidthFee: form.bandwidthFee,
+        profitSharePercent: form.profitSharePercent,
+        bhpUsoPercent: form.bhpUsoPercent,
+        ksoPercent: form.ksoPercent,
         status: form.status,
       });
     } catch (err: any) {
@@ -302,13 +326,30 @@ export function PartnerForm({ edit = false, id }: { edit?: boolean; id?: string 
     }
   }
 
-  return <FormShell title={(edit ? "Edit" : "Tambah") + " Mitra"} subtitle="Informasi mitra perseorangan atau individual sebagai channel sales." onSubmit={save} backHref="/users/mitra">{error ? <div className="rounded-lg bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div> : null}<div className="grid gap-5 lg:grid-cols-2">
+  return <FormShell title={(edit ? "Edit" : "Tambah") + " Reseller / Mitra"} subtitle="Buat profil, akun login, legalitas, dan skema pembukuan reseller/mitra." onSubmit={save} backHref="/users/mitra">{error ? <div className="rounded-lg bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div> : null}<div className="grid gap-5 lg:grid-cols-2">
     <TextInput label="ID Mitra" value={form.partnerCode} onChange={(e) => setForm({ ...form, partnerCode: e.target.value })} placeholder="Otomatis jika kosong" />
+    <SelectInput label="Jenis Akun" value={form.partnerType} onChange={(e) => setForm({ ...form, partnerType: e.target.value })} options={[{ label: "Mitra", value: "mitra" }, { label: "Reseller", value: "reseller" }]} />
     <TextInput label="Nama Mitra Individual" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-    <TextInput label="Area" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} />
     <TextInput label="No Telepon" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-    <TextInput label="Kota" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
     <TextInput label="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+    <TextInput label="Email Login Portal" type="email" value={form.loginEmail} onChange={(e) => setForm({ ...form, loginEmail: e.target.value })} placeholder="mitra@ringnet.com" />
+    <TextInput label={edit ? "Password Baru (opsional)" : "Password Portal"} type="password" value={form.accountPassword} onChange={(e) => setForm({ ...form, accountPassword: e.target.value })} placeholder={edit ? "Kosongkan jika tidak diubah" : "Minimal 8 karakter"} />
+    <TextInput label="Nama PIC" value={form.picName} onChange={(e) => setForm({ ...form, picName: e.target.value })} />
+    <TextInput label="Telepon PIC" value={form.picPhone} onChange={(e) => setForm({ ...form, picPhone: e.target.value })} />
+    <TextInput label="Alamat" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+    <TextInput label="Area" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} />
+    <TextInput label="Kota" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+    <TextInput label="Koordinat" value={form.coordinate} onChange={(e) => setForm({ ...form, coordinate: e.target.value })} placeholder="-7.7956, 110.3695" />
+    <TextInput label="Nomor NPWP" value={form.npwpNumber} onChange={(e) => setForm({ ...form, npwpNumber: e.target.value })} />
+    <TextInput label="Nomor NIB" value={form.nibNumber} onChange={(e) => setForm({ ...form, nibNumber: e.target.value })} />
+    <TextInput label="Nomor Sertifikat Standar" value={form.certificateNumber} onChange={(e) => setForm({ ...form, certificateNumber: e.target.value })} />
+    <TextInput label="Nomor PKS" value={form.agreementNumber} onChange={(e) => setForm({ ...form, agreementNumber: e.target.value })} />
+    <TextInput label="Tanggal Mulai PKS" type="date" value={form.agreementStart} onChange={(e) => setForm({ ...form, agreementStart: e.target.value })} />
+    <TextInput label="Tanggal Berakhir PKS" type="date" value={form.agreementEnd} onChange={(e) => setForm({ ...form, agreementEnd: e.target.value })} />
+    <TextInput label="Biaya Supply Bandwidth" type="number" value={form.bandwidthFee} onChange={(e) => setForm({ ...form, bandwidthFee: e.target.value })} />
+    <TextInput label="Sharing Profit (%)" type="number" step="0.01" value={form.profitSharePercent} onChange={(e) => setForm({ ...form, profitSharePercent: e.target.value })} />
+    <TextInput label="BHP USO (%)" type="number" step="0.01" value={form.bhpUsoPercent} onChange={(e) => setForm({ ...form, bhpUsoPercent: e.target.value })} />
+    <TextInput label="KSO (%)" type="number" step="0.01" value={form.ksoPercent} onChange={(e) => setForm({ ...form, ksoPercent: e.target.value })} />
     <SelectInput label="Status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} options={statusOptions} />
   </div></FormShell>;
 }

@@ -9,6 +9,7 @@ import { currency } from "@/lib/format";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Receipt, TrendingUp, Users, Wallet } from "lucide-react";
 import { useEffect, useState } from "react";
+import { MitraDashboardPage } from "@/components/pages/MitraPortalPages";
 
 const emptySummary = {
   totalPelanggan: 0,
@@ -26,7 +27,7 @@ const emptySummary = {
   dailyUsage: [] as { time: string; download: number; upload: number }[],
 };
 
-export default function DashboardPage() {
+function AdminDashboardPage() {
   const user = useAuthStore((state) => state.user);
   const isAdmin = user?.role === "admin";
   const [ready, setReady] = useState(false);
@@ -202,4 +203,10 @@ export default function DashboardPage() {
       </div>
     </div>
   );
+}
+
+export default function DashboardPage() {
+  const user = useAuthStore((state) => state.user);
+  if (!user) return <div className="space-y-4"><ShimmerBlock className="h-24" /><ShimmerBlock className="h-80" /></div>;
+  return user.role === "mitra" ? <MitraDashboardPage /> : <AdminDashboardPage />;
 }

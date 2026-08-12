@@ -74,6 +74,8 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
   const displayRole = roleLabel(user?.role);
 
   useEffect(() => {
+    if (!user) return;
+    if (user.role === "mitra") return;
     api.get("/dashboard/notifications")
       .then((res) => {
         const data = Array.isArray(res.data.data) ? res.data.data : [];
@@ -84,7 +86,7 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
         setItems([]);
         setSelected(null);
       });
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     function closeOnOutside(event: MouseEvent) {
@@ -124,7 +126,7 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
         <button onClick={() => setSidebarOpen?.(true)} className="grid h-10 w-10 place-items-center rounded-lg border border-slate-200 text-slate-600 lg:hidden"><Menu size={20} /></button>
         <div className="relative hidden w-full max-w-xl md:block">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-          <input className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100" placeholder="Cari pelanggan, invoice, layanan..." />
+          <input className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100" placeholder={user?.role === "mitra" ? "Cari pelanggan, tiket, atau invoice..." : "Cari pelanggan, invoice, layanan..."} />
         </div>
       </div>
       <div className="flex items-center gap-4">
@@ -233,11 +235,11 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
               </div>
 
               <div className="p-2">
-                <Link href="/users" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-slate-950">
+                <Link href={user?.role === "mitra" ? "/mitra/profil" : "/users"} onClick={() => setProfileOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-slate-950">
                   <div className="grid h-9 w-9 place-items-center rounded-lg bg-indigo-50 text-indigo-600"><UserCog size={17} /></div>
                   User Management
                 </Link>
-                <Link href="/pengaturan" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-slate-950">
+                <Link href={user?.role === "mitra" ? "/mitra/profil" : "/pengaturan"} onClick={() => setProfileOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-slate-950">
                   <div className="grid h-9 w-9 place-items-center rounded-lg bg-slate-100 text-slate-600"><Settings size={17} /></div>
                   Pengaturan Akun
                 </Link>

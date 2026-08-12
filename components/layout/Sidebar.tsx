@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/hooks/useAuth";
 import { BarChart3, ChevronDown, FileStack, FileText, Network, Settings, UserRoundCog, Wallet } from "lucide-react";
 import { useEffect, useState } from "react";
+import MitraSidebar from "@/components/layout/MitraSidebar";
 
 const groups = [
   { label: "Laporan", href: "/laporan", icon: FileText },
@@ -61,6 +62,8 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: { sidebarOpen?:
   useEffect(() => {
     setSidebarOpen?.(false);
   }, [pathname, setSidebarOpen]);
+
+  if (user?.role === "mitra") return <MitraSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />;
 
   return (
     <>

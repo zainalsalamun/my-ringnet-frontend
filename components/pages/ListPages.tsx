@@ -117,12 +117,13 @@ export function PartnersPage() {
   const { rows, setRows, toast, setToast, loading } = useRows<any>("/partners?limit=5000");
   return (
     <div>
-      <PageHeader title="Mitra Bisnis" subtitle="Kelola mitra perseorangan atau individual sebagai channel penjualan MyRingNet." actionHref="/users/mitra/new" actionLabel="Tambah Mitra" />
+      <PageHeader title="Reseller & Mitra" subtitle="Kelola akun reseller atau mitra sebagai channel penjualan MyRingNet." actionHref="/users/mitra/new" actionLabel="Tambah Reseller / Mitra" />
       <Toast message={toast} />
       {loading ? <TableSkeleton columns={6} /> :
       <DataTable data={rows as any[]} editBasePath="/users/mitra" onDelete={(row) => deleteRow("/partners", row, setRows as any, setToast, "Mitra berhasil dihapus.")}
         columns={[
           { key: "partnerCode", header: "ID Mitra", render: (row: any) => <Link href={`/users/mitra/${row.id}`} className="font-semibold text-indigo-600 hover:underline">{row.partnerCode || "-"}</Link> },
+          { key: "partnerType", header: "Jenis", render: (row: any) => <Badge value={row.partnerType === "reseller" ? "Reseller" : "Mitra"} /> },
           { key: "name", header: "Nama Mitra", render: (row: any) => <span className="font-semibold text-slate-900">{row.name}</span> },
           { key: "phone", header: "Kontak" },
           { key: "email", header: "Email", render: (row: any) => row.email || "-" },

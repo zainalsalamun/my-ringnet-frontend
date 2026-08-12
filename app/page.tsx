@@ -4,7 +4,8 @@ import api from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
-import { Lock, Mail, RadioTower, Wifi } from "lucide-react";
+import { Lock, Mail, RadioTower, UserPlus, Wifi } from "lucide-react";
+import Link from "next/link";
 
 function getLoginErrorMessage(err: any) {
   if (!err.response) {
@@ -121,6 +122,7 @@ export default function LoginPage() {
             Simpan email login
           </label>
           <button disabled={loading} className="mt-6 h-11 w-full rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 text-sm font-bold text-white shadow-lg shadow-indigo-200 disabled:opacity-70">{loading ? "Memproses..." : "Masuk"}</button>
+          <Link href="/register-mitra" className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 text-sm font-bold text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100"><UserPlus size={17} /> Daftar sebagai Reseller / Mitra</Link>
           <p className="mt-6 text-center text-xs text-slate-400">© 2026 MyRingNet. All rights reserved.</p>
         </form>
       </section>

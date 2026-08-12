@@ -16,7 +16,7 @@ const userChildren = [
   { label: "User Management", href: "/users" },
   { label: "Pelanggan", href: "/users/pelanggan" },
   { label: "Bisnis / Perusahaan", href: "/users/bisnis" },
-  { label: "Marketing", href: "/users/mitra" },
+  { label: "Reseller / Mitra", href: "/users/mitra" },
   { label: "POP", href: "/users/pop" },
 ];
 

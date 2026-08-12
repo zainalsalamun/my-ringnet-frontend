@@ -12,7 +12,7 @@ type Column<T> = {
   className?: string;
 };
 
-export function PageHeader({ title, subtitle, actionHref, actionLabel }: { title: string; subtitle: string; actionHref?: string; actionLabel?: string }) {
+export function PageHeader({ title, subtitle, actionHref, actionLabel, rightContent }: { title: string; subtitle: string; actionHref?: string; actionLabel?: string; rightContent?: ReactNode }) {
   return (
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
@@ -20,11 +20,11 @@ export function PageHeader({ title, subtitle, actionHref, actionLabel }: { title
         <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">{title}</h1>
         <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
       </div>
-      {actionHref && actionLabel ? (
+      {rightContent || (actionHref && actionLabel ? (
         <Link href={actionHref} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#6366F1] px-4 text-sm font-semibold text-white shadow-sm shadow-indigo-200 transition hover:bg-indigo-500">
           <Plus size={16} /> {actionLabel}
         </Link>
-      ) : null}
+      ) : null)}
     </div>
   );
 }

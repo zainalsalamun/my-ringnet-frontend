@@ -1,5 +1,7 @@
 # MyRingNet Frontend
 
+Panduan penggunaan Portal Reseller/Mitra tersedia di [USER_GUIDE_RESELLER_MITRA.md](USER_GUIDE_RESELLER_MITRA.md).
+
 Frontend admin dashboard untuk sistem manajemen ISP **MyRingNet**. Aplikasi ini dibangun dengan Next.js App Router, Tailwind CSS, Axios, Zustand, dan Recharts. UI memakai sidebar gelap, area konten terang, tabel operasional, form CRUD, dropdown custom, shimmer loading, panel notifikasi, peta OpenStreetMap, dan invoice builder.
 
 ## Stack

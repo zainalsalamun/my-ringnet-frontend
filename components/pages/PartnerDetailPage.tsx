@@ -3,13 +3,14 @@
 import api from "@/lib/api";
 import { Badge, Card, DataTable, PageHeader, TableSkeleton } from "@/components/ui/AdminUI";
 import { currency, date, monthName } from "@/lib/format";
-import { Building2, FileText, Loader2, MapPin, Phone, Search, Ticket, Trash2, UserPlus, Users, X } from "lucide-react";
+import { Building2, CheckCircle2, FileText, Loader2, MapPin, Phone, Search, Ticket, Trash2, UserPlus, Users, X, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 type PartnerDetail = {
   id: string;
   partnerCode?: string | null;
+  partnerType?: string | null;
   name: string;
   email?: string | null;
   phone?: string | null;
@@ -20,7 +21,16 @@ type PartnerDetail = {
   customers: any[];
   invoices: any[];
   tickets: any[];
+  technicalAssets: any[];
+  documents: any[];
+  registrationSource?: string;
+  submittedAt?: string | null;
+  reviewedAt?: string | null;
+  reviewNotes?: string | null;
+  termsAcceptedAt?: string | null;
 };
+
+const API_ORIGIN = (process.env.NEXT_PUBLIC_API || "").replace(/\/api\/?$/, "");
 
 function InfoRow({ label, value }: { label: string; value?: string | null }) {
   return (
@@ -176,6 +186,15 @@ export default function PartnerDetailPage({ id }: { id: string }) {
       .catch((err) => setToast(err.response?.data?.message || "Gagal melepas pelanggan."));
   }
 
+  function decideRegistration(decision: "approved" | "rejected") {
+    const label = decision === "approved" ? "menyetujui" : "menolak";
+    if (!window.confirm(`Yakin ingin ${label} pengajuan Mitra ini?`)) return;
+    const notes = decision === "rejected" ? window.prompt("Alasan penolakan:") || "Dokumen atau data belum memenuhi persyaratan." : "Pengajuan dan dokumen telah diverifikasi.";
+    api.put(`/partners/${id}/registration-decision`, { decision, notes })
+      .then((res) => { setDetail(res.data.data); setToast(res.data.message); })
+      .catch((err) => setToast(err.response?.data?.message || "Gagal memproses pengajuan Mitra."));
+  }
+
   const outstanding = useMemo(() => (
     detail?.invoices.filter((invoice) => invoice.status !== "PAID").reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0) || 0
   ), [detail]);
@@ -203,12 +222,14 @@ export default function PartnerDetailPage({ id }: { id: string }) {
     <div>
       <PageHeader title={detail.name} subtitle="Detail marketing/mitra individual, pelanggan terdaftar, faktur & tagihan, dan tiket operasional." actionHref={`/users/mitra/${detail.id}/edit`} actionLabel="Edit Mitra" />
       {toast ? <div className="mb-4 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-700">{toast}</div> : null}
+      {detail.registrationSource === "self_service" ? <Card className={`mb-6 overflow-hidden border-l-4 ${detail.status === "pending" ? "border-l-amber-500" : detail.status === "active" ? "border-l-emerald-500" : "border-l-rose-500"}`}><div className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between"><div><p className="text-xs font-black uppercase tracking-wider text-indigo-600">Registrasi Mandiri Reseller / Mitra</p><h2 className="mt-1 text-lg font-black text-slate-950">Status: <span className="uppercase">{detail.status}</span></h2><p className="mt-1 text-sm text-slate-500">Diajukan {date(detail.submittedAt)} · Persetujuan ketentuan {date(detail.termsAcceptedAt)}</p>{detail.reviewNotes ? <p className="mt-2 text-sm font-semibold text-slate-700">Catatan: {detail.reviewNotes}</p> : null}</div>{detail.status === "pending" ? <div className="flex gap-3"><button onClick={() => decideRegistration("rejected")} className="inline-flex h-10 items-center gap-2 rounded-lg border border-rose-200 px-4 text-sm font-bold text-rose-600 hover:bg-rose-50"><XCircle size={17} /> Tolak</button><button onClick={() => decideRegistration("approved")} className="inline-flex h-10 items-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-bold text-white hover:bg-emerald-500"><CheckCircle2 size={17} /> Setujui & Aktifkan</button></div> : null}</div></Card> : null}
 
-      <div className="mb-6 grid gap-4 md:grid-cols-4">
+      <div className="mb-6 grid gap-4 md:grid-cols-5">
         <SummaryCard icon={<Users size={20} />} label="Pelanggan" value={String(detail.customers.length)} />
         <SummaryCard icon={<FileText size={20} />} label="Faktur & Tagihan" value={String(detail.invoices.length)} />
         <SummaryCard icon={<Ticket size={20} />} label="Tiket" value={String(detail.tickets.length)} />
         <SummaryCard icon={<Building2 size={20} />} label="Tunggakan" value={currency(outstanding)} />
+        <SummaryCard icon={<MapPin size={20} />} label="Aset Teknis" value={String(detail.technicalAssets?.length || 0)} />
       </div>
 
       <div className="mb-6 grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
@@ -225,6 +246,7 @@ export default function PartnerDetailPage({ id }: { id: string }) {
           <div className="p-5">
             <InfoRow label="Status" value={detail.status || "active"} />
             <InfoRow label="ID Mitra" value={detail.partnerCode} />
+            <InfoRow label="Jenis Akun" value={detail.partnerType === "reseller" ? "Reseller" : "Mitra"} />
             <InfoRow label="Nama Mitra Individual" value={detail.name} />
             <InfoRow label="Nomor Telepon" value={detail.phone} />
             <InfoRow label="Alamat Surel" value={detail.email} />
@@ -257,6 +279,7 @@ export default function PartnerDetailPage({ id }: { id: string }) {
       </div>
 
       <div className="space-y-6">
+        {detail.documents?.length ? <Card className="p-5"><div className="mb-4 flex items-center gap-2"><FileText size={18} className="text-indigo-600" /><h2 className="font-black text-slate-950">Dokumen Pengajuan Mitra</h2></div><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">{detail.documents.map((document) => <a key={document.id} href={`${API_ORIGIN}${document.filePath}`} target="_blank" rel="noreferrer" className="rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-indigo-300 hover:bg-indigo-50"><p className="text-xs font-bold uppercase text-indigo-600">{document.category?.name || "Dokumen"}</p><p className="mt-1 text-sm font-bold text-slate-900">{document.name}</p><p className="mt-2 text-xs text-slate-400">Klik untuk memeriksa</p></a>)}</div></Card> : null}
         <DataTable
           title="Pelanggan Terdaftar"
           data={detail.customers}
@@ -306,6 +329,22 @@ export default function PartnerDetailPage({ id }: { id: string }) {
             { key: "priority", header: "Prioritas", render: (row: any) => <Badge value={row.priority} /> },
             { key: "status", header: "Status", render: (row: any) => <Badge value={row.status} /> },
             { key: "createdAt", header: "Tanggal", render: (row: any) => date(row.createdAt) },
+          ]}
+        />
+
+        <DataTable
+          title="Data Teknis Mitra"
+          data={detail.technicalAssets || []}
+          searchPlaceholder="Cari router, switch, ODC, ODP, atau lokasi..."
+          columns={[
+            { key: "assetType", header: "Jenis", render: (row: any) => <span className="font-bold uppercase text-indigo-600">{row.assetType}</span> },
+            { key: "name", header: "Nama Aset" },
+            { key: "category", header: "Kategori", render: (row: any) => <Badge value={row.category} /> },
+            { key: "serialNo", header: "Serial" },
+            { key: "ipAddress", header: "IP Address" },
+            { key: "location", header: "Lokasi" },
+            { key: "coordinate", header: "Koordinat" },
+            { key: "status", header: "Status", render: (row: any) => <Badge value={row.status} /> },
           ]}
         />
       </div>

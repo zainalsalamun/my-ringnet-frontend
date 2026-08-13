@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAuthStore } from "@/hooks/useAuth";
+import api from "@/lib/api";
 import { BarChart3, BookOpenCheck, ChevronDown, CircleUserRound, FileCheck2, Headphones, Network, PackageCheck, ReceiptText, Settings2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -24,31 +25,17 @@ type MenuGroup = {
 
 const itemIsActive = (item: MenuItem, pathname: string) => item.href === pathname || item.children?.some((child) => child.href === pathname) === true;
 
-const menuGroups: MenuGroup[] = [
-  {
-    key: "terms",
-    label: "Syarat dan Ketentuan",
-    icon: BookOpenCheck,
-    items: [
-      { label: "Komdigi", href: "/mitra/syarat-komdigi" },
-      { label: "Operasional Mitra", href: "/mitra/syarat-operasional" },
-    ],
-  },
+export const getMitraMenuGroups = (pops: any[] = [], isAdmin: boolean = false): MenuGroup[] => [
   {
     key: "documents",
-    label: "Dokumen Persyaratan",
+    label: "Legal",
     icon: FileCheck2,
-    items: [
-      { label: "Data PIC Mitra", href: "/mitra/pic" },
-      { label: "Data Registrasi Mitra", href: "/mitra/registrasi" },
-      { label: "Data KTP", href: "/mitra/ktp" },
-      { label: "Data NPWP", href: "/mitra/npwp" },
-      { label: "Data NIB", href: "/mitra/nib" },
-      { label: "Data Sertifikat Standar", href: "/mitra/sertifikat" },
-      { label: "Data PKS Jasa Jual Kembali", href: "/mitra/pks" },
-    ],
+    items: isAdmin ? [
+      { label: "Data POP", href: "/users/pop" }
+    ] : [],
   },
-  { key: "support-documents", label: "Dokumen Perizinan dan Kerjasama", icon: FileCheck2, href: "/mitra/dokumen-pendukung", items: [] },
+
+
   {
     key: "tickets",
     label: "Tiketing",
@@ -121,7 +108,28 @@ const menuGroups: MenuGroup[] = [
 export default function MitraSidebar({ sidebarOpen, setSidebarOpen }: { sidebarOpen?: boolean; setSidebarOpen?: (value: boolean) => void }) {
   const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
+  const token = useAuthStore((state) => state.token);
+  const [pops, setPops] = useState<any[]>([]);
+  
+  useEffect(() => {
+    if (!token) return;
+    api.get('/mitra-portal/pops')
+      .then(res => {
+        if (res.data?.success && res.data?.data) setPops(res.data.data);
+      })
+      .catch(console.error);
+  }, [token]);
+
+  const menuGroups = useMemo(() => getMitraMenuGroups(pops, false), [pops]);
+
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => Object.fromEntries(menuGroups.map((group) => [group.key, group.items.some((item) => itemIsActive(item, pathname))])));
+
+  useEffect(() => {
+    setOpenGroups((prev) => ({
+      ...prev,
+      ...Object.fromEntries(menuGroups.map((group) => [group.key, prev[group.key] || group.items.some((item) => itemIsActive(item, pathname))]))
+    }));
+  }, [menuGroups, pathname]);
 
   useEffect(() => setSidebarOpen?.(false), [pathname, setSidebarOpen]);
 

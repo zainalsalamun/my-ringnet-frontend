@@ -36,13 +36,17 @@ function formatCoordinate(lat: number, lng: number) {
 }
 
 type CoordinatePickerProps = {
-  open: boolean;
+  open?: boolean;
+  inline?: boolean;
   value: string;
-  onClose: () => void;
-  onSave: (value: string) => void;
+  onClose?: () => void;
+  onSave?: (value: string) => void;
+  onChange?: (value: string) => void;
+  hideSearch?: boolean;
+  readonly?: boolean;
 };
 
-export default function CoordinatePicker({ open, value, onClose, onSave }: CoordinatePickerProps) {
+export default function CoordinatePicker({ open = true, inline, value, onClose, onSave, onChange, hideSearch, readonly }: CoordinatePickerProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ x: number; y: number; centerX: number; centerY: number; moved: boolean } | null>(null);
   const [size, setSize] = useState({ width: 900, height: 500 });
@@ -55,17 +59,19 @@ export default function CoordinatePicker({ open, value, onClose, onSave }: Coord
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
 
+  const isOpen = inline ? true : open;
+
   useEffect(() => {
-    if (!open) return;
+    if (!isOpen) return;
     const next = parseCoordinate(value) || DEFAULT_CENTER;
     setCenter(next);
     setSelected(next);
     setCoordinateInput(formatCoordinate(next.lat, next.lng));
     setSearchError("");
-  }, [open, value]);
+  }, [isOpen, value]);
 
   useEffect(() => {
-    if (!open || !mapRef.current) return;
+    if (!isOpen || !mapRef.current) return;
     const updateSize = () => {
       const rect = mapRef.current?.getBoundingClientRect();
       if (rect) setSize({ width: rect.width, height: rect.height });
@@ -74,7 +80,7 @@ export default function CoordinatePicker({ open, value, onClose, onSave }: Coord
     const observer = new ResizeObserver(updateSize);
     observer.observe(mapRef.current);
     return () => observer.disconnect();
-  }, [open]);
+  }, [isOpen]);
 
   const geometry = useMemo(() => {
     const centerX = lngToX(center.lng, zoom);
@@ -110,18 +116,20 @@ export default function CoordinatePicker({ open, value, onClose, onSave }: Coord
     };
   }, [geometry.topLeftX, geometry.topLeftY, selected, zoom]);
 
-  if (!open) return null;
+  if (!open && !inline) return null;
 
   function updateZoom(nextZoom: number) {
     setZoom(Math.max(5, Math.min(18, nextZoom)));
   }
 
-  function applyCoordinateInput(nextValue: string) {
-    setCoordinateInput(nextValue);
-    const parsed = parseCoordinate(nextValue);
-    if (!parsed) return;
-    setSelected(parsed);
-    setCenter(parsed);
+  function applyCoordinateInput(val: string) {
+    setCoordinateInput(val);
+    const parsed = parseCoordinate(val);
+    if (parsed) {
+      setCenter(parsed);
+      setSelected(parsed);
+      if (inline && onChange) onChange(formatCoordinate(parsed.lat, parsed.lng));
+    }
   }
 
   async function searchLocation() {
@@ -150,14 +158,17 @@ export default function CoordinatePicker({ open, value, onClose, onSave }: Coord
         setSearchError("Wilayah tidak ditemukan.");
         return;
       }
-      const next = { lat: Number(first.lat), lng: Number(first.lon) };
-      if (!Number.isFinite(next.lat) || !Number.isFinite(next.lng)) {
+      const lat = Number(first.lat);
+      const lng = Number(first.lon);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
         setSearchError("Koordinat hasil pencarian tidak valid.");
         return;
       }
-      setCenter(next);
-      setSelected(next);
-      setCoordinateInput(formatCoordinate(next.lat, next.lng));
+      setCenter({ lat, lng });
+      setSelected({ lat, lng });
+      const formatted = formatCoordinate(lat, lng);
+      setCoordinateInput(formatted);
+      if (inline && onChange) onChange(formatted);
       setZoom(15);
     } catch {
       setSearchError("Gagal mencari wilayah. Coba lagi.");
@@ -188,29 +199,32 @@ export default function CoordinatePicker({ open, value, onClose, onSave }: Coord
     const drag = dragRef.current;
     dragRef.current = null;
     event.currentTarget.releasePointerCapture(event.pointerId);
-    if (drag?.moved) return;
+    if (drag?.moved || readonly) return;
     const rect = event.currentTarget.getBoundingClientRect();
     const x = geometry.topLeftX + event.clientX - rect.left;
     const y = geometry.topLeftY + event.clientY - rect.top;
     const next = { lat: yToLat(y, zoom), lng: xToLng(x, zoom) };
     setSelected(next);
-    setCoordinateInput(formatCoordinate(next.lat, next.lng));
+    const formatted = formatCoordinate(next.lat, next.lng);
+    setCoordinateInput(formatted);
+    if (inline && onChange) onChange(formatted);
   }
 
   const selectedValue = selected ? formatCoordinate(selected.lat, selected.lng) : "";
 
-  return (
-    <div className="fixed inset-0 z-[100] bg-slate-950/55 p-4 backdrop-blur-sm">
-      <div className="mx-auto flex h-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-          <div>
-            <h2 className="text-base font-black text-slate-950">Pilih Koordinat dari Maps</h2>
-            <p className="text-sm text-slate-500">Klik titik lokasi pelanggan pada peta, lalu simpan.</p>
+  const mapContent = (
+      <div className={`flex flex-col overflow-hidden bg-white ${inline ? "rounded-xl border border-slate-200" : "mx-auto h-full max-w-6xl rounded-2xl shadow-2xl"}`}>
+        {!inline ? (
+          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+            <div>
+              <h2 className="text-base font-black text-slate-950">Pilih Koordinat dari Maps</h2>
+              <p className="text-sm text-slate-500">Klik titik lokasi pelanggan pada peta, lalu simpan.</p>
+            </div>
+            <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900">
+              <X size={16} />
+            </button>
           </div>
-          <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900">
-            <X size={16} />
-          </button>
-        </div>
+        ) : null}
 
         <div
           ref={mapRef}
@@ -221,37 +235,39 @@ export default function CoordinatePicker({ open, value, onClose, onSave }: Coord
             event.preventDefault();
             updateZoom(zoom + (event.deltaY < 0 ? 1 : -1));
           }}
-          className="relative min-h-[420px] flex-1 cursor-crosshair overflow-hidden bg-slate-200 touch-none"
+          className={`relative flex-1 overflow-hidden bg-slate-200 touch-none ${readonly ? "cursor-grab active:cursor-grabbing" : "cursor-crosshair"} ${inline ? "min-h-[300px]" : "min-h-[420px]"}`}
         >
-          <div className="absolute left-4 top-4 z-10 w-[min(calc(100%-2rem),620px)] rounded-xl border border-slate-200 bg-white p-2 shadow-xl shadow-slate-900/15">
-            <div className="flex gap-2">
-              <div className="relative min-w-0 flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                <input
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      searchLocation();
-                    }
-                  }}
-                  placeholder="Cari wilayah, alamat, atau nama tempat..."
-                  className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                />
+          {!hideSearch ? (
+            <div className="absolute left-4 top-4 z-10 w-[min(calc(100%-2rem),620px)] rounded-xl border border-slate-200 bg-white p-2 shadow-xl shadow-slate-900/15">
+              <div className="flex gap-2">
+                <div className="relative min-w-0 flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        searchLocation();
+                      }
+                    }}
+                    placeholder="Cari wilayah, alamat, atau nama tempat..."
+                    className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={searchLocation}
+                  disabled={searching}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#6366F1] px-4 text-sm font-bold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-indigo-300"
+                >
+                  {searching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+                  Cari
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={searchLocation}
-                disabled={searching}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#6366F1] px-4 text-sm font-bold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-indigo-300"
-              >
-                {searching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-                Cari
-              </button>
+              {searchError ? <p className="mt-2 px-1 text-xs font-semibold text-rose-600">{searchError}</p> : null}
             </div>
-            {searchError ? <p className="mt-2 px-1 text-xs font-semibold text-rose-600">{searchError}</p> : null}
-          </div>
+          ) : null}
 
           {geometry.tiles.map((tile) => (
             <img
@@ -269,7 +285,7 @@ export default function CoordinatePicker({ open, value, onClose, onSave }: Coord
             </div>
           ) : null}
 
-          <div className="absolute left-4 top-24 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+          <div className={`absolute left-4 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg ${hideSearch ? "top-4" : "top-24"}`}>
             <button type="button" onClick={() => updateZoom(zoom + 1)} className="grid h-10 w-10 place-items-center border-b border-slate-200 text-slate-700 hover:bg-slate-50">
               <Plus size={18} />
             </button>
@@ -279,12 +295,22 @@ export default function CoordinatePicker({ open, value, onClose, onSave }: Coord
           </div>
         </div>
 
-        <div className="grid gap-3 border-t border-slate-200 p-4 md:grid-cols-[1fr_220px_220px]">
-          <input value={coordinateInput} onChange={(event) => applyCoordinateInput(event.target.value)} placeholder="-7.782968, 110.367013" className="h-11 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
-          <button type="button" onClick={() => onSave(selectedValue || coordinateInput)} className="h-11 rounded-lg bg-[#6366F1] px-4 text-sm font-bold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-500">Simpan</button>
-          <button type="button" onClick={onClose} className="h-11 rounded-lg border border-slate-200 px-4 text-sm font-bold text-slate-600 hover:bg-slate-50">Batal</button>
-        </div>
+        {!inline ? (
+          <div className="grid gap-3 border-t border-slate-200 p-4 md:grid-cols-[1fr_220px_220px]">
+            <input value={coordinateInput} onChange={(event) => applyCoordinateInput(event.target.value)} placeholder="-7.782968, 110.367013" className="h-11 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+            <button type="button" onClick={() => onSave?.(selectedValue || coordinateInput)} className="h-11 rounded-lg bg-[#6366F1] px-4 text-sm font-bold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-500">Simpan</button>
+            <button type="button" onClick={onClose} className="h-11 rounded-lg border border-slate-200 px-4 text-sm font-bold text-slate-600 hover:bg-slate-50">Batal</button>
+          </div>
+        ) : null}
       </div>
+  );
+
+  if (inline) return mapContent;
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-slate-950/55 p-4 backdrop-blur-sm">
+      {mapContent}
     </div>
   );
 }

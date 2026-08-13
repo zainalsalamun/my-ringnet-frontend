@@ -17,6 +17,8 @@ type NotificationItem = {
   amount?: number;
   href?: string;
   createdAt?: string;
+  isRead: boolean;
+  readAt?: string | null;
   detail?: Record<string, string | number | null | undefined>;
 };
 
@@ -63,11 +65,7 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
   const [profileOpen, setProfileOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [selected, setSelected] = useState<NotificationItem | null>(null);
-  const [readIds, setReadIds] = useState<string[]>(() => {
-    if (typeof window === "undefined") return [];
-    const stored = window.localStorage.getItem("ringnet_read_notifications");
-    return stored ? JSON.parse(stored) : [];
-  });
+  const [notificationError, setNotificationError] = useState("");
   const panelRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const displayName = user?.name || "Admin RingNet";
@@ -80,11 +78,13 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
       .then((res) => {
         const data = Array.isArray(res.data.data) ? res.data.data : [];
         setItems(data);
-        setSelected(data[0] || null);
+        setSelected(null);
+        setNotificationError("");
       })
       .catch(() => {
         setItems([]);
         setSelected(null);
+        setNotificationError("Notifikasi belum dapat dimuat.");
       });
   }, [user]);
 
@@ -97,21 +97,38 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
     return () => document.removeEventListener("mousedown", closeOnOutside);
   }, []);
 
-  const unreadCount = useMemo(() => items.filter((item) => !readIds.includes(item.id)).length, [items, readIds]);
+  const unreadCount = useMemo(() => items.filter((item) => !item.isRead).length, [items]);
 
-  function persistRead(nextIds: string[]) {
-    const unique = Array.from(new Set(nextIds));
-    setReadIds(unique);
-    window.localStorage.setItem("ringnet_read_notifications", JSON.stringify(unique));
+  async function openNotification(item: NotificationItem) {
+    const nextItem = { ...item, isRead: true, readAt: item.readAt || new Date().toISOString() };
+    setSelected(nextItem);
+    if (item.isRead) return;
+    setItems((current) => current.map((entry) => entry.id === item.id ? nextItem : entry));
+    setNotificationError("");
+    try {
+      await api.post(`/dashboard/notifications/${encodeURIComponent(item.id)}/read`);
+    } catch {
+      setItems((current) => current.map((entry) => entry.id === item.id ? item : entry));
+      setSelected(item);
+      setNotificationError("Status baca gagal disimpan. Silakan coba kembali.");
+    }
   }
 
-  function openNotification(item: NotificationItem) {
-    setSelected(item);
-    persistRead([...readIds, item.id]);
-  }
-
-  function markAllRead() {
-    persistRead(items.map((item) => item.id));
+  async function markAllRead() {
+    const unreadItems = items.filter((item) => !item.isRead);
+    if (!unreadItems.length) return;
+    const previousItems = items;
+    const now = new Date().toISOString();
+    setItems((current) => current.map((item) => ({ ...item, isRead: true, readAt: item.readAt || now })));
+    setSelected((current) => current ? { ...current, isRead: true, readAt: current.readAt || now } : current);
+    setNotificationError("");
+    try {
+      await api.post("/dashboard/notifications/read-all", { notificationIds: unreadItems.map((item) => item.id) });
+    } catch {
+      setItems(previousItems);
+      setSelected((current) => current ? previousItems.find((item) => item.id === current.id) || current : current);
+      setNotificationError("Status baca semua notifikasi gagal disimpan.");
+    }
   }
 
   function handleLogout() {
@@ -144,18 +161,20 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
                   <p className="text-xs text-slate-500">{unreadCount ? `${unreadCount} belum dibaca` : "Semua sudah dibaca"}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={markAllRead} className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold text-slate-600 hover:border-indigo-200 hover:text-indigo-600"><CheckCheck size={15} /> Tandai dibaca</button>
+                  <button type="button" onClick={markAllRead} disabled={!unreadCount} className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold text-slate-600 hover:border-indigo-200 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-50"><CheckCheck size={15} /> {unreadCount ? "Tandai semua dibaca" : "Semua dibaca"}</button>
                   <button onClick={() => setOpen(false)} className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900"><X size={16} /></button>
                 </div>
               </div>
+
+              {notificationError ? <div className="border-b border-rose-100 bg-rose-50 px-5 py-2 text-xs font-semibold text-rose-700">{notificationError}</div> : null}
 
               <div className="grid max-h-[520px] md:grid-cols-[320px_1fr]">
                 <div className="max-h-[520px] overflow-y-auto border-r border-slate-100 p-2">
                   {items.length ? items.map((item) => {
                     const active = selected?.id === item.id;
-                    const unread = !readIds.includes(item.id);
+                    const unread = !item.isRead;
                     return (
-                      <button key={item.id} onClick={() => openNotification(item)} className={"flex w-full gap-3 rounded-xl p-3 text-left transition " + (active ? "bg-indigo-50" : "hover:bg-slate-50")}>
+                      <button key={item.id} onClick={() => openNotification(item)} className={"flex w-full gap-3 rounded-xl p-3 text-left transition " + (active ? "bg-indigo-50" : unread ? "bg-slate-50/70 hover:bg-slate-100" : "hover:bg-slate-50")}>
                         <NotificationIcon item={item} />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-2">
@@ -189,6 +208,10 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
                         </div>
                       </div>
                       <div className="mt-5 grid gap-3 rounded-xl border border-slate-100 bg-slate-50 p-4">
+                        <div className="flex items-center justify-between gap-4 text-sm">
+                          <span className="text-slate-500">Status</span>
+                          <span className={selected.isRead ? "font-bold text-emerald-600" : "font-bold text-rose-600"}>{selected.isRead ? "Sudah dibaca" : "Belum dibaca"}</span>
+                        </div>
                         {Object.entries(selected.detail || {}).map(([key, value]) => (
                           <div key={key} className="flex items-center justify-between gap-4 text-sm">
                             <span className="text-slate-500">{key.replace(/([A-Z])/g, " $1")}</span>
@@ -200,7 +223,15 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
                         {selected.href ? <Link href={selected.href} onClick={() => setOpen(false)} className="inline-flex h-10 items-center justify-center rounded-lg bg-[#6366F1] px-4 text-sm font-bold text-white shadow-sm shadow-indigo-200">Lihat Detail</Link> : null}
                       </div>
                     </div>
-                  ) : null}
+                  ) : (
+                    <div className="grid h-full min-h-[320px] place-items-center text-center">
+                      <div>
+                        <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-indigo-50 text-indigo-500"><Bell size={20} /></div>
+                        <p className="mt-3 text-sm font-bold text-slate-900">Pilih notifikasi</p>
+                        <p className="mt-1 text-xs text-slate-500">Notifikasi ditandai sudah dibaca setelah dipilih.</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

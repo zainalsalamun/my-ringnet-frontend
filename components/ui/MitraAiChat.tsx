@@ -1,6 +1,7 @@
 "use client";
 
 import api from "@/lib/api";
+import { useAuthStore } from "@/hooks/useAuth";
 import axios from "axios";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Bot, LoaderCircle, MessageCircleMore, RefreshCcw, Send, Sparkles, X } from "lucide-react";
@@ -13,6 +14,8 @@ const greeting: ChatMessage = {
 };
 
 export default function MitraAiChat() {
+  const user = useAuthStore((state) => state.user);
+  const isAdministrator = ["admin", "super_admin", "superadmin"].includes(user?.role || "");
   const [open, setOpen] = useState(false);
   const [division, setDivision] = useState("NOC / Teknis");
   const [subject, setSubject] = useState("");
@@ -73,7 +76,7 @@ export default function MitraAiChat() {
           <header className="flex items-start justify-between border-b border-slate-100 bg-gradient-to-r from-slate-900 to-indigo-950 px-5 py-4 text-white">
             <div className="flex gap-3">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-400 text-slate-900"><Sparkles size={21} /></span>
-              <div><h2 className="font-black">Assistant AI MyRingNet</h2><p className="mt-0.5 text-xs text-slate-300">Bantuan cepat untuk Reseller / Mitra</p></div>
+              <div><h2 className="font-black">Assistant AI MyRingNet</h2><p className="mt-0.5 text-xs text-slate-300">{isAdministrator ? "Bantuan cepat untuk Administrator" : "Bantuan cepat untuk Reseller / Mitra"}</p></div>
             </div>
             <div className="flex gap-1"><button type="button" onClick={() => { setConversationId(null); setMessages([greeting]); setSubject(""); setError(""); }} aria-label="Mulai percakapan baru" title="Percakapan baru" className="grid h-9 w-9 place-items-center rounded-lg text-slate-300 transition hover:bg-white/10 hover:text-white"><RefreshCcw size={18} /></button><button type="button" onClick={() => setOpen(false)} aria-label="Tutup asisten AI" className="grid h-9 w-9 place-items-center rounded-lg text-slate-300 transition hover:bg-white/10 hover:text-white"><X size={21} /></button></div>
           </header>

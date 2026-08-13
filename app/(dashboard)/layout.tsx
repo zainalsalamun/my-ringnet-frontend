@@ -39,7 +39,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
       <Header setSidebarOpen={setSidebarOpen} />
       <main className="px-5 py-6 lg:ml-[264px] lg:px-7">{(user?.role === "admin" && adminRestricted) || mitraRestricted ? null : children}</main>
-      {user?.role === "mitra" ? <MitraAiChat /> : null}
+      {["mitra", "admin", "super_admin", "superadmin"].includes(user?.role || "") ? <MitraAiChat /> : null}
     </div>
   );
 }

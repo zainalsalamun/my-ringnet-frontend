@@ -46,6 +46,78 @@ function mapDekadataRecord(row: Record<string, unknown>) {
   };
 }
 
+function normalizeStatus(value: unknown) {
+  const status = String(value || "").toLowerCase();
+  if (status.includes("paid") || status.includes("lunas") || status.includes("verified")) return "PAID";
+  if (status.includes("overdue") || status.includes("telat") || status.includes("terlambat")) return "OVERDUE";
+  if (status.includes("cancel") || status.includes("void")) return "CANCELLED";
+  return "UNPAID";
+}
+
+function textValue(value: unknown, fallback = "-") {
+  if (value === null || value === undefined || value === "") return fallback;
+  if (typeof value === "object") {
+    const row = value as Record<string, unknown>;
+    return String(row.name || row.customer_id || row._id || row.id || fallback);
+  }
+  return String(value);
+}
+
+function mapDekadataBroadbandInvoice(row: Record<string, unknown>) {
+  const rawId = row.invoice_id || row.billing_id || row.broadband_id || row.service_id || row.customer_id || row._id || row.id || "";
+  const invoiceNo = row.no_invoice || row.noInvoice || row.invoice_no || row.invoiceNo || row.no_faktur || row.noFaktur || (rawId ? `BRD-${rawId}` : "");
+  const amount = row.amount || row.grandTotal || row.grand_total || row.total || row.price || row.package_price || row.monthly_fee || row.bill_amount || 0;
+  const customerObject = typeof row.customer === "object" && row.customer ? row.customer as Record<string, unknown> : {};
+  const customerName = textValue(row.customerName || row.customer_name || customerObject.name || row.customer || row.name || row.fullname);
+  const packageName = textValue(row.packageName || row.package_name || row.product_name || row.product || row.profile || row.profile_name || row.serviceType, "Broadband");
+  const status = normalizeStatus(row.payment_status || row.invoice_status || row.billing_status || row.status_payment || row.status);
+
+  return {
+    ...row,
+    id: String(rawId || invoiceNo || customerName),
+    noInvoice: invoiceNo,
+    noFaktur: row.no_faktur || row.noFaktur || invoiceNo,
+    invoiceName: textValue(row.invoiceName || row.invoice_name || packageName),
+    invoiceType: textValue(row.invoiceType || row.invoice_type, "Pelanggan"),
+    customerName,
+    amount: Number(amount) || 0,
+    grandTotal: Number(amount) || 0,
+    serviceType: packageName,
+    supportPayment: textValue(row.supportPayment || row.support_payment || row.payment_support),
+    periodMonth: row.periodMonth || row.period_month || row.month,
+    periodYear: row.periodYear || row.period_year || row.year,
+    createdAt: row.createdAt || row.created_at || row.billing_date || row.invoice_date,
+    dueDate: row.dueDate || row.due_date || row.expired_at || row.deadline,
+    status,
+    customer: {
+      id: textValue(row.customer_id || row.customerId || customerObject.customer_id || customerObject._id || rawId, ""),
+      customerCode: textValue(row.customer_id || row.customerCode || customerObject.customer_id, ""),
+      name: customerName,
+      phone: textValue(row.phone || row.customer_phone || customerObject.phone, ""),
+      email: textValue(row.email || row.username || customerObject.email, ""),
+      username: textValue(row.username || row.pppoe_username || customerObject.username, ""),
+      supportPayment: textValue(row.supportPayment || row.support_payment),
+    },
+  };
+}
+
+function mapDekadataBroadbandPayment(row: Record<string, unknown>) {
+  const invoice = mapDekadataBroadbandInvoice(row);
+  const status = invoice.status === "PAID" ? "verified" : invoice.status === "CANCELLED" ? "cancelled" : "pending";
+  return {
+    ...row,
+    id: String(row.payment_id || row.paymentId || invoice.id),
+    referenceNo: row.referenceNo || row.reference_no || row.payment_no || `PAY-${String(invoice.noInvoice || invoice.id).replace(/[^A-Za-z0-9]/g, "-")}`,
+    customerName: invoice.customerName,
+    invoiceNo: invoice.noInvoice,
+    amount: invoice.amount,
+    method: row.method || row.payment_method || row.bank || "-",
+    status,
+    paidAt: row.paidAt || row.paid_at || row.payment_date || (status === "verified" ? invoice.createdAt : null),
+    notes: row.notes || row.description || invoice.serviceType,
+  };
+}
+
 function normalizeListPayload(payload: JsonRecord, pageSize: number, pageIndex: number, ok: boolean) {
   const rawRows = Array.isArray(payload.list)
     ? payload.list
@@ -68,7 +140,7 @@ function normalizeListPayload(payload: JsonRecord, pageSize: number, pageIndex: 
   };
 }
 
-async function fetchDekadataList(req: Request, endpoint: string, url: URL) {
+async function fetchDekadataList(req: Request, endpoint: string, url: URL, mapper: (row: Record<string, unknown>) => Record<string, unknown> = mapDekadataRecord) {
   const { pageSize, pageIndex } = getPagination(url);
   const search = url.searchParams.get("search") || url.searchParams.get("globalFilter") || "";
   const backendRes = await fetch(`${TARGET_BACKEND}/api/v1/${endpoint}`, {
@@ -89,7 +161,40 @@ async function fetchDekadataList(req: Request, endpoint: string, url: URL) {
     }),
   });
   const payload = await backendRes.json();
-  return Response.json(normalizeListPayload(payload, pageSize, pageIndex, backendRes.ok), { status: backendRes.status });
+  const normalized = normalizeListPayload(payload, pageSize, pageIndex, backendRes.ok);
+  return Response.json({
+    ...normalized,
+    data: normalized.data.map((item) => mapper(item as JsonRecord)),
+  }, { status: backendRes.status });
+}
+
+async function findDekadataListItem(req: Request, endpoint: string, id: string, mapper: (row: Record<string, unknown>) => Record<string, unknown>) {
+  const backendRes = await fetch(`${TARGET_BACKEND}/api/v1/${endpoint}`, {
+    method: "POST",
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+      ...getBearerToken(req),
+    },
+    body: JSON.stringify({
+      sorting: [],
+      globalFilter: "",
+      columnVisibility: {},
+      pageSize: 5000,
+      pageIndex: 0,
+      columnFilters: [],
+      withDeleted: false,
+    }),
+  });
+  const payload = await backendRes.json();
+  const rows = normalizeListPayload(payload, 5000, 0, backendRes.ok).data.map((item) => mapper(item as JsonRecord));
+  const found = rows.find((row) => String(row.id) === id || String(row.noInvoice || "") === id || String(row.noFaktur || "") === id || String(row.referenceNo || "") === id);
+
+  return Response.json({
+    success: Boolean(found),
+    message: found ? "Data berhasil dimuat" : "Data tidak ditemukan",
+    data: found || null,
+  }, { status: found ? 200 : 404 });
 }
 
 async function forwardJson(req: Request, endpoint: string, init?: { method?: string; body?: unknown }) {
@@ -204,6 +309,14 @@ async function handleCompatibility(req: Request, pathParts: string[]) {
   if (method === "GET" && path === "api/v1/customers") return fetchDekadataList(req, "customer/list", url);
   if (method === "GET" && path === "api/v1/companies") return fetchDekadataList(req, "partner/list", url);
   if (method === "GET" && path === "api/v1/partners") return fetchDekadataList(req, "partner/list", url);
+  if (method === "GET" && path === "api/v1/internet-services") return fetchDekadataList(req, "broadband/list", url, mapDekadataBroadbandInvoice);
+  if (method === "GET" && path === "api/v1/finance") return fetchDekadataList(req, "broadband/list", url, mapDekadataBroadbandPayment);
+
+  const internetServiceDetail = path.match(/^api\/v1\/internet-services\/([^/]+)$/);
+  if (method === "GET" && internetServiceDetail) return findDekadataListItem(req, "broadband/list", internetServiceDetail[1], mapDekadataBroadbandInvoice);
+
+  const financeDetail = path.match(/^api\/v1\/finance\/([^/]+)$/);
+  if (method === "GET" && financeDetail) return findDekadataListItem(req, "broadband/list", financeDetail[1], mapDekadataBroadbandPayment);
 
   if (method === "GET" && path === "api/v1/users") {
     const role = url.searchParams.get("role") || "";

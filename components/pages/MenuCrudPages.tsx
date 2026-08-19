@@ -80,35 +80,58 @@ function sortPaymentsByLatest(rows: any[]) {
   });
 }
 
+function safeText(value: any, fallback = "-") {
+  if (value === null || value === undefined || value === "") return fallback;
+  if (typeof value === "object") return String(value.name || value.customer_id || value._id || value.id || fallback);
+  return String(value);
+}
+
 export function FinanceCrudPage() {
   const { rows, toast, remove, loading } = useRows("/finance?limit=5000&sort=latest");
   const sortedRows = useMemo(() => sortPaymentsByLatest(rows), [rows]);
   const stats = useMemo(() => ({
     total: rows.reduce((sum, item) => sum + Number(item.amount || 0), 0),
-    verified: rows.filter((item) => item.status === "verified").length,
-    pending: rows.filter((item) => item.status === "pending").length,
+    verified: rows.filter((item) => String(item.status || "").toLowerCase() === "verified").length,
+    pending: rows.filter((item) => String(item.status || "").toLowerCase() === "pending").length,
   }), [rows]);
 
   return (
     <div>
-      <PageHeader title="Keuangan" subtitle="CRUD pembayaran, rekonsiliasi, dan status transaksi pelanggan." actionHref="/keuangan/new" actionLabel="Tambah Pembayaran" />
+      <PageHeader title="Keuangan" subtitle="Monitoring pembayaran, rekonsiliasi, dan status transaksi pelanggan." actionHref="/keuangan/new" actionLabel="Tambah Pembayaran" />
       <Toast message={toast} />
       {loading ? <StatSkeleton count={3} /> : <div className="mb-6 grid gap-4 md:grid-cols-3">
-        <Card className="p-5"><Wallet className="text-indigo-500" size={24} /><p className="mt-3 text-xs font-bold uppercase text-slate-400">Total Pembayaran</p><p className="text-2xl font-black">{currency(stats.total)}</p></Card>
-        <Card className="p-5"><p className="text-xs font-bold uppercase text-slate-400">Terverifikasi</p><p className="mt-3 text-2xl font-black text-emerald-600">{stats.verified}</p></Card>
-        <Card className="p-5"><p className="text-xs font-bold uppercase text-slate-400">Pending</p><p className="mt-3 text-2xl font-black text-amber-600">{stats.pending}</p></Card>
+        <Card className="p-5">
+          <div className="flex items-center gap-4">
+            <div className="grid h-12 w-12 place-items-center rounded-xl bg-indigo-500 text-white"><Wallet size={22} /></div>
+            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Total Pembayaran</p><p className="mt-1 text-2xl font-black text-slate-950">{currency(stats.total)}</p></div>
+          </div>
+        </Card>
+        <Card className="p-5">
+          <div className="flex items-center gap-4">
+            <div className="grid h-12 w-12 place-items-center rounded-xl bg-emerald-500 text-white"><Check size={22} /></div>
+            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Terverifikasi</p><p className="mt-1 text-2xl font-black text-slate-950">{stats.verified}</p></div>
+          </div>
+        </Card>
+        <Card className="p-5">
+          <div className="flex items-center gap-4">
+            <div className="grid h-12 w-12 place-items-center rounded-xl bg-amber-500 text-white"><CreditCard size={22} /></div>
+            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Pending</p><p className="mt-1 text-2xl font-black text-slate-950">{stats.pending}</p></div>
+          </div>
+        </Card>
       </div>}
       {loading ? <TableSkeleton columns={8} /> :
       <DataTable
+        title="Daftar Pembayaran"
         data={sortedRows}
+        searchPlaceholder="Cari referensi, pelanggan, invoice, metode..."
         editBasePath="/keuangan"
         onDelete={(row) => remove(row, "Pembayaran berhasil dihapus.")}
         columns={[
-          { key: "referenceNo", header: "Referensi", render: (row: any) => <span className="font-semibold text-indigo-600">{row.referenceNo}</span> },
-          { key: "customerName", header: "Pelanggan" },
-          { key: "invoiceNo", header: "Invoice" },
+          { key: "referenceNo", header: "Referensi", render: (row: any) => <span className="font-semibold text-indigo-600">{safeText(row.referenceNo)}</span> },
+          { key: "customerName", header: "Pelanggan", render: (row: any) => safeText(row.customerName) },
+          { key: "invoiceNo", header: "Invoice", render: (row: any) => safeText(row.invoiceNo) },
           { key: "amount", header: "Nominal", render: (row: any) => currency(row.amount) },
-          { key: "method", header: "Metode" },
+          { key: "method", header: "Metode", render: (row: any) => safeText(row.method) },
           { key: "status", header: "Status", render: (row: any) => <Badge value={row.status} /> },
           { key: "paidAt", header: "Tanggal", render: (row: any) => date(row.paidAt) },
         ]}

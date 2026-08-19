@@ -7,7 +7,7 @@ import { useAuthStore } from "@/hooks/useAuth";
 import { Badge, Card, DataTable, PageHeader, TableSkeleton } from "@/components/ui/AdminUI";
 import { currency, date, monthName } from "@/lib/format";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, FileText, Filter, MinusCircle, PlusCircle, Power, RefreshCw, Search, Trash2 } from "lucide-react";
+import { ArrowDownUp, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, FileText, Filter, Grid3X3, List, ListFilter, MinusCircle, Phone, PlusCircle, Power, RefreshCw, Search, Store, Trash2, Upload, UserPlus } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 
@@ -68,28 +68,399 @@ export function UsersPage({ role, title }: { role: string; title: string }) {
 }
 
 export function CustomersPage() {
-  const { rows, setRows, toast, setToast, loading } = useRows<any>("/customers?limit=5000");
-  return (
-    <div>
-      <PageHeader title="Pelanggan" subtitle="Data pelanggan individu beserta paket dan status layanan." actionHref="/users/pelanggan/new" actionLabel="Tambah Pelanggan" />
-      <Toast message={toast} />
-      {loading ? <TableSkeleton columns={8} /> :
-      <DataTable data={rows as any[]} editBasePath="/users/pelanggan" onDelete={(row) => deleteRow("/customers", row, setRows as any, setToast, "Pelanggan berhasil dihapus.")}
-        columns={[
-          { key: "status", header: "Status", render: (row: any) => <Badge value={row.status} /> },
-          { key: "customerCode", header: "ID Pelanggan", render: (row: any) => <Link href={`/users/pelanggan/${row.id}`} className="font-semibold text-indigo-600 hover:underline">{row.customerCode || row.id.slice(0, 8)}</Link> },
-          { key: "name", header: "Nama", render: (row: any) => <span className="font-semibold text-slate-800">{row.name}</span> },
-          { key: "phone", header: "Nomor Telepon", render: (row: any) => row.phone || "-" },
-          { key: "area", header: "Area", render: (row: any) => row.area || "-" },
-          { key: "city", header: "Kota", render: (row: any) => row.city || "-" },
-          { key: "customerType", header: "Jenis Pelanggan", render: (row: any) => row.customerType || "-" },
-          { key: "lastActivity", header: "Aktivitas", render: (row: any) => row.lastActivity ? date(row.lastActivity) : "-" },
-        ]}
-      />
+  const [rows, setRows] = useState<any[]>([]);
+  const [toast, setToast] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [openActionId, setOpenActionId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
+  const load = () => {
+    setLoading(true);
+    setToast("");
+
+    // Call DEKASIMAL API POST /api/v1/customer/list
+    api.post("/customer/list", {
+      pageSize: 500,
+      pageIndex: 0,
+      sorting: [],
+      columnFilters: [],
+      globalFilter: "",
+      columnVisibility: {
+        customer_id: true,
+        name: true,
+        area: true,
+        type: true,
+        address: true,
+        phone: true,
+        status: true,
+        package_name: true,
+        created_at: true,
+        updated_at: true,
+      },
+      withDeleted: false,
+    })
+      .then((res) => {
+        const raw = res.data?.data?.data || res.data?.data || res.data?.rows || [];
+        const normalized = raw.map((item: any) => ({
+          id: item.id || item.customer_id,
+          customerCode: item.customer_id || item.customerCode || String(item.id || "").slice(0, 8),
+          name: item.name || item.username || "-",
+          phone: item.phone || "-",
+          area: item.area || "-",
+          city: item.city || item.address || "-",
+          address: item.address || "-",
+          packageName: item.package_name || item.packageName || item.product || item.product_name || "-",
+          packagePrice: item.package_price || item.price || item.monthly_fee || null,
+          customerType: item.type || item.customerType || "home",
+          status: item.status === false ? "nonactive" : (item.status === true || item.status === "active" ? "active" : item.status || "active"),
+          lastActivity: item.updated_at || item.created_at || item.createdAt || null,
+        }));
+        setRows(normalized);
+      })
+      .catch(() => {
+        // Fallback to legacy GET /customers
+        api.get("/customers?limit=5000")
+          .then((res) => setRows(res.data?.data || []))
+          .catch(() => {
+            setRows([]);
+            setToast("Gagal memuat data pelanggan dari server.");
+          });
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const filteredRows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return rows.filter((row) => {
+      const matchQuery = !q || [
+        row.customerCode,
+        row.name,
+        row.phone,
+        row.area,
+        row.city,
+        row.address,
+        row.packageName,
+        row.customerType,
+      ].some((value) => String(value || "").toLowerCase().includes(q));
+      const matchStatus = statusFilter === "all" || String(row.status || "").toLowerCase() === statusFilter;
+      const matchType = typeFilter === "all" || String(row.customerType || "").toLowerCase().includes(typeFilter);
+      return matchQuery && matchStatus && matchType;
+    });
+  }, [rows, query, statusFilter, typeFilter]);
+
+  const maxPage = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const paginatedRows = useMemo(() => filteredRows.slice((page - 1) * pageSize, page * pageSize), [filteredRows, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, statusFilter, typeFilter, viewMode]);
+
+  useEffect(() => {
+    if (page <= maxPage) return;
+    setPage(maxPage);
+  }, [maxPage, page]);
+
+  const stats = useMemo(() => {
+    const now = new Date();
+    const month = now.getMonth();
+    const year = now.getFullYear();
+    const createdThisMonth = rows.filter((row) => {
+      const created = new Date(row.lastActivity || row.createdAt || "");
+      return Number.isFinite(created.getTime()) && created.getMonth() === month && created.getFullYear() === year;
+    }).length;
+    const active = rows.filter((row) => String(row.status || "").toLowerCase() === "active").length;
+    return {
+      newCustomers: createdThisMonth,
+      activity: rows.filter((row) => row.lastActivity).length,
+      active,
+      inactive: Math.max(0, rows.length - active),
+    };
+  }, [rows]);
+
+  async function handleDelete(row: any) {
+    try {
+      try {
+        await api.delete(`/customer/delete/${row.id}`);
+      } catch {
+        await api.delete(`/customers/${row.id}`);
       }
+      setRows((current) => current.filter((item) => item.id !== row.id));
+      setToast("Pelanggan berhasil dihapus.");
+    } catch (err: any) {
+      setToast(err.response?.data?.message || "Gagal menghapus pelanggan.");
+    }
+  }
+
+  async function handleToggleStatus(row: any) {
+    const nextActive = String(row.status || "").toLowerCase() !== "active";
+    const nextStatus = nextActive ? "active" : "nonactive";
+    setRows((current) => current.map((item) => item.id === row.id ? { ...item, status: nextStatus } : item));
+    try {
+      await api.patch("/customer/update", { selectedCustomerId: row.id, status: nextActive });
+      setToast(`Status pelanggan ${row.name} berhasil diubah.`);
+    } catch (err: any) {
+      setRows((current) => current.map((item) => item.id === row.id ? { ...item, status: row.status } : item));
+      setToast(err.response?.data?.message || "Gagal mengubah status pelanggan.");
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Pelanggan"
+        subtitle="Data pelanggan individu beserta paket, status layanan, dan aktivitas."
+        rightContent={
+          <Link href="/users/pelanggan/new" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-bold text-white shadow-sm shadow-indigo-200 transition hover:bg-indigo-500">
+            <PlusCircle size={18} /> Pelanggan Baru
+          </Link>
+        }
+      />
+      <Toast message={toast} />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <CustomerMetricCard icon={<UserPlus size={22} />} label="Pelanggan Baru" value={String(stats.newCustomers)} accent="text-fuchsia-600" />
+        <CustomerMetricCard icon={<ArrowDownUp size={22} />} label="Aktifivitas" value={String(stats.activity)} accent="text-emerald-600" />
+        <CustomerMetricCard icon={<CheckCircle2 size={22} />} label="Aktif" value={String(stats.active)} accent="text-blue-600" />
+        <CustomerMetricCard icon={<MinusCircle size={22} />} label="Tidak Aktif" value={String(stats.inactive)} accent="text-amber-600" />
+      </div>
+
+      <section>
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-xl font-bold tracking-tight text-slate-950">Daftar Pelanggan</h2>
+            <p className="mt-1 text-sm text-slate-500">Menampilkan {paginatedRows.length} dari {filteredRows.length} pelanggan.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari..." className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100" />
+            </div>
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700">
+              <option value="all">Semua Status</option>
+              <option value="active">Aktif</option>
+              <option value="nonactive">Tidak Aktif</option>
+            </select>
+            <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700">
+              <option value="all">Semua Jenis</option>
+              <option value="home">Perumahan</option>
+              <option value="business">Bisnis</option>
+            </select>
+            <button type="button" onClick={load} className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50" title="Refresh">
+              <RefreshCw size={18} />
+            </button>
+            <button type="button" className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50" title="Export">
+              <Upload size={18} />
+            </button>
+            <div className="flex rounded-xl bg-slate-100 p-1">
+              <button type="button" onClick={() => setViewMode("list")} className={"grid h-9 w-10 place-items-center rounded-lg " + (viewMode === "list" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500")} title="Tampilan list"><List size={18} /></button>
+              <button type="button" onClick={() => setViewMode("grid")} className={"grid h-9 w-10 place-items-center rounded-lg " + (viewMode === "grid" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500")} title="Tampilan grid"><Grid3X3 size={18} /></button>
+            </div>
+          </div>
+        </div>
+
+        {loading ? <TableSkeleton columns={8} /> : viewMode === "list" ? (
+          <Card className="overflow-visible">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1180px] text-left text-sm">
+                <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-700">
+                  <tr>
+                    <CustomerTh>Status</CustomerTh>
+                    <CustomerTh>Pelanggan</CustomerTh>
+                    <CustomerTh>Nama</CustomerTh>
+                    <CustomerTh>No. Telepon</CustomerTh>
+                    <CustomerTh>Produk</CustomerTh>
+                    <CustomerTh>Jenis</CustomerTh>
+                    <CustomerTh>Aktifivitas</CustomerTh>
+                    <CustomerTh className="text-right">Aksi</CustomerTh>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {paginatedRows.map((row) => (
+                    <tr key={row.id} className="bg-white hover:bg-slate-50/80">
+                      <td className="px-4 py-5">
+                        <button type="button" onClick={() => handleToggleStatus(row)} className={"relative h-7 w-14 rounded-full transition " + (String(row.status).toLowerCase() === "active" ? "bg-blue-600" : "bg-slate-300")} title="Ubah status">
+                          <span className={"absolute top-1 h-5 w-5 rounded-full bg-white shadow transition " + (String(row.status).toLowerCase() === "active" ? "left-8" : "left-1")} />
+                        </button>
+                      </td>
+                      <td className="px-4 py-5">
+                        <Link href={`/users/pelanggan/${row.id}`} className="font-bold text-indigo-600 hover:underline">{row.customerCode || row.id.slice(0, 8)}</Link>
+                      </td>
+                      <td className="px-4 py-5">
+                        <div className="flex items-center gap-3">
+                          <CustomerAvatar name={row.name} code={row.customerCode} />
+                          <div>
+                            <Link href={`/users/pelanggan/${row.id}`} className="font-bold text-indigo-600 hover:underline">{row.name}</Link>
+                            <p className="mt-1 text-xs font-semibold text-slate-500">{[row.area, row.city].filter(Boolean).join("  |  ") || "-"}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-5">
+                        <PhonePill phone={row.phone} />
+                      </td>
+                      <td className="px-4 py-5">
+                        <ProductPill name={row.packageName} price={row.packagePrice} />
+                      </td>
+                      <td className="px-4 py-5">
+                        <TypePill type={row.customerType} />
+                      </td>
+                      <td className="px-4 py-5">
+                        <div className="font-bold text-slate-800">{row.lastActivity ? date(row.lastActivity) : "-"}</div>
+                      </td>
+                      <td className="relative px-4 py-5 text-right">
+                        <button type="button" onClick={() => setOpenActionId(openActionId === row.id ? null : row.id)} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 hover:bg-slate-50">
+                          <ListFilter size={17} /> Pilih Aksi <ChevronDown size={15} />
+                        </button>
+                        {openActionId === row.id ? (
+                          <CustomerActionMenu row={row} onClose={() => setOpenActionId(null)} onDelete={handleDelete} />
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                  {!paginatedRows.length ? (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-16 text-center text-sm font-semibold text-slate-500">Data pelanggan tidak ditemukan.</td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+            <CustomerPagination page={page} maxPage={maxPage} total={filteredRows.length} pageSize={pageSize} onPageChange={setPage} />
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {paginatedRows.map((row) => (
+              <Card key={row.id} className="p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <CustomerAvatar name={row.name} code={row.customerCode} />
+                    <div>
+                      <Link href={`/users/pelanggan/${row.id}`} className="font-black text-indigo-600 hover:underline">{row.name}</Link>
+                      <p className="mt-1 text-xs font-semibold text-slate-500">{row.customerCode}</p>
+                    </div>
+                  </div>
+                  <Badge value={row.status} />
+                </div>
+                <div className="mt-4 space-y-3">
+                  <PhonePill phone={row.phone} />
+                  <ProductPill name={row.packageName} price={row.packagePrice} />
+                  <TypePill type={row.customerType} />
+                </div>
+                <div className="mt-5 flex gap-2">
+                  <Link href={`/users/pelanggan/${row.id}`} className="flex-1 rounded-lg bg-indigo-600 px-3 py-2 text-center text-sm font-bold text-white">Detail</Link>
+                  <Link href={`/users/pelanggan/${row.id}/edit`} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700">Edit</Link>
+                </div>
+              </Card>
+            ))}
+            <div className="md:col-span-2 xl:col-span-3">
+              <CustomerPagination page={page} maxPage={maxPage} total={filteredRows.length} pageSize={pageSize} onPageChange={setPage} />
+            </div>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
+
+function CustomerMetricCard({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: string; accent: string }) {
+  return (
+    <Card className="bg-slate-100/80 p-5">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-3xl font-black tracking-tight text-slate-900">{value}</p>
+          <p className="mt-3 text-sm font-semibold text-slate-600">{label}</p>
+        </div>
+        <div className={accent}>{icon}</div>
+      </div>
+    </Card>
+  );
+}
+
+function CustomerTh({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <th className={"whitespace-nowrap px-4 py-4 align-top font-black " + className}>
+      <div className="flex items-center gap-2">
+        <span>{children}</span>
+        <ArrowDownUp size={14} className="text-slate-400" />
+      </div>
+    </th>
+  );
+}
+
+function CustomerAvatar({ name, code }: { name?: string; code?: string }) {
+  const colors = ["bg-cyan-100 text-cyan-700", "bg-emerald-100 text-emerald-700", "bg-amber-100 text-amber-700", "bg-rose-100 text-rose-700", "bg-indigo-100 text-indigo-700"];
+  const seed = String(code || name || "P").split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  const initials = String(name || "P").split(" ").filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "P";
+  return <div className={"grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-sm font-black " + colors[seed % colors.length]}>{initials}</div>;
+}
+
+function PhonePill({ phone }: { phone?: string }) {
+  const normalized = String(phone || "").replace(/\D/g, "");
+  if (!normalized) return <span className="text-slate-400">-</span>;
+  const whatsapp = normalized.startsWith("62") ? normalized : normalized.startsWith("0") ? `62${normalized.slice(1)}` : normalized;
+  return (
+    <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-1 text-sm font-bold text-slate-900 hover:bg-emerald-50 hover:text-emerald-700">
+      <Phone size={14} className="text-emerald-500" /> {phone}
+    </a>
+  );
+}
+
+function ProductPill({ name, price }: { name?: string; price?: number | string | null }) {
+  const text = [name && name !== "-" ? name : "Produk belum diisi", price ? currency(price) : ""].filter(Boolean).join(" : ");
+  const premium = /rimax1|bronze|125/i.test(text);
+  return (
+    <span className={"inline-flex max-w-[260px] rounded-lg px-2.5 py-1 text-xs font-bold leading-5 " + (premium ? "bg-rose-50 text-rose-600" : "bg-indigo-50 text-indigo-700")}>
+      <span className="truncate">{text}</span>
+    </span>
+  );
+}
+
+function TypePill({ type }: { type?: string }) {
+  const label = String(type || "Perumahan/Apartemen/Kos").replace(/^home$/i, "Perumahan/Apartemen/Kos").replace(/^business$/i, "Bisnis/Enterprise");
+  return (
+    <span className="inline-flex items-center gap-2 rounded-lg bg-indigo-50 px-3 py-1 text-sm font-bold text-indigo-700">
+      <Store size={15} /> {label}
+    </span>
+  );
+}
+
+function CustomerActionMenu({ row, onClose, onDelete }: { row: any; onClose: () => void; onDelete: (row: any) => void }) {
+  return (
+    <div className="absolute right-4 top-16 z-20 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white text-left shadow-xl">
+      <Link onClick={onClose} href={`/users/pelanggan/${row.id}`} className="block px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Detail Pelanggan</Link>
+      <Link onClick={onClose} href={`/users/pelanggan/${row.id}/edit`} className="block px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Edit Profil</Link>
+      <Link onClick={onClose} href={`/internet-services?customerId=${encodeURIComponent(row.id)}`} className="block px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Faktur & Tagihan</Link>
+      <Link onClick={onClose} href={`/radius/autentikasi?customerId=${encodeURIComponent(row.id)}`} className="block px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Autentikasi PPPoE</Link>
+      <Link onClick={onClose} href={`/dokumen/nik-npwp?customerId=${encodeURIComponent(row.id)}`} className="block px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Dokumen</Link>
+      <button type="button" onClick={() => { onClose(); onDelete(row); }} className="block w-full px-4 py-3 text-left text-sm font-semibold text-rose-600 hover:bg-rose-50">Hapus Pelanggan</button>
+    </div>
+  );
+}
+
+function CustomerPagination({ page, maxPage, total, pageSize, onPageChange }: { page: number; maxPage: number; total: number; pageSize: number; onPageChange: Dispatch<SetStateAction<number>> }) {
+  const start = total ? (page - 1) * pageSize + 1 : 0;
+  const end = Math.min(total, page * pageSize);
+  return (
+    <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm font-medium text-slate-500">Menampilkan {start}-{end} dari {total} data</p>
+      <div className="flex items-center gap-2">
+        <button type="button" onClick={() => onPageChange(1)} disabled={page === 1} className="h-9 rounded-lg border border-slate-200 px-3 text-sm font-bold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40">Awal</button>
+        <button type="button" onClick={() => onPageChange((current) => Math.max(1, current - 1))} disabled={page === 1} className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft size={16} /></button>
+        <span className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-bold text-slate-700">{page} / {maxPage}</span>
+        <button type="button" onClick={() => onPageChange((current) => Math.min(maxPage, current + 1))} disabled={page === maxPage} className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"><ChevronRight size={16} /></button>
+        <button type="button" onClick={() => onPageChange(maxPage)} disabled={page === maxPage} className="h-9 rounded-lg border border-slate-200 px-3 text-sm font-bold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40">Akhir</button>
+      </div>
+    </div>
+  );
+}
+
 
 export function CompaniesPage() {
   const { rows, setRows, toast, setToast, loading } = useRows<any>("/companies?limit=5000");

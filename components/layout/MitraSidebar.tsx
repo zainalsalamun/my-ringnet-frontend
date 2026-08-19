@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { useAuthStore } from "@/hooks/useAuth";
 import api from "@/lib/api";
-import { BarChart3, BookOpenCheck, ChevronDown, CircleUserRound, FileCheck2, Headphones, Network, PackageCheck, ReceiptText, Settings2 } from "lucide-react";
+import { BarChart3, BookOpenCheck, Cable, ChevronDown, CircleUserRound, FileCheck2, Headphones, MapPin, Network, PackageCheck, Radio, ReceiptText, Settings2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 type MenuItem = {
@@ -34,8 +34,6 @@ export const getMitraMenuGroups = (pops: any[] = [], isAdmin: boolean = false): 
       { label: "Data POP", href: "/users/pop" }
     ] : [],
   },
-
-
   {
     key: "tickets",
     label: "Tiketing",
@@ -52,26 +50,40 @@ export const getMitraMenuGroups = (pops: any[] = [], isAdmin: boolean = false): 
     label: "Data Teknis",
     icon: Network,
     items: [
-      { label: "Perangkat Aktif", children: [
-        { label: "Router (RO)", href: "/mitra/router" },
-        { label: "Switch", href: "/mitra/switch" },
-        { label: "CPE / User", href: "/mitra/cpe" },
-      ] },
-      { label: "Perangkat Logic", children: [
-        { label: "GenieACS Management", href: "/mitra/genieacs" },
-        { label: "Cacti / MRTG", href: "/mitra/monitoring" },
-        { label: "SLA Pelanggan", href: "/mitra/sla" },
-      ] },
-      { label: "Perangkat Pasif", children: [
-        { label: "OTB", href: "/mitra/otb" },
-        { label: "ODC", href: "/mitra/odc" },
-        { label: "ODP", href: "/mitra/odp" },
-        { label: "Tiang", href: "/mitra/tiang" },
-        { label: "Kabel", href: "/mitra/kabel" },
-      ] },
-      { label: "Map Infrastruktur", href: "/mitra/infrastruktur" },
+      {
+        label: "Perangkat Aktif",
+        children: [
+          { label: "OLT", href: "/mitra/olt" },
+          { label: "Router", href: "/mitra/router" },
+          { label: "Switch", href: "/mitra/switch" },
+        ],
+      },
+      {
+        label: "Perangkat Pasif",
+        children: [
+          { label: "OTB", href: "/mitra/otb" },
+          { label: "ODC", href: "/mitra/odc" },
+          { label: "ODP", href: "/mitra/odp" },
+          { label: "Kabel", href: "/mitra/kabel" },
+        ],
+      },
+      {
+        label: "Map Infrastruktur",
+        href: "/mitra/infrastruktur",
+      },
+      {
+        label: "Radius",
+        children: [
+          { label: "NAS/Router", href: "/radius/nas-router" },
+          { label: "Autentikasi", href: "/radius/autentikasi" },
+          { label: "Grup Profil", href: "/radius/grup-profil" },
+          { label: "Sesi Pengguna", href: "/radius/sesi-pengguna" },
+          { label: "Riwayat", href: "/radius/riwayat" },
+        ],
+      },
     ],
   },
+
   {
     key: "finance",
     label: "Pencatatan & Pembukuan",
@@ -79,19 +91,10 @@ export const getMitraMenuGroups = (pops: any[] = [], isAdmin: boolean = false): 
     items: [
       { label: "Produk", href: "/mitra/produk" },
       { label: "Data Customer", href: "/mitra/pelanggan" },
+      { label: "SLA Pelanggan", href: "/mitra/sla" },
       { label: "Pencatatan Pendapatan Billing", href: "/mitra/pendapatan-billing" },
       { label: "Kelola Tagihan Pelanggan", href: "/mitra/kelola-tagihan" },
       { label: "BA Pelaporan Pendapatan", href: "/mitra/berita-acara" },
-    ],
-  },
-  {
-    key: "operational",
-    label: "Operasional",
-    icon: PackageCheck,
-    items: [
-      { label: "Produk", href: "/mitra/operasional-produk" },
-      { label: "Presales", href: "/mitra/presales" },
-      { label: "Evaluasi Penjualan", href: "/mitra/evaluasi" },
     ],
   },
   {
@@ -103,7 +106,68 @@ export const getMitraMenuGroups = (pops: any[] = [], isAdmin: boolean = false): 
       { label: "Profile", href: "/mitra/profil" },
     ],
   },
+
 ];
+
+
+function MitraSubItem({ item, pathname }: { item: MenuItem; pathname: string }) {
+  const isChildActive = item.children?.some((child) => pathname === child.href || pathname.startsWith(child.href + "/")) ?? false;
+  const [open, setOpen] = useState(isChildActive);
+
+  useEffect(() => {
+    if (isChildActive) setOpen(true);
+  }, [isChildActive]);
+
+  if (item.href) {
+    const active = pathname === item.href || pathname.startsWith(item.href + "/");
+    return (
+      <Link
+        href={item.href}
+        className={`block rounded-lg px-3 py-2 text-xs font-medium leading-5 transition ${
+          active ? "bg-white/10 text-white font-semibold" : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+        }`}
+      >
+        {item.label}
+      </Link>
+    );
+  }
+
+  return (
+    <div className="py-0.5">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        className={`flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-left text-xs font-semibold transition ${
+          isChildActive ? "text-indigo-400" : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+        }`}
+      >
+        <span>{item.label}</span>
+        <ChevronDown
+          size={14}
+          className={`shrink-0 text-slate-500 transition-transform duration-200 ${open ? "rotate-180 text-indigo-400" : ""}`}
+        />
+      </button>
+      {open ? (
+        <div className="my-1 ml-2 space-y-0.5 border-l border-white/10 pl-2.5">
+          {item.children?.map((child) => {
+            const active = pathname === child.href || pathname.startsWith(child.href + "/");
+            return (
+              <Link
+                key={child.href}
+                href={child.href}
+                className={`block rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
+                  active ? "bg-white/10 text-white font-semibold" : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+                }`}
+              >
+                {child.label}
+              </Link>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export default function MitraSidebar({ sidebarOpen, setSidebarOpen }: { sidebarOpen?: boolean; setSidebarOpen?: (value: boolean) => void }) {
   const pathname = usePathname();
@@ -171,11 +235,8 @@ export default function MitraSidebar({ sidebarOpen, setSidebarOpen }: { sidebarO
                 {open ? (
                   <div className="pb-3 pl-[50px] pr-3 pt-1">
                     <div className="space-y-1 border-l border-white/10 pl-3">
-                      {group.items.map((item) => item.href ? <Link key={`${group.key}-${item.label}`} href={item.href} className={`block rounded-lg px-3 py-2 text-xs font-medium leading-5 transition ${pathname === item.href ? "bg-white/10 text-white" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{item.label}</Link> : (
-                        <div key={`${group.key}-${item.label}`} className="pb-1 pt-2 first:pt-0">
-                          <p className="px-3 pb-1.5 text-[10px] font-black uppercase tracking-wider text-slate-600">{item.label}</p>
-                          {item.children?.map((child) => <Link key={child.href} href={child.href} className={`block rounded-lg px-3 py-1.5 text-xs font-medium leading-5 transition ${pathname === child.href ? "bg-white/10 text-white" : "text-slate-500 hover:bg-white/5 hover:text-slate-200"}`}>{child.label}</Link>)}
-                        </div>
+                      {group.items.map((item) => (
+                        <MitraSubItem key={`${group.key}-${item.label}`} item={item} pathname={pathname} />
                       ))}
                     </div>
                   </div>
@@ -184,6 +245,7 @@ export default function MitraSidebar({ sidebarOpen, setSidebarOpen }: { sidebarO
             );
           })}
         </nav>
+
 
         <div className="p-4">
           <div className="rounded-xl border border-white/10 bg-white/5 p-4">

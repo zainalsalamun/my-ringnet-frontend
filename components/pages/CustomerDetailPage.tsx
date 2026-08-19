@@ -48,8 +48,8 @@ export function CustomerDetailPage({ id }: { id: string }) {
         setTickets(normalized.tickets);
       })
       .catch(() => {
-        // Fallback to legacy GET /customers/{id}/detail
-        api.get("/customers/" + id + "/detail")
+        // Fallback adapter: GET /customers/{id}
+        api.get("/customers/" + id)
           .then((res) => {
             const data = res.data?.data || {};
             setCustomer(data);

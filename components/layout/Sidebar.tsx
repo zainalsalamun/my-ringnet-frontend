@@ -15,7 +15,9 @@ type SidebarItem = {
 };
 
 const userChildren: SidebarItem[] = [
-  { label: "User Management", href: "/users" },
+  { label: "Privilege", href: "/users/privilege" },
+  { label: "Employee", href: "/users/employee" },
+  { label: "Admin", href: "/users/admin" },
   { label: "Pelanggan", href: "/users/pelanggan" },
   { label: "Pelanggan Bisnis", href: "/users/bisnis" },
 ];

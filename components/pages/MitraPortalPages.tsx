@@ -186,7 +186,269 @@ function FinancePage({ invoices = false }: { invoices?: boolean }) { const [data
 
 function TicketsPage({ section }: { section: string }) { const [rows, setRows] = useState<any[]>([]); const [customers, setCustomers] = useState<any[]>([]); const [error, setError] = useState(""); const [message, setMessage] = useState(""); const [attachment, setAttachment] = useState<File | null>(null); const kind = section === "tiket" ? "customer" : section === "tiket-gangguan" ? "disruption" : section === "tiket-layanan" ? "service" : "support"; const [form, setForm] = useState({ title: "", description: "", reportType: "Gangguan", priority: "normal", customerId: "" }); const load = () => Promise.all([api.get("/mitra-portal/tickets"), api.get("/mitra-portal/customers")]).then(([a, b]) => { setRows(a.data.data || []); setCustomers(b.data.data || []); }); useEffect(() => { load().catch(() => setError("Gagal memuat tiket.")); }, []); async function submit(e: FormEvent) { e.preventDefault(); const body = new FormData(); Object.entries({ ...form, ticketKind: kind }).forEach(([k, v]) => body.append(k, v)); if (attachment) body.append("attachment", attachment); try { await api.post("/mitra-portal/tickets", body); setMessage("Tiket berhasil dikirim ke admin."); setForm({ title: "", description: "", reportType: "Gangguan", priority: "normal", customerId: "" }); setAttachment(null); await load(); } catch (err: any) { setError(err.response?.data?.message || "Gagal membuat tiket."); } } const filtered = rows.filter((r) => section === "tiket" ? r.ticketKind === "customer" : r.ticketKind === kind); const stat = (status?: string) => status ? filtered.filter((r) => r.status === status).length : filtered.length; return <div className="space-y-6"><div className="grid gap-4 md:grid-cols-4"><StatCard icon={<Headphones size={20} />} label="Total" value={String(stat())} trend="semua tiket" /><StatCard icon={<ReceiptText size={20} />} label="Open" value={String(stat("open"))} trend="menunggu" accent="rose" /><StatCard icon={<Router size={20} />} label="Diproses" value={String(stat("progress"))} trend="penanganan" accent="amber" /><StatCard icon={<PackageCheck size={20} />} label="Closed" value={String(stat("closed"))} trend="selesai" accent="emerald" /></div><div className="grid gap-6 xl:grid-cols-[0.7fr_1.3fr]"><Card className="p-5"><h2 className="font-black">Buat Tiket Baru</h2><ErrorBox message={error} /><Notice message={message} /><form onSubmit={submit} className="mt-4 space-y-4"><label className="block"><span className="mb-2 block text-sm font-semibold">Pelanggan Terdampak</span><select value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm"><option value="">Umum / tidak terkait pelanggan</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.customerCode} - {c.name}</option>)}</select></label><label className="block"><span className="mb-2 block text-sm font-semibold">Jenis Laporan</span><select value={form.reportType} onChange={(e) => setForm({ ...form, reportType: e.target.value })} className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm">{["Gangguan", "Komplain", "Upgrade Layanan", "Maintenance", "Penarikan Kabel", "Lain-Lain"].map((x) => <option key={x}>{x}</option>)}</select></label><TextInput required label="Nama Gangguan / Judul" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /><label className="block"><span className="mb-2 block text-sm font-semibold">Detail</span><textarea required rows={5} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label><label className="block"><span className="mb-2 block text-sm font-semibold">Lampiran (opsional)</span><input type="file" onChange={(e) => setAttachment(e.target.files?.[0] || null)} className="w-full rounded-lg border border-slate-200 p-2 text-sm" /></label><Button type="submit">Kirim Tiket</Button></form></Card><Card className="p-5"><h2 className="mb-4 font-black">Daftar Tiket</h2><DataGrid rows={filtered} columns={[{ label: "No Tiket", value: (r) => <strong>{r.ticketNo}</strong> }, { label: "Customer", value: (r) => r.customer?.name || "Umum" }, { label: "Jenis", value: (r) => r.reportType || "-" }, { label: "Gangguan", value: (r) => r.title }, { label: "Mulai", value: (r) => date(r.startedAt || r.createdAt) }, { label: "Lampiran", value: (r) => r.attachmentPath ? <a href={fileUrl(r.attachmentPath)} target="_blank" className="font-bold text-indigo-600">Lihat</a> : "-" }, { label: "Status", value: (r) => <Badge value={r.status} /> }, { label: "Penangan", value: (r) => r.handlerName || "Admin" }]} /></Card></div></div>; }
 
-function TechnicalPage({ section }: { section: string }) { const [rows, setRows] = useState<any[] | null>(null); useEffect(() => { api.get("/mitra-portal/technical-assets").then((r) => setRows(r.data.data || [])); }, []); const filtered = useMemo(() => { const aliases: Record<string, string[]> = { router: ["router"], switch: ["switch"], olt: ["olt", "cpe", "user"], cpe: ["olt", "cpe", "user"], sla: ["sla"], otb: ["otb"], odc: ["odc"], odp: ["odp"], kabel: ["kabel", "cable"] }; return (rows || []).filter((r) => section === "infrastruktur" || (section === "perangkat-aktif" && r.category === "active") || (section === "perangkat-pasif" && r.category === "passive") || aliases[section]?.includes(String(r.assetType || "").toLowerCase())); }, [rows, section]); return <Card className="p-5">{rows === null ? <ShimmerBlock className="h-72" /> : <DataGrid rows={filtered} columns={[{ label: "Jenis", value: (r) => <span className="inline-flex items-center gap-2 font-bold uppercase text-indigo-600">{r.category === "passive" ? <Cable size={15} /> : <Router size={15} />}{r.assetType}</span> }, { label: "Nama", value: (r) => <strong>{r.name}</strong> }, { label: "Serial / IP", value: (r) => <>{r.serialNo || "-"}<p className="text-xs text-slate-400">{r.ipAddress}</p></> }, { label: "Lokasi", value: (r) => r.location || "-" }, { label: "Koordinat", value: (r) => r.coordinate || "-" }, { label: "Status", value: (r) => <Badge value={r.status} /> }]} />}</Card>; }
+function technicalListBody() {
+  return {
+    pageSize: 500,
+    pageIndex: 0,
+    sorting: [],
+    columnFilters: [],
+    globalFilter: "",
+    columnVisibility: {
+      maps_id: true,
+      name: true,
+      type: true,
+      category: true,
+      coordinate: true,
+      latitude: true,
+      longitude: true,
+      lat: true,
+      lng: true,
+      address: true,
+      area: true,
+      city: true,
+      status: true,
+      ip_address: true,
+      serial_no: true,
+    },
+    withDeleted: false,
+  };
+}
+
+function technicalPayloadRows(payload: any): any[] {
+  const data = payload?.data;
+  if (Array.isArray(data?.markers)) return data.markers;
+  if (Array.isArray(data?.features)) return data.features;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.rows)) return data.rows;
+  if (Array.isArray(data?.list)) return data.list;
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(payload?.markers)) return payload.markers;
+  if (Array.isArray(payload?.features)) return payload.features;
+  if (Array.isArray(payload?.rows)) return payload.rows;
+  if (Array.isArray(payload?.list)) return payload.list;
+  return [];
+}
+
+function technicalKey(row: any) {
+  const raw = String(
+    row.assetType ||
+      row.asset_type ||
+      row.markerType ||
+      row.marker_type ||
+      row.type ||
+      row.category ||
+      row.jenis ||
+      row.name ||
+      row.label ||
+      ""
+  ).toLowerCase();
+
+  if (raw.includes("router") || raw === "ro") return "router";
+  if (raw.includes("switch")) return "switch";
+  if (raw.includes("olt") || raw.includes("cpe")) return "olt";
+  if (raw.includes("otb")) return "otb";
+  if (raw.includes("odc")) return "odc";
+  if (raw.includes("odp")) return "odp";
+  if (raw.includes("closure")) return "closure";
+  if (raw.includes("kabel") || raw.includes("cable") || raw.includes("fiber") || raw.includes("fo")) return "kabel";
+  if (raw.includes("pop") || raw.includes("location") || raw.includes("maps")) return "pop";
+  return "pop";
+}
+
+function technicalLabel(type: string) {
+  const labels: Record<string, string> = {
+    pop: "POP",
+    router: "Router",
+    switch: "Switch",
+    olt: "OLT",
+    otb: "OTB",
+    odc: "ODC",
+    odp: "ODP",
+    kabel: "Kabel",
+    closure: "Closure",
+  };
+  return labels[type] || type.toUpperCase();
+}
+
+function coordinateFrom(row: any) {
+  const coordinate = row.coordinate || row.coordinates || row.latlng || row.latLng;
+  if (coordinate) return String(coordinate);
+  const lat = row.latitude ?? row.lat;
+  const lng = row.longitude ?? row.lng ?? row.long;
+  return lat && lng ? `${lat}, ${lng}` : "-";
+}
+
+function normalizeTechnicalRow(row: any) {
+  const typeKey = technicalKey(row);
+  const isActive = ["router", "switch", "olt"].includes(typeKey);
+  const isPassive = ["otb", "odc", "odp", "kabel", "closure"].includes(typeKey);
+  return {
+    ...row,
+    id: String(row.id || row.maps_id || row.mapsId || row.code || row.name || `${typeKey}-${coordinateFrom(row)}`),
+    typeKey,
+    category: isActive ? "active" : isPassive ? "passive" : "pop",
+    assetType: technicalLabel(typeKey),
+    name: row.name || row.label || row.title || row.pop_name || row.site_name || "-",
+    serialNo: row.serialNo || row.serial_no || row.sn || row.code || row.maps_id || row.mapsId || "-",
+    ipAddress: row.ipAddress || row.ip_address || row.ip || "",
+    location: row.location || row.address || [row.area, row.city].filter(Boolean).join(" | ") || "-",
+    coordinate: coordinateFrom(row),
+    status: row.status === true ? "active" : row.status === false ? "nonactive" : row.status || "active",
+  };
+}
+
+function uniqueTechnicalRows(rows: any[]) {
+  const seen = new Set<string>();
+  return rows.filter((row) => {
+    const key = `${row.id}-${row.typeKey}-${row.coordinate}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function TechnicalPage({ section }: { section: string }) {
+  const [rows, setRows] = useState<any[] | null>(null);
+  const [error, setError] = useState("");
+  const [pageIndex, setPageIndex] = useState(0);
+  const pageSize = 10;
+
+  useEffect(() => {
+    Promise.allSettled([
+      api.post("/location-point/list", technicalListBody()),
+      api.get("/location-point/map-markers"),
+    ])
+      .then((results) => {
+        const listPayload = results[0].status === "fulfilled" ? results[0].value.data : null;
+        const markerPayload = results[1].status === "fulfilled" ? results[1].value.data : null;
+        const merged = uniqueTechnicalRows([
+          ...technicalPayloadRows(markerPayload),
+          ...technicalPayloadRows(listPayload),
+        ].map(normalizeTechnicalRow));
+        setRows(merged);
+        if (results.every((result) => result.status === "rejected")) setError("Gagal memuat data teknis dari API location-point.");
+      })
+      .catch(() => {
+        setRows([]);
+        setError("Gagal memuat data teknis dari API location-point.");
+      });
+  }, []);
+
+  const filtered = useMemo(() => {
+    const all = rows || [];
+    const aliases: Record<string, string[]> = {
+      router: ["router"],
+      switch: ["switch"],
+      olt: ["olt"],
+      cpe: ["olt"],
+      otb: ["otb"],
+      odc: ["odc"],
+      odp: ["odp"],
+      kabel: ["kabel"],
+      sla: ["sla"],
+    };
+    return all.filter((row) =>
+      section === "infrastruktur" ||
+      (section === "perangkat-aktif" && row.category === "active") ||
+      (section === "perangkat-pasif" && row.category === "passive") ||
+      aliases[section]?.includes(row.typeKey)
+    );
+  }, [rows, section]);
+
+  const counts = useMemo(() => {
+    const source = section === "infrastruktur" ? rows || [] : filtered;
+    return {
+      total: source.length,
+      active: source.filter((row) => row.category === "active").length,
+      passive: source.filter((row) => row.category === "passive").length,
+      mapped: source.filter((row) => row.coordinate && row.coordinate !== "-").length,
+    };
+  }, [filtered, rows, section]);
+
+  const mapPoints = filtered.filter((row) => row.coordinate && row.coordinate !== "-");
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(pageIndex, totalPages - 1);
+  const paginatedRows = filtered.slice(currentPage * pageSize, currentPage * pageSize + pageSize);
+
+  return (
+    <div className="space-y-6">
+      <ErrorBox message={error} />
+      {rows === null ? (
+        <ShimmerBlock className="h-72" />
+      ) : (
+        <>
+          <div className="grid gap-4 md:grid-cols-3">
+            {[
+              { label: "Total Data", value: counts.total, icon: <Server size={20} />, color: "bg-indigo-500" },
+              { label: "Perangkat Aktif", value: counts.active, icon: <Router size={20} />, color: "bg-emerald-500" },
+              { label: "Perangkat Pasif", value: counts.passive, icon: <Cable size={20} />, color: "bg-amber-500" },
+            ].map((item) => (
+              <Card key={item.label} className="p-5">
+                <div className="flex items-center gap-4">
+                  <div className={`grid h-12 w-12 place-items-center rounded-xl text-white ${item.color}`}>{item.icon}</div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{item.label}</p>
+                    <p className="mt-1 text-2xl font-bold text-slate-950">{item.value}</p>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          {section === "infrastruktur" ? (
+            <InfrastructureMap points={mapPoints} />
+          ) : null}
+
+          <Card className="p-5">
+            <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="font-black text-slate-950">Daftar Data Teknis</h2>
+                <p className="text-sm text-slate-500">{counts.mapped} data memiliki koordinat.</p>
+              </div>
+            </div>
+            <DataGrid rows={paginatedRows} columns={[
+              { label: "Jenis", value: (r) => <span className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-xs font-black uppercase text-indigo-700">{r.category === "passive" ? <Cable size={14} /> : r.category === "active" ? <Router size={14} /> : <RadioTower size={14} />}{r.assetType}</span> },
+              { label: "Nama", value: (r) => <strong>{r.name}</strong> },
+              { label: "Kode / Serial", value: (r) => r.serialNo || "-" },
+              { label: "IP", value: (r) => r.ipAddress || "-" },
+              { label: "Lokasi", value: (r) => r.location || "-" },
+              { label: "Koordinat", value: (r) => r.coordinate || "-" },
+              { label: "Status", value: (r) => <Badge value={r.status} /> },
+            ]} />
+            {filtered.length > pageSize ? (
+              <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+                <p className="font-semibold text-slate-500">
+                  Menampilkan {currentPage * pageSize + 1}-{Math.min((currentPage + 1) * pageSize, filtered.length)} dari {filtered.length} data
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={currentPage === 0}
+                    onClick={() => setPageIndex((value) => Math.max(0, value - 1))}
+                    className="rounded-lg border border-slate-200 px-3 py-2 font-bold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Sebelumnya
+                  </button>
+                  <span className="rounded-lg bg-slate-50 px-3 py-2 font-black text-slate-700">
+                    {currentPage + 1} / {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={currentPage >= totalPages - 1}
+                    onClick={() => setPageIndex((value) => Math.min(totalPages - 1, value + 1))}
+                    className="rounded-lg border border-slate-200 px-3 py-2 font-bold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Berikutnya
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </Card>
+        </>
+      )}
+    </div>
+  );
+}
 
 export default function MitraPortalSectionPage({ section }: { section: string }) { const page = meta[section] || ["Portal Mitra", "Kelola data Mitra."]; let content: ReactNode;
   if (section === "syarat-komdigi") content = <DocumentCards category="syarat-komdigi" />; else if (section === "syarat-operasional") content = <DocumentCards category="syarat-operasional" />; else if (section === "dokumen-pendukung") content = <DocumentCards category="dokumen-kerjasama,benefit,support-mitra,perizinan-wilayah" />; else if (section === "registrasi" || section === "profil") content = <RegistrationPage />; else if (section === "settings") content = <RegistrationPage settings />; else if (section === "legal") content = <LegalPage />; else if (docCategory[section] || ["ijin-lokasi", "sewa-menyewa", "lokasi", "kontrak"].includes(section)) content = <PartnerDocuments section={section} />; else if (["tiket", "cs-online", "tiket-gangguan", "tiket-layanan"].includes(section)) content = <TicketsPage section={section} />; else if (["perangkat-aktif", "perangkat-pasif", "router", "switch", "olt", "cpe", "sla", "otb", "odc", "odp", "kabel", "infrastruktur"].includes(section)) content = <TechnicalPage section={section} />; else if (section === "produk") content = <ProductsPage />; else if (section === "pelanggan") content = <CustomersPage />; else if (["pendapatan-billing", "kelola-tagihan"].includes(section)) content = <FinancePage invoices />; else if (section === "berita-acara") content = <><FinancePage /><div className="mt-6"><DocumentCards category="berita-acara-pendapatan" /></div></>; else if (section === "operasional-produk") content = <DocumentCards category="brosur-produk" />; else if (section === "presales") content = <DocumentCards category="presales-mitra" />; else if (section === "evaluasi") content = <DocumentCards category="evaluasi-penjualan" />; else content = <Empty>Menu portal belum tersedia.</Empty>;

@@ -5,8 +5,8 @@ import api from "@/lib/api";
 import { Card, FormShell, SelectInput, TextArea, TextInput } from "@/components/ui/AdminUI";
 import CoordinatePicker from "@/components/ui/CoordinatePicker";
 import { customerTypeOptions } from "@/lib/customer-options";
-import { useAuthStore } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
+import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 
 const statusOptions = [{ label: "Aktif", value: "active" }, { label: "Nonaktif", value: "nonactive" }];
@@ -66,7 +66,6 @@ function documentMetadata(files: Record<string, File | null>) {
 
 export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string }) {
   const router = useRouter();
-  const currentUser = useAuthStore((state) => state.user);
   const [error, setError] = useState("");
   const [packageOptions, setPackageOptions] = useState<{ label: string; value: string }[]>([]);
   const [partnerOptions, setPartnerOptions] = useState<{ label: string; value: string }[]>([]);
@@ -77,10 +76,14 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
   const [coordinatePickerOpen, setCoordinatePickerOpen] = useState(false);
   const [form, setForm] = useState({
     ticketId: "",
+    customerCode: "",
     name: "",
     username: "",
     password: "",
+    serviceUsername: "",
+    servicePassword: "",
     phone: "",
+    whatsapp: "",
     email: "",
     city: "",
     area: "",
@@ -90,6 +93,14 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
     npwp: "",
     customerType: "Perumahan / Apartemen / Kos",
     packageName: "Mega 50Mbps",
+    billingCycle: "monthly",
+    installationDate: "",
+    activationDate: "",
+    popName: "",
+    odpName: "",
+    port: "",
+    ipAddress: "",
+    routerNas: "",
     supportPayment: "",
     supportTechnical: "",
     partnerId: "",
@@ -97,18 +108,6 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
     status: "active",
     notes: "",
   });
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const savedUser = typeof window !== "undefined" ? window.localStorage.getItem("ringnet_user") : null;
-      const parsedUser = savedUser ? JSON.parse(savedUser) : null;
-      const activeUserName = currentUser?.name || parsedUser?.name || "";
-      if (!activeUserName) return;
-      setForm((current) => current.username === activeUserName ? current : { ...current, username: activeUserName });
-    }, 0);
-
-    return () => window.clearTimeout(timer);
-  }, [currentUser?.name]);
 
   useEffect(() => {
     // 1. Paket Layanan: POST /api/v1/product/broadband/select or fallback
@@ -181,9 +180,13 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
         setForm((current) => ({
           ...current,
           ticketId: raw.ticket || current.ticketId,
+          customerCode: raw.customer_id || raw.customerCode || current.customerCode,
           name: raw.name || current.name,
           username: raw.username || current.username,
+          serviceUsername: raw.pppoe_username || raw.serviceUsername || raw.username || current.serviceUsername,
+          servicePassword: raw.pppoe_password || raw.servicePassword || current.servicePassword,
           phone: raw.phone || current.phone,
+          whatsapp: raw.whatsapp || raw.phone || current.whatsapp,
           email: raw.email || current.email,
           city: raw.city || current.city,
           area: raw.area || current.area,
@@ -192,6 +195,15 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
           ktp: String(raw.ktp || current.ktp),
           npwp: String(raw.npwp || current.npwp),
           customerType: raw.type || current.customerType,
+          packageName: raw.package_name || raw.packageName || current.packageName,
+          billingCycle: raw.billing_cycle || raw.billingCycle || current.billingCycle,
+          installationDate: toInputDate(raw.installation_date || raw.installationDate) || current.installationDate,
+          activationDate: toInputDate(raw.activation_date || raw.activationDate) || current.activationDate,
+          popName: raw.pop_name || raw.popName || current.popName,
+          odpName: raw.odp_name || raw.odpName || current.odpName,
+          port: raw.port || current.port,
+          ipAddress: raw.ip_address || raw.ipAddress || current.ipAddress,
+          routerNas: raw.router_nas || raw.routerNas || current.routerNas,
           supportPayment: raw.pay_support || current.supportPayment,
           supportTechnical: raw.tech_support || current.supportTechnical,
           notes: raw.notes || current.notes,
@@ -211,11 +223,12 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
     const dekadataPayload = {
       ticket: form.ticketId || "TICKET-AUTO",
       type: form.customerType === "Perumahan / Apartemen / Kos" ? "home" : (form.customerType.toLowerCase().includes("bisnis") ? "business" : form.customerType.toLowerCase()),
-      username: form.username || form.email.split("@")[0] || form.name.toLowerCase().replace(/\s+/g, ""),
-      password: form.password || "RingNet123!",
+      username: form.username || form.serviceUsername || form.email.split("@")[0] || form.name.toLowerCase().replace(/\s+/g, ""),
+      password: form.password || form.servicePassword || "RingNet123!",
       name: form.name,
       email: form.email,
       phone: form.phone,
+      whatsapp: form.whatsapp || form.phone,
       address: form.address,
       coordinate: form.coordinate || "-6.200000, 106.816666",
       ktp: Number(form.ktp.replace(/\D/g, "")) || 1234567890,
@@ -223,6 +236,18 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
       area: form.area || form.city || "Pusat",
       status: form.status === "active",
       notes: form.notes || "",
+      package_name: form.packageName,
+      billing_cycle: form.billingCycle,
+      installation_date: form.installationDate || null,
+      activation_date: form.activationDate || null,
+      pppoe_username: form.serviceUsername || form.username,
+      pppoe_password: form.servicePassword || form.password,
+      pop_name: form.popName,
+      odp_name: form.odpName,
+      port: form.port,
+      ip_address: form.ipAddress,
+      router_nas: form.routerNas,
+      partner_id: form.partnerId || null,
       tech_support: form.supportTechnical || "",
       pay_support: form.supportPayment || "",
       documents: documentMetadata(documentFiles),
@@ -266,47 +291,76 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
   }
 
 
-  return <FormShell title={(edit ? "Edit" : "Tambah") + " Pelanggan"} subtitle="Lengkapi informasi pelanggan dan paket internet." onSubmit={save} backHref="/users/pelanggan">{error ? <div className="rounded-lg bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div> : null}<div className="grid gap-5 lg:grid-cols-2">
-    <div className="lg:col-span-2"><SelectInput label="Tiket" value={form.ticketId} onChange={(e) => setForm({ ...form, ticketId: e.target.value })} options={[{ label: "Pilih Tiket", value: "" }, ...ticketOptions]} /></div>
-    <TextInput label="Nama Lengkap" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Masukkan nama lengkap" />
-    <TextInput label="Nama Pengguna" value={form.username} readOnly className="bg-slate-50 text-slate-600" placeholder="Otomatis dari user yang login" />
-    <TextInput label="Kata Sandi" type="password" value={currentUser ? "************" : ""} readOnly className="bg-slate-50 text-slate-600" placeholder="Otomatis dari user yang login" />
-    <TextInput label="No Telepon" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="0812-xxxx-xxxx" />
-    <TextInput label="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@contoh.com" />
-    <TextInput label="Kota" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Masukkan kota" />
-    <TextInput label="Area" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} />
-    <div>
-      <span className="mb-2 block text-sm font-semibold text-slate-700">Koordinat</span>
-      <div className="flex gap-2">
-        <input value={form.coordinate} onChange={(e) => setForm({ ...form, coordinate: e.target.value })} placeholder="-7.77720164, 110.3977788" className="h-11 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
-        <button type="button" onClick={() => setCoordinatePickerOpen(true)} className="h-11 rounded-lg border border-indigo-200 px-4 text-sm font-bold text-indigo-600 hover:bg-indigo-50">Pilih Maps</button>
-      </div>
+  return <FormShell title={(edit ? "Edit" : "Tambah") + " Pelanggan"} subtitle="Lengkapi data pelanggan, akun layanan, lokasi pemasangan, produk, dan dokumen." onSubmit={save} backHref="/users/pelanggan">
+    {error ? <div className="rounded-lg bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div> : null}
+    <div className="space-y-6">
+      <FormSection title="Informasi Pelanggan" description="Identitas dasar pelanggan seperti di master data apps.ring.">
+        <div className="grid gap-5 lg:grid-cols-2">
+          <TextInput label="ID Pelanggan" value={form.customerCode} onChange={(e) => setForm({ ...form, customerCode: e.target.value })} placeholder="Otomatis dari API jika dikosongkan" />
+          <SelectInput label="Tiket / Referensi" value={form.ticketId} onChange={(e) => setForm({ ...form, ticketId: e.target.value })} options={[{ label: "Pilih Tiket", value: "" }, ...ticketOptions]} />
+          <TextInput label="Nama Lengkap" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Masukkan nama lengkap" />
+          <SelectInput label="Jenis Pelanggan" value={form.customerType} onChange={(e) => setForm({ ...form, customerType: e.target.value })} options={customerTypeOptions} />
+          <TextInput label="No Telepon" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value, whatsapp: form.whatsapp || e.target.value })} placeholder="0812-xxxx-xxxx" />
+          <TextInput label="WhatsApp" value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} placeholder="Nomor WhatsApp pelanggan" />
+          <TextInput label="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@contoh.com" />
+          <SelectInput label="Status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} options={statusOptions} />
+        </div>
+      </FormSection>
+
+      <FormSection title="Akun Layanan Internet" description="Akun login/PPPoE dan data teknis layanan pelanggan.">
+        <div className="grid gap-5 lg:grid-cols-2">
+          <TextInput label="Username Aplikasi" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} placeholder="Username customer" />
+          <TextInput label="Password Aplikasi" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder={edit ? "Kosongkan jika tidak diubah" : "Password customer"} />
+          <TextInput label="Username PPPoE" value={form.serviceUsername} onChange={(e) => setForm({ ...form, serviceUsername: e.target.value })} placeholder="username@ring.net.id" />
+          <TextInput label="Password PPPoE" type="password" value={form.servicePassword} onChange={(e) => setForm({ ...form, servicePassword: e.target.value })} placeholder="Password PPPoE" />
+          <TextInput label="IP Address" value={form.ipAddress} onChange={(e) => setForm({ ...form, ipAddress: e.target.value })} placeholder="Opsional" />
+          <TextInput label="Router NAS" value={form.routerNas} onChange={(e) => setForm({ ...form, routerNas: e.target.value })} placeholder="Router/NAS" />
+          <TextInput label="POP" value={form.popName} onChange={(e) => setForm({ ...form, popName: e.target.value })} placeholder="Nama POP" />
+          <div className="grid gap-5 sm:grid-cols-2">
+            <TextInput label="ODP" value={form.odpName} onChange={(e) => setForm({ ...form, odpName: e.target.value })} placeholder="ODP" />
+            <TextInput label="Port" value={form.port} onChange={(e) => setForm({ ...form, port: e.target.value })} placeholder="Port" />
+          </div>
+        </div>
+      </FormSection>
+
+      <FormSection title="Lokasi Pemasangan" description="Alamat, area, kota, dan koordinat pelanggan.">
+        <div className="grid gap-5 lg:grid-cols-2">
+          <TextInput label="Kota/Kabupaten" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Masukkan kota" />
+          <TextInput label="Area" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} placeholder="Area layanan" />
+          <div className="lg:col-span-2">
+            <span className="mb-2 block text-sm font-semibold text-slate-700">Koordinat</span>
+            <div className="flex gap-2">
+              <input value={form.coordinate} onChange={(e) => setForm({ ...form, coordinate: e.target.value })} placeholder="-7.77720164, 110.3977788" className="h-11 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+              <button type="button" onClick={() => setCoordinatePickerOpen(true)} className="h-11 rounded-lg border border-indigo-200 px-4 text-sm font-bold text-indigo-600 hover:bg-indigo-50">Pilih Maps</button>
+            </div>
+          </div>
+          <div className="lg:col-span-2"><TextInput label="Alamat Lengkap" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Alamat lengkap pemasangan" /></div>
+        </div>
+      </FormSection>
+
+      <FormSection title="Produk, Billing, dan Support" description="Paket internet, siklus billing, jadwal aktivasi, PIC support, dan mitra bisnis.">
+        <div className="grid gap-5 lg:grid-cols-2">
+          <SelectInput label="Paket Internet" value={form.packageName} onChange={(e) => setForm({ ...form, packageName: e.target.value })} options={packageOptions.length ? packageOptions : [{ label: "Belum ada paket", value: "" }]} disabled={!packageOptions.length} />
+          <SelectInput label="Siklus Billing" value={form.billingCycle} onChange={(e) => setForm({ ...form, billingCycle: e.target.value })} options={[{ label: "Bulanan", value: "monthly" }, { label: "Tahunan", value: "yearly" }, { label: "Sekali Bayar", value: "one_time" }]} />
+          <TextInput label="Tanggal Instalasi" type="date" value={form.installationDate} onChange={(e) => setForm({ ...form, installationDate: e.target.value })} />
+          <TextInput label="Tanggal Aktivasi" type="date" value={form.activationDate} onChange={(e) => setForm({ ...form, activationDate: e.target.value })} />
+          <SelectInput label="Dukungan Pembayaran" value={form.supportPayment} onChange={(e) => setForm({ ...form, supportPayment: e.target.value })} options={adminOptions.length ? adminOptions : [{ label: "Belum ada admin", value: "" }]} disabled={!adminOptions.length} />
+          <SelectInput label="Dukungan Teknis" value={form.supportTechnical} onChange={(e) => setForm({ ...form, supportTechnical: e.target.value })} options={adminOptions.length ? adminOptions : [{ label: "Belum ada admin", value: "" }]} disabled={!adminOptions.length} />
+          <div className="lg:col-span-2"><SelectInput label="Mitra Bisnis / Sales" value={form.partnerId} onChange={(e) => setForm({ ...form, partnerId: e.target.value })} options={[{ label: "Pilih Mitra Bisnis", value: "" }, ...partnerOptions]} searchable searchPlaceholder="Cari ID mitra atau nama..." /></div>
+        </div>
+      </FormSection>
+
+      <FormSection title="Dokumen dan Foto" description="Berkas pendukung pelanggan. File fisik disiapkan di frontend; metadata dokumen dikirim ke API.">
+        <div className="grid gap-5 lg:grid-cols-2">
+          <TextInput label="Nomor KTP / NIK" value={form.ktp} onChange={(e) => setForm({ ...form, ktp: e.target.value })} placeholder="NIK KTP" />
+          <TextInput label="NPWP" value={form.npwp} onChange={(e) => setForm({ ...form, npwp: e.target.value })} placeholder="Nomor NPWP" />
+          <FileInput label="Upload KTP" accept=".pdf,.jpg,.jpeg,.png" fileName={documentFiles.ktp?.name} onChange={(file) => setDocumentFiles((current) => ({ ...current, ktp: file }))} />
+          <FileInput label="Upload NPWP" accept=".pdf,.jpg,.jpeg,.png" fileName={documentFiles.npwp?.name} onChange={(file) => setDocumentFiles((current) => ({ ...current, npwp: file }))} />
+          <FileInput label="Gambar Profil" accept="image/png,image/jpeg,image/jpg,image/webp" fileName={profileFile?.name || form.profileImage} onChange={setProfileFile} />
+          <div className="lg:col-span-2"><TextArea label="Catatan" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Catatan tambahan opsional" /></div>
+        </div>
+      </FormSection>
     </div>
-    <div className="lg:col-span-2"><TextInput label="Alamat" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Alamat lengkap" /></div>
-    <TextInput label="Nomor KTP" value={form.ktp} onChange={(e) => setForm({ ...form, ktp: e.target.value })} placeholder="NIK KTP" />
-    <TextInput label="NPWP" value={form.npwp} onChange={(e) => setForm({ ...form, npwp: e.target.value })} placeholder="Nomor NPWP" />
-    <label className="block">
-      <span className="mb-2 block text-sm font-semibold text-slate-700">Upload KTP</span>
-      <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setDocumentFiles((current) => ({ ...current, ktp: e.target.files?.[0] || null }))} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 file:mr-3 file:rounded-md file:border-0 file:bg-indigo-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-indigo-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
-      {documentFiles.ktp ? <span className="mt-2 block text-xs font-medium text-slate-500">{documentFiles.ktp.name}</span> : null}
-    </label>
-    <label className="block">
-      <span className="mb-2 block text-sm font-semibold text-slate-700">Upload NPWP</span>
-      <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setDocumentFiles((current) => ({ ...current, npwp: e.target.files?.[0] || null }))} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 file:mr-3 file:rounded-md file:border-0 file:bg-indigo-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-indigo-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
-      {documentFiles.npwp ? <span className="mt-2 block text-xs font-medium text-slate-500">{documentFiles.npwp.name}</span> : null}
-    </label>
-    <SelectInput label="Jenis Pelanggan" value={form.customerType} onChange={(e) => setForm({ ...form, customerType: e.target.value })} options={customerTypeOptions} />
-    <SelectInput label="Paket Internet" value={form.packageName} onChange={(e) => setForm({ ...form, packageName: e.target.value })} options={packageOptions.length ? packageOptions : [{ label: "Belum ada paket", value: "" }]} disabled={!packageOptions.length} />
-    <SelectInput label="Status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} options={statusOptions} />
-    <SelectInput label="Dukungan Pembayaran" value={form.supportPayment} onChange={(e) => setForm({ ...form, supportPayment: e.target.value })} options={adminOptions.length ? adminOptions : [{ label: "Belum ada admin", value: "" }]} disabled={!adminOptions.length} />
-    <SelectInput label="Dukungan Teknis" value={form.supportTechnical} onChange={(e) => setForm({ ...form, supportTechnical: e.target.value })} options={adminOptions.length ? adminOptions : [{ label: "Belum ada admin", value: "" }]} disabled={!adminOptions.length} />
-    <SelectInput label="Mitra Bisnis" value={form.partnerId} onChange={(e) => setForm({ ...form, partnerId: e.target.value })} options={[{ label: "Pilih Mitra Bisnis", value: "" }, ...partnerOptions]} searchable searchPlaceholder="Cari ID mitra atau nama..." />
-    <label className="block">
-      <span className="mb-2 block text-sm font-semibold text-slate-700">Gambar Profil</span>
-      <input type="file" accept="image/png,image/jpeg,image/jpg,image/webp" onChange={(e) => setProfileFile(e.target.files?.[0] || null)} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 file:mr-3 file:rounded-md file:border-0 file:bg-indigo-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-indigo-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
-      {profileFile || form.profileImage ? <span className="mt-2 block text-xs font-medium text-slate-500">{profileFile?.name || form.profileImage}</span> : null}
-    </label>
-    <div className="lg:col-span-2"><TextArea label="Catatan" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Catatan tambahan opsional" /></div>
     <CoordinatePicker
       open={coordinatePickerOpen}
       value={form.coordinate}
@@ -316,30 +370,179 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
         setCoordinatePickerOpen(false);
       }}
     />
-  </div></FormShell>;
+  </FormShell>;
+}
+
+function FormSection({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4">
+      <div className="mb-4">
+        <h2 className="text-base font-black text-slate-950">{title}</h2>
+        <p className="mt-1 text-sm font-medium text-slate-500">{description}</p>
+      </div>
+      <div className="rounded-xl bg-white p-4 shadow-sm shadow-slate-200/60">
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function FileInput({ label, accept, fileName, onChange }: { label: string; accept: string; fileName?: string; onChange: (file: File | null) => void }) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-semibold text-slate-700">{label}</span>
+      <input
+        type="file"
+        accept={accept}
+        onChange={(event) => onChange(event.target.files?.[0] || null)}
+        className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 file:mr-3 file:rounded-md file:border-0 file:bg-indigo-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-indigo-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+      />
+      {fileName ? <span className="mt-2 block text-xs font-medium text-slate-500">{fileName}</span> : null}
+    </label>
+  );
 }
 
 export function CompanyForm({ edit = false, id }: { edit?: boolean; id?: string }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [coordinatePickerOpen, setCoordinatePickerOpen] = useState(false);
-  const [documentFiles, setDocumentFiles] = useState<Record<string, File | null>>({ ktp: null, npwp: null });
-  const [form, setForm] = useState({ companyCode: "", name: "", email: "", phone: "", city: "Jakarta", area: "Jakarta", address: "", coordinate: "", ktp: "", npwp: "", status: "active" });
+  const [packageOptions, setPackageOptions] = useState<{ label: string; value: string }[]>([]);
+  const [adminOptions, setAdminOptions] = useState<{ label: string; value: string }[]>([]);
+  const [documentFiles, setDocumentFiles] = useState<Record<string, File | null>>({ ktp: null, npwp: null, nib: null, legal: null });
+  const [form, setForm] = useState({
+    companyCode: "",
+    name: "",
+    businessEntity: "PT",
+    nib: "",
+    npwp: "",
+    picName: "",
+    picPosition: "",
+    picPhone: "",
+    picEmail: "",
+    ktp: "",
+    email: "",
+    phone: "",
+    username: "",
+    password: "",
+    serviceUsername: "",
+    servicePassword: "",
+    city: "Jakarta",
+    area: "Jakarta",
+    address: "",
+    coordinate: "",
+    packageName: "",
+    billingCycle: "monthly",
+    installationDate: "",
+    activationDate: "",
+    popName: "",
+    odpName: "",
+    port: "",
+    ipAddress: "",
+    routerNas: "",
+    supportPayment: "",
+    supportTechnical: "",
+    status: "active",
+    notes: "",
+  });
+
+  useEffect(() => {
+    api.post("/product/broadband/select", { query: "" })
+      .then((res) => {
+        const raw = res.data?.data || [];
+        const options = raw.map((item: any) => ({
+          label: item.name || item.code || item.label || String(item),
+          value: item.name || item.code || String(item),
+        }));
+        if (options.length > 0) {
+          setPackageOptions(options);
+          setForm((current) => current.packageName ? current : { ...current, packageName: options[0].value });
+        }
+      })
+      .catch(() => {
+        setPackageOptions([
+          { label: "Dedicated Internet", value: "Dedicated Internet" },
+          { label: "Data Access", value: "Data Access" },
+          { label: "Broadband Business", value: "Broadband Business" },
+        ]);
+      });
+  }, []);
+
+  useEffect(() => {
+    api.post("/admin/list", { pageSize: 100, pageIndex: 0, sorting: [], columnFilters: [], globalFilter: "" })
+      .then((res) => {
+        const raw = res.data?.data?.data || res.data?.data || [];
+        const options = raw.map((item: any) => ({
+          label: item.name || item.username,
+          value: item.name || item.username,
+        }));
+        setAdminOptions(options);
+        if (options.length > 0) {
+          setForm((current) => ({
+            ...current,
+            supportPayment: current.supportPayment || options[0].value,
+            supportTechnical: current.supportTechnical || options[0].value,
+          }));
+        }
+      })
+      .catch(() => setAdminOptions([]));
+  }, []);
 
   useEffect(() => {
     if (!edit || !id) return;
     api.get("/companies/" + id)
-      .then((res) => setForm((current) => mergeCleanForm(current, res.data.data || {})))
+      .then((res) => {
+        const raw = res.data.data || {};
+        setForm((current) => ({
+          ...current,
+          companyCode: raw.partner_id || raw.companyCode || raw.company_code || current.companyCode,
+          name: raw.name || current.name,
+          businessEntity: raw.business_entity || raw.businessEntity || current.businessEntity,
+          nib: String(raw.nib || current.nib),
+          npwp: String(raw.npwp || current.npwp),
+          picName: raw.pic_name || raw.picName || raw.contact_person || current.picName,
+          picPosition: raw.pic_position || raw.picPosition || current.picPosition,
+          picPhone: raw.pic_phone || raw.picPhone || raw.phone || current.picPhone,
+          picEmail: raw.pic_email || raw.picEmail || raw.email || current.picEmail,
+          ktp: String(raw.ktp || current.ktp),
+          email: raw.email || current.email,
+          phone: raw.phone || current.phone,
+          username: raw.username || current.username,
+          serviceUsername: raw.pppoe_username || raw.serviceUsername || current.serviceUsername,
+          servicePassword: raw.pppoe_password || raw.servicePassword || current.servicePassword,
+          city: raw.city || current.city,
+          area: raw.area || current.area,
+          address: raw.address || current.address,
+          coordinate: raw.coordinate || current.coordinate,
+          packageName: raw.package_name || raw.packageName || current.packageName,
+          billingCycle: raw.billing_cycle || raw.billingCycle || current.billingCycle,
+          installationDate: toInputDate(raw.installation_date || raw.installationDate) || current.installationDate,
+          activationDate: toInputDate(raw.activation_date || raw.activationDate) || current.activationDate,
+          popName: raw.pop_name || raw.popName || current.popName,
+          odpName: raw.odp_name || raw.odpName || current.odpName,
+          port: raw.port || current.port,
+          ipAddress: raw.ip_address || raw.ipAddress || current.ipAddress,
+          routerNas: raw.router_nas || raw.routerNas || current.routerNas,
+          supportPayment: raw.pay_support || raw.supportPayment || current.supportPayment,
+          supportTechnical: raw.tech_support || raw.supportTechnical || current.supportTechnical,
+          status: raw.status === false ? "nonactive" : "active",
+          notes: raw.notes || current.notes,
+        }));
+      })
       .catch((err) => setError(err.response?.data?.message || "Gagal memuat data bisnis dari database."));
   }, [edit, id]);
 
   async function save() {
     setError("");
+    if (!form.name || !form.picName || !form.picPhone) {
+      setError("Nama perusahaan, nama PIC, dan telepon PIC wajib diisi.");
+      return;
+    }
     try {
       const payload = {
         ticket: form.companyCode || "TICKET-AUTO",
         type: "business",
-        username: form.email?.split("@")[0] || form.name.toLowerCase().replace(/\s+/g, ""),
+        username: form.username || form.email?.split("@")[0] || form.name.toLowerCase().replace(/\s+/g, ""),
+        password: form.password || form.servicePassword || "RingNet123!",
         name: form.name,
         email: form.email,
         phone: form.phone,
@@ -349,9 +552,26 @@ export function CompanyForm({ edit = false, id }: { edit?: boolean; id?: string 
         npwp: Number(form.npwp.replace(/\D/g, "")) || 0,
         area: form.area,
         status: form.status === "active",
-        notes: "",
-        tech_support: "",
-        pay_support: "",
+        notes: form.notes || "",
+        business_entity: form.businessEntity,
+        nib: form.nib,
+        pic_name: form.picName,
+        pic_position: form.picPosition,
+        pic_phone: form.picPhone,
+        pic_email: form.picEmail,
+        package_name: form.packageName,
+        billing_cycle: form.billingCycle,
+        installation_date: form.installationDate || null,
+        activation_date: form.activationDate || null,
+        pppoe_username: form.serviceUsername || form.username,
+        pppoe_password: form.servicePassword || form.password,
+        pop_name: form.popName,
+        odp_name: form.odpName,
+        port: form.port,
+        ip_address: form.ipAddress,
+        router_nas: form.routerNas,
+        tech_support: form.supportTechnical || "",
+        pay_support: form.supportPayment || "",
         documents: documentMetadata(documentFiles),
       };
       if (edit && id) {
@@ -365,34 +585,84 @@ export function CompanyForm({ edit = false, id }: { edit?: boolean; id?: string 
     }
   }
 
-  return <FormShell title={(edit ? "Edit" : "Tambah") + " Bisnis / Perusahaan"} subtitle="Data PT, CV, instansi, kantor, atau pelanggan enterprise." onSubmit={save} backHref="/users/bisnis">{error ? <div className="rounded-lg bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div> : null}<div className="grid gap-5 lg:grid-cols-2">
-    <TextInput label="ID Mitra" value={form.companyCode} onChange={(e) => setForm({ ...form, companyCode: e.target.value })} placeholder="Otomatis jika kosong" />
-    <TextInput label="Nama Perusahaan / Instansi" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-    <TextInput label="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-    <TextInput label="No Telepon" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-    <TextInput label="Area" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} />
-    <TextInput label="Kota" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
-    <div className="lg:col-span-2"><TextInput label="Alamat" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Alamat bisnis/perusahaan" /></div>
-    <div>
-      <span className="mb-2 block text-sm font-semibold text-slate-700">Koordinat</span>
-      <div className="flex gap-2">
-        <input value={form.coordinate} onChange={(e) => setForm({ ...form, coordinate: e.target.value })} placeholder="-7.77720164, 110.3977788" className="h-11 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
-        <button type="button" onClick={() => setCoordinatePickerOpen(true)} className="h-11 rounded-lg border border-indigo-200 px-4 text-sm font-bold text-indigo-600 hover:bg-indigo-50">Pilih Maps</button>
-      </div>
+  return <FormShell title={(edit ? "Edit" : "Tambah") + " Pelanggan Bisnis"} subtitle="Lengkapi data perusahaan, PIC, legalitas, akun layanan, lokasi, produk, dan billing." onSubmit={save} backHref="/users/bisnis">
+    {error ? <div className="rounded-lg bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div> : null}
+    <div className="space-y-6">
+      <FormSection title="Informasi Perusahaan" description="Identitas master pelanggan bisnis/perusahaan.">
+        <div className="grid gap-5 lg:grid-cols-2">
+          <TextInput label="ID Bisnis" value={form.companyCode} onChange={(e) => setForm({ ...form, companyCode: e.target.value })} placeholder="Otomatis jika kosong" />
+          <SelectInput label="Bentuk Badan Usaha" value={form.businessEntity} onChange={(e) => setForm({ ...form, businessEntity: e.target.value })} options={[{ label: "PT", value: "PT" }, { label: "CV", value: "CV" }, { label: "Yayasan", value: "Yayasan" }, { label: "Instansi", value: "Instansi" }, { label: "Koperasi", value: "Koperasi" }, { label: "Lainnya", value: "Lainnya" }]} />
+          <TextInput label="Nama Perusahaan / Instansi" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nama bisnis/perusahaan" />
+          <TextInput label="Email Perusahaan" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value, username: form.username || e.target.value.split("@")[0] })} placeholder="email@perusahaan.com" />
+          <TextInput label="No Telepon Perusahaan" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="021/08xx" />
+          <SelectInput label="Status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} options={statusOptions} />
+        </div>
+      </FormSection>
+
+      <FormSection title="Data PIC" description="Penanggung jawab pelanggan bisnis untuk koordinasi administrasi dan teknis.">
+        <div className="grid gap-5 lg:grid-cols-2">
+          <TextInput label="Nama PIC" value={form.picName} onChange={(e) => setForm({ ...form, picName: e.target.value })} placeholder="Nama PIC" />
+          <TextInput label="Jabatan PIC" value={form.picPosition} onChange={(e) => setForm({ ...form, picPosition: e.target.value })} placeholder="Contoh: IT Manager" />
+          <TextInput label="No Telepon / WhatsApp PIC" value={form.picPhone} onChange={(e) => setForm({ ...form, picPhone: e.target.value })} placeholder="08xxxxxxxxxx" />
+          <TextInput label="Email PIC" value={form.picEmail} onChange={(e) => setForm({ ...form, picEmail: e.target.value })} placeholder="pic@perusahaan.com" />
+          <TextInput label="Nomor KTP / NIK PIC" value={form.ktp} onChange={(e) => setForm({ ...form, ktp: e.target.value })} placeholder="NIK PIC" />
+        </div>
+      </FormSection>
+
+      <FormSection title="Legalitas Bisnis" description="Dokumen legal perusahaan untuk kebutuhan registrasi layanan.">
+        <div className="grid gap-5 lg:grid-cols-2">
+          <TextInput label="NPWP Perusahaan" value={form.npwp} onChange={(e) => setForm({ ...form, npwp: e.target.value })} placeholder="Nomor NPWP" />
+          <TextInput label="NIB / Nomor Legalitas" value={form.nib} onChange={(e) => setForm({ ...form, nib: e.target.value })} placeholder="Nomor NIB/legalitas" />
+          <FileInput label="Upload KTP / NIK PIC" accept=".pdf,.jpg,.jpeg,.png" fileName={documentFiles.ktp?.name} onChange={(file) => setDocumentFiles((current) => ({ ...current, ktp: file }))} />
+          <FileInput label="Upload NPWP" accept=".pdf,.jpg,.jpeg,.png" fileName={documentFiles.npwp?.name} onChange={(file) => setDocumentFiles((current) => ({ ...current, npwp: file }))} />
+          <FileInput label="Upload NIB" accept=".pdf,.jpg,.jpeg,.png" fileName={documentFiles.nib?.name} onChange={(file) => setDocumentFiles((current) => ({ ...current, nib: file }))} />
+          <FileInput label="Upload Dokumen Legal Lainnya" accept=".pdf,.jpg,.jpeg,.png" fileName={documentFiles.legal?.name} onChange={(file) => setDocumentFiles((current) => ({ ...current, legal: file }))} />
+        </div>
+      </FormSection>
+
+      <FormSection title="Akun Layanan Internet" description="Akun aplikasi, PPPoE, dan data teknis jaringan pelanggan bisnis.">
+        <div className="grid gap-5 lg:grid-cols-2">
+          <TextInput label="Username Aplikasi" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} placeholder="Username customer bisnis" />
+          <TextInput label="Password Aplikasi" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder={edit ? "Kosongkan jika tidak diubah" : "Password customer bisnis"} />
+          <TextInput label="Username PPPoE" value={form.serviceUsername} onChange={(e) => setForm({ ...form, serviceUsername: e.target.value })} placeholder="username@ring.net.id" />
+          <TextInput label="Password PPPoE" type="password" value={form.servicePassword} onChange={(e) => setForm({ ...form, servicePassword: e.target.value })} placeholder="Password PPPoE" />
+          <TextInput label="IP Address" value={form.ipAddress} onChange={(e) => setForm({ ...form, ipAddress: e.target.value })} placeholder="Opsional" />
+          <TextInput label="Router NAS" value={form.routerNas} onChange={(e) => setForm({ ...form, routerNas: e.target.value })} placeholder="Router/NAS" />
+          <TextInput label="POP" value={form.popName} onChange={(e) => setForm({ ...form, popName: e.target.value })} placeholder="Nama POP" />
+          <div className="grid gap-5 sm:grid-cols-2">
+            <TextInput label="ODP" value={form.odpName} onChange={(e) => setForm({ ...form, odpName: e.target.value })} placeholder="ODP" />
+            <TextInput label="Port" value={form.port} onChange={(e) => setForm({ ...form, port: e.target.value })} placeholder="Port" />
+          </div>
+        </div>
+      </FormSection>
+
+      <FormSection title="Lokasi Pemasangan" description="Alamat kantor/site, area layanan, kota, dan koordinat pemasangan.">
+        <div className="grid gap-5 lg:grid-cols-2">
+          <TextInput label="Area" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} placeholder="Area layanan" />
+          <TextInput label="Kota/Kabupaten" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Kota/Kabupaten" />
+          <div className="lg:col-span-2"><TextInput label="Alamat" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Alamat bisnis/perusahaan" /></div>
+          <div className="lg:col-span-2">
+            <span className="mb-2 block text-sm font-semibold text-slate-700">Koordinat</span>
+            <div className="flex gap-2">
+              <input value={form.coordinate} onChange={(e) => setForm({ ...form, coordinate: e.target.value })} placeholder="-7.77720164, 110.3977788" className="h-11 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+              <button type="button" onClick={() => setCoordinatePickerOpen(true)} className="h-11 rounded-lg border border-indigo-200 px-4 text-sm font-bold text-indigo-600 hover:bg-indigo-50">Pilih Maps</button>
+            </div>
+          </div>
+        </div>
+      </FormSection>
+
+      <FormSection title="Produk, Billing, dan Support" description="Paket layanan bisnis, siklus billing, jadwal aktivasi, dan PIC support internal.">
+        <div className="grid gap-5 lg:grid-cols-2">
+          <SelectInput label="Paket Layanan" value={form.packageName} onChange={(e) => setForm({ ...form, packageName: e.target.value })} options={packageOptions.length ? packageOptions : [{ label: "Belum ada paket", value: "" }]} disabled={!packageOptions.length} />
+          <SelectInput label="Siklus Billing" value={form.billingCycle} onChange={(e) => setForm({ ...form, billingCycle: e.target.value })} options={[{ label: "Bulanan", value: "monthly" }, { label: "Tahunan", value: "yearly" }, { label: "Sekali Bayar", value: "one_time" }]} />
+          <TextInput label="Tanggal Instalasi" type="date" value={form.installationDate} onChange={(e) => setForm({ ...form, installationDate: e.target.value })} />
+          <TextInput label="Tanggal Aktivasi" type="date" value={form.activationDate} onChange={(e) => setForm({ ...form, activationDate: e.target.value })} />
+          <SelectInput label="Dukungan Pembayaran" value={form.supportPayment} onChange={(e) => setForm({ ...form, supportPayment: e.target.value })} options={adminOptions.length ? adminOptions : [{ label: "Belum ada admin", value: "" }]} disabled={!adminOptions.length} />
+          <SelectInput label="Dukungan Teknis" value={form.supportTechnical} onChange={(e) => setForm({ ...form, supportTechnical: e.target.value })} options={adminOptions.length ? adminOptions : [{ label: "Belum ada admin", value: "" }]} disabled={!adminOptions.length} />
+          <div className="lg:col-span-2"><TextArea label="Catatan" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Catatan tambahan opsional" /></div>
+        </div>
+      </FormSection>
     </div>
-    <TextInput label="Nomor KTP / NIK PIC" value={form.ktp} onChange={(e) => setForm({ ...form, ktp: e.target.value })} placeholder="NIK PIC" />
-    <TextInput label="NPWP" value={form.npwp} onChange={(e) => setForm({ ...form, npwp: e.target.value })} placeholder="Nomor NPWP" />
-    <label className="block">
-      <span className="mb-2 block text-sm font-semibold text-slate-700">Upload KTP / NIK PIC</span>
-      <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setDocumentFiles((current) => ({ ...current, ktp: e.target.files?.[0] || null }))} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 file:mr-3 file:rounded-md file:border-0 file:bg-indigo-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-indigo-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
-      {documentFiles.ktp ? <span className="mt-2 block text-xs font-medium text-slate-500">{documentFiles.ktp.name}</span> : null}
-    </label>
-    <label className="block">
-      <span className="mb-2 block text-sm font-semibold text-slate-700">Upload NPWP</span>
-      <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setDocumentFiles((current) => ({ ...current, npwp: e.target.files?.[0] || null }))} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 file:mr-3 file:rounded-md file:border-0 file:bg-indigo-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-indigo-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
-      {documentFiles.npwp ? <span className="mt-2 block text-xs font-medium text-slate-500">{documentFiles.npwp.name}</span> : null}
-    </label>
-    <SelectInput label="Status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} options={statusOptions} />
     <CoordinatePicker
       open={coordinatePickerOpen}
       value={form.coordinate}
@@ -402,7 +672,7 @@ export function CompanyForm({ edit = false, id }: { edit?: boolean; id?: string 
         setCoordinatePickerOpen(false);
       }}
     />
-  </div></FormShell>;
+  </FormShell>;
 }
 
 export function PartnerForm({ edit = false, id }: { edit?: boolean; id?: string }) {

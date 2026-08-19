@@ -72,9 +72,9 @@ function RadiusStatus({ value }: { value: string }) {
 function RadiusSummary({ active, secondary, label }: { active: string; secondary: string; label: string }) {
   return (
     <div className="mb-6 grid gap-4 md:grid-cols-3">
-      <StatCard icon={<Network size={21} />} label={label} value={active} trend="Data radius terpantau" accent="indigo" />
-      <StatCard icon={<ShieldCheck size={21} />} label="Status Aktif" value={secondary} trend="Siap melayani autentikasi" accent="emerald" />
-      <StatCard icon={<Activity size={21} />} label="Update Terakhir" value="Realtime" trend="Sinkronisasi operasional" accent="amber" />
+      <StatCard icon={<Network size={21} />} label={label} value={active} accent="indigo" />
+      <StatCard icon={<ShieldCheck size={21} />} label="Status Aktif" value={secondary} accent="emerald" />
+      <StatCard icon={<Activity size={21} />} label="Update Terakhir" value="Realtime" accent="amber" />
     </div>
   );
 }
@@ -179,9 +179,9 @@ export function RadiusHistoryPage() {
     <>
       <PageHeader title="Riwayat Radius" subtitle="Lihat log autentikasi, koneksi, dan kejadian Radius pelanggan." />
       <div className="mb-6 grid gap-4 md:grid-cols-3">
-        <StatCard icon={<Clock3 size={21} />} label="Retensi Riwayat" value="30 hari" trend="Log lama dibersihkan otomatis" accent="indigo" />
-        <StatCard icon={<DatabaseZap size={21} />} label="Total Log" value={String(histories.length)} trend="Data contoh operasional" accent="emerald" />
-        <StatCard icon={<Wifi size={21} />} label="Status Monitor" value="Aktif" trend="Siap menerima event Radius" accent="amber" />
+        <StatCard icon={<Clock3 size={21} />} label="Retensi Riwayat" value="30 hari" accent="indigo" />
+        <StatCard icon={<DatabaseZap size={21} />} label="Total Log" value={String(histories.length)} accent="emerald" />
+        <StatCard icon={<Wifi size={21} />} label="Status Monitor" value="Aktif" accent="amber" />
       </div>
       <Card className="mb-4 border-cyan-100 bg-cyan-50 px-4 py-3 text-center text-sm font-medium text-cyan-800">
         Riwayat akan terhapus otomatis setelah 30 hari

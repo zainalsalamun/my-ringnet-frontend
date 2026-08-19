@@ -2,7 +2,7 @@
 
 import api from "@/lib/api";
 import { currency, date } from "@/lib/format";
-import { AlertTriangle, Bell, CheckCheck, ChevronDown, Clock, LogOut, Menu, ReceiptText, Search, Settings, ShieldCheck, UserCog, UserPlus, WalletCards, X } from "lucide-react";
+import { AlertTriangle, Bell, CheckCheck, ChevronDown, Clock, Headphones, LogOut, Menu, ReceiptText, Search, Settings, ShieldCheck, UserCog, UserPlus, WalletCards, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -30,9 +30,10 @@ const severityStyles = {
 };
 
 function NotificationIcon({ item }: { item: NotificationItem }) {
-  const icon = item.type.includes("invoice") ? <ReceiptText size={17} /> : item.type === "payment" ? <WalletCards size={17} /> : item.type === "lead" ? <UserPlus size={17} /> : <AlertTriangle size={17} />;
-  return <div className={"grid h-9 w-9 shrink-0 place-items-center rounded-lg ring-1 " + severityStyles[item.severity]}>{icon}</div>;
+  const icon = item.type.includes("ticket") ? <Headphones size={17} /> : item.type.includes("partner") ? <UserPlus size={17} /> : item.type.includes("invoice") ? <ReceiptText size={17} /> : item.type === "payment" ? <WalletCards size={17} /> : <AlertTriangle size={17} />;
+  return <div className={"grid h-9 w-9 shrink-0 place-items-center rounded-lg ring-1 " + (severityStyles[item.severity] || severityStyles.info)}>{icon}</div>;
 }
+
 
 function formatDetailValue(key: string, value: string | number | null | undefined) {
   if (value === null || value === undefined || value === "") return "-";
@@ -74,9 +75,11 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
   useEffect(() => {
     if (!user) return;
     if (user.role === "mitra") return;
+    
+    // Safely attempt notifications fetch
     api.get("/dashboard/notifications")
       .then((res) => {
-        const data = Array.isArray(res.data.data) ? res.data.data : [];
+        const data = Array.isArray(res.data?.data) ? res.data.data : [];
         setItems(data);
         setSelected(null);
         setNotificationError("");
@@ -84,9 +87,9 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
       .catch(() => {
         setItems([]);
         setSelected(null);
-        setNotificationError("Notifikasi belum dapat dimuat.");
       });
   }, [user]);
+
 
   useEffect(() => {
     function closeOnOutside(event: MouseEvent) {
@@ -131,7 +134,12 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
     }
   }
 
-  function handleLogout() {
+  async function handleLogout() {
+    try {
+      await api.get("/admin/logout");
+    } catch {
+      // Keep local logout responsive even if the remote session is already gone.
+    }
     logout();
     setProfileOpen(false);
     router.push("/");
@@ -237,10 +245,8 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
             </div>
           ) : null}
         </div>
-        <button onClick={handleLogout} className="hidden h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-600 hover:text-rose-600 sm:flex">
-          <LogOut size={16} /> Keluar
-        </button>
         <div ref={profileRef} className="relative border-l border-slate-200 pl-4">
+
           <button onClick={() => setProfileOpen((current) => !current)} className="flex items-center gap-3 rounded-xl px-1 py-1.5 text-left transition hover:bg-slate-50">
             <div className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-sm font-bold uppercase text-white">{initials(displayName)}</div>
             <div className="hidden md:block">

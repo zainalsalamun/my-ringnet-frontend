@@ -102,7 +102,7 @@ export function TableSkeleton({ columns = 6, rows = 6, showHeader = true }: { co
   );
 }
 
-export function StatCard({ icon, label, value, trend, accent = "indigo" }: { icon: ReactNode; label: string; value: string; trend: string; accent?: "indigo" | "emerald" | "amber" | "rose" }) {
+export function StatCard({ icon, label, value, trend, accent = "indigo" }: { icon: ReactNode; label: string; value: string; trend?: string; accent?: "indigo" | "emerald" | "amber" | "rose" }) {
   const colors = {
     indigo: "bg-indigo-500 text-white",
     emerald: "bg-emerald-500 text-white",
@@ -116,7 +116,7 @@ export function StatCard({ icon, label, value, trend, accent = "indigo" }: { ico
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
           <p className="mt-1 text-2xl font-bold text-slate-950">{value}</p>
-          <p className="mt-1 text-xs font-medium text-emerald-600">{trend}</p>
+          {trend ? <p className="mt-1 text-xs font-medium text-emerald-600">{trend}</p> : null}
         </div>
       </div>
     </Card>

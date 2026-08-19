@@ -4,9 +4,8 @@
 
 import api from "@/lib/api";
 import { Badge, Card, DataTable, PageHeader, SelectInput, TableSkeleton, TextArea, TextInput } from "@/components/ui/AdminUI";
-import { date } from "@/lib/format";
 import CoordinatePicker from "@/components/ui/CoordinatePicker";
-import { MapPin, Network, Router, Upload, FileText, Image as ImageIcon, Eye, Download } from "lucide-react";
+import { MapPin, Network, Router, FileText, Eye, Download } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -28,24 +27,58 @@ export default function PopPage() {
 
   useEffect(() => {
     setLoading(true);
-    api.get("/pops?limit=500")
-      .then((res) => setRows(res.data.data || []))
+    setToast("");
+
+    // Call DEKASIMAL API POST /api/v1/location-point/list with columnFilters
+    api.post("/location-point/list", {
+      pageSize: 500,
+      pageIndex: 0,
+      sorting: [],
+      columnFilters: [{ id: "type", value: "pop" }],
+      globalFilter: "",
+    })
+      .then((res) => {
+        const raw = res.data?.data?.data || res.data?.data || res.data?.rows || (Array.isArray(res.data) ? res.data : []);
+        const normalized = raw.map((item: any) => ({
+          id: item.maps_id || item._id || item.id,
+          popCode: item.maps_id || item.code || item.popCode || "-",
+          name: item.name || item.title || "-",
+          area: item.group || item.area || "-",
+          city: item.location?.city || item.city || item.address || "-",
+          coordinate: item.coordinate || (item.location?.coordinates ? `${item.location.coordinates[1]}, ${item.location.coordinates[0]}` : "-"),
+          picName: item.picName || item.pic_name || item.pic?.name || "-",
+          picPhone: item.picPhone || item.pic_phone || item.pic_contact || item.pic?.phone || "-",
+          status: item.status || "active",
+        }));
+        setRows(normalized);
+      })
       .catch(() => {
-        setRows([]);
-        setToast("Gagal memuat data POP. Pastikan backend aktif dan sesi login valid.");
+        // Fallback to legacy GET /pops
+        api.get("/pops")
+          .then((res) => setRows(res.data?.data || []))
+          .catch(() => {
+            setRows([]);
+            setToast("Gagal memuat data POP dari server.");
+          });
       })
       .finally(() => setLoading(false));
   }, []);
 
+
   async function remove(row: any) {
     try {
-      await api.delete("/pops/" + row.id);
+      try {
+        await api.delete(`/location-point/delete/${row.id}`);
+      } catch {
+        await api.delete(`/pops/${row.id}`);
+      }
       setRows((current) => current.filter((item) => item.id !== row.id));
       setToast("POP berhasil dihapus.");
     } catch (err: any) {
       setToast(err.response?.data?.message || "Gagal menghapus POP.");
     }
   }
+
 
   return (
     <div>
@@ -80,6 +113,8 @@ export default function PopPage() {
             { key: "area", header: "Area / Wilayah", render: (row: any) => row.area || "-" },
             { key: "city", header: "Kota", render: (row: any) => row.city || "-" },
             { key: "coordinate", header: "Koordinat", render: (row: any) => row.coordinate || "-" },
+            { key: "picName", header: "PIC", render: (row: any) => row.picName || "-" },
+            { key: "picPhone", header: "No PIC", render: (row: any) => row.picPhone || "-" },
             { key: "status", header: "Status", render: (row: any) => <Badge value={row.status || "active"} /> },
           ]}
         />
@@ -101,45 +136,89 @@ export function PopFormPage({ edit = false, id }: { edit?: boolean; id?: string 
   const [existingFiles, setExistingFiles] = useState<Record<string, string | null>>({
     picKtp: null, locationPermit: null, leaseAgreement: null, locationPhoto: null, contract: null
   });
-  const [coordinatePickerOpen, setCoordinatePickerOpen] = useState(false);
 
   useEffect(() => {
     if (!edit || !id) return;
-    api.get("/pops/" + id)
+    
+    // Try DEKASIMAL API GET /location-point/report/{mapsId} or GET /location-point/{id}
+    api.get("/location-point/report/" + id)
       .then((res) => {
-        const data = res.data.data;
+        const data = res.data?.data?.node || res.data?.data || {};
         setForm({
-          popCode: data.popCode || "", name: data.name || "", area: data.area || "", city: data.city || "",
-          address: data.address || "", coordinate: data.coordinate || "", status: data.status || "active", notes: data.notes || "",
-          picName: data.picName || "", picPhone: data.picPhone || ""
-        });
-        setExistingFiles({
-          picKtp: data.picKtp || null,
-          locationPermit: data.locationPermit || null,
-          leaseAgreement: data.leaseAgreement || null,
-          locationPhoto: data.locationPhoto || null,
-          contract: data.contract || null,
+          popCode: data.maps_id || data.code || "",
+          name: data.name || "",
+          area: data.group || data.area || "",
+          city: data.location?.city || data.city || "",
+          address: data.address || "",
+          coordinate: data.coordinate || "",
+          status: data.status || "active",
+          notes: data.notes || "",
+          picName: data.picName || data.pic_name || data.pic?.name || "",
+          picPhone: data.picPhone || data.pic_phone || data.pic_contact || data.pic?.phone || "",
         });
       })
-      .catch(() => setError("Gagal memuat data POP."));
+      .catch(() => {
+        api.get("/pops/" + id)
+          .then((res) => {
+            const data = res.data?.data || {};
+            setForm({
+              popCode: data.popCode || "", name: data.name || "", area: data.area || "", city: data.city || "",
+              address: data.address || "", coordinate: data.coordinate || "", status: data.status || "active", notes: data.notes || "",
+              picName: data.picName || data.pic_name || data.pic?.name || "", picPhone: data.picPhone || data.pic_phone || data.pic_contact || data.pic?.phone || ""
+            });
+            setExistingFiles({
+              picKtp: data.picKtp || null,
+              locationPermit: data.locationPermit || null,
+              leaseAgreement: data.leaseAgreement || null,
+              locationPhoto: data.locationPhoto || null,
+              contract: data.contract || null,
+            });
+          })
+          .catch(() => setError("Gagal memuat data POP."));
+      });
   }, [edit, id]);
 
   async function submit() {
     setError("");
-    const body = new FormData();
-    Object.entries(form).forEach(([k, v]) => body.append(k, v as string));
-    Object.entries(files).forEach(([k, v]) => {
-      if (v) body.append(k, v);
-    });
+
+    const dekadataPayload = {
+      name: form.name,
+      type: "pop",
+      group: form.area || "backbone",
+      coordinate: form.coordinate || "-6.200000, 106.816666",
+      status: form.status,
+      address: form.address,
+      notes: form.notes,
+      pic_name: form.picName,
+      pic_phone: form.picPhone,
+    };
 
     try {
-      if (edit) await api.put("/pops/" + id, body);
-      else await api.post("/pops", body);
+      if (edit && id) {
+        try {
+          await api.put(`/location-point/update/${id}`, dekadataPayload);
+        } catch {
+          const body = new FormData();
+          Object.entries(form).forEach(([k, v]) => body.append(k, v as string));
+          Object.entries(files).forEach(([k, v]) => { if (v) body.append(k, v); });
+          await api.put("/pops/" + id, body);
+        }
+      } else {
+        try {
+          await api.post("/location-point/create", dekadataPayload);
+        } catch {
+          const body = new FormData();
+          Object.entries(form).forEach(([k, v]) => body.append(k, v as string));
+          Object.entries(files).forEach(([k, v]) => { if (v) body.append(k, v); });
+          await api.post("/pops", body);
+        }
+      }
       router.push("/users/pop");
     } catch (err: any) {
       setError(err.response?.data?.message || "Gagal menyimpan POP.");
     }
   }
+
 
   const handleFile = (key: string) => (file: File | null) => {
     setFiles({ ...files, [key]: file });

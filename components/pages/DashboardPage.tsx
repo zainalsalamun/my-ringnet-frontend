@@ -6,76 +6,181 @@ import api from "@/lib/api";
 import { Badge, Card, PageHeader, ShimmerBlock, StatCard } from "@/components/ui/AdminUI";
 import { useAuthStore } from "@/hooks/useAuth";
 import { currency } from "@/lib/format";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Receipt, TrendingUp, Users, Wallet } from "lucide-react";
 import { useEffect, useState } from "react";
 import { MitraDashboardPage } from "@/components/pages/MitraPortalPages";
 
-const isDekadataApi = process.env.NEXT_PUBLIC_API_PROVIDER === "dekadata";
-
 const emptySummary = {
   totalPelanggan: 0,
+  totalBisnis: 0,
+  totalAdmin: 0,
+  totalPop: 0,
+  pelangganAktif: 0,
   totalInvoice: 0,
   pendapatan: 0,
   tunggakan: 0,
-  revenue: [] as { month: string; value: number }[],
-  invoiceStatus: [
-    { name: "Lunas", value: 0, color: "#22c55e" },
-    { name: "Belum Lunas", value: 0, color: "#f59e0b" },
-    { name: "Terlambat", value: 0, color: "#ef4444" },
-  ],
   popularPackages: [] as { name: string; value: number }[],
   recentActivities: [] as any[],
-  dailyUsage: [] as { time: string; download: number; upload: number }[],
 };
 
+function payloadRows(payload: any): any[] {
+  const data = payload?.data;
+  if (Array.isArray(data?.markers)) return data.markers;
+  if (Array.isArray(data?.features)) return data.features;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(payload?.markers)) return payload.markers;
+  if (Array.isArray(payload?.features)) return payload.features;
+  if (Array.isArray(payload?.rows)) return payload.rows;
+  if (Array.isArray(payload?.list)) return payload.list;
+  return [];
+}
+
+function payloadTotal(payload: any, rows: any[]) {
+  return Number(payload?.meta?.total || payload?.data?.total || payload?.data?.count || payload?.totalDocs || payload?.total || rows.length || 0);
+}
+
+function moneyValue(row: any) {
+  return Number(row.amount || row.grandTotal || row.total || row.price || row.package_price || row.monthly_fee || 0) || 0;
+}
+
+function invoicePaid(row: any) {
+  const status = String(row.status || row.paymentStatus || "").toLowerCase();
+  return status.includes("paid") || status.includes("lunas") || status.includes("verified");
+}
+
+function invoiceOpen(row: any) {
+  const status = String(row.status || row.paymentStatus || "").toLowerCase();
+  return !invoicePaid(row) && !status.includes("cancel") && !status.includes("void");
+}
+
+function packageName(row: any) {
+  return String(row.packageName || row.package_name || row.product || row.product_name || row.serviceType || "Belum ada paket");
+}
+
+function buildPopularPackages(customers: any[], partners: any[]) {
+  const byPackage = new Map<string, number>();
+  [...customers, ...partners].forEach((row) => {
+    const name = packageName(row);
+    if (!name || name === "-") return;
+    byPackage.set(name, (byPackage.get(name) || 0) + 1);
+  });
+  return Array.from(byPackage.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([name, value]) => ({ name, value }));
+}
+
+function buildRecentActivities(customers: any[], invoices: any[], payments: any[]) {
+  const invoiceItems = invoices.slice(0, 4).map((row) => ({
+    id: `invoice-${row.id || row.noInvoice || row.noFaktur}`,
+    noInvoice: row.noInvoice || row.noFaktur || "Invoice",
+    customerName: row.customerName || row.customer?.name || row.name || "Tagihan pelanggan",
+    amount: moneyValue(row),
+    status: row.status || "invoice",
+    createdAt: row.createdAt || row.created_at || row.updatedAt || row.updated_at,
+  }));
+  const paymentItems = payments.slice(0, 3).map((row) => ({
+    id: `payment-${row.id || row.referenceNo || row.invoiceNo}`,
+    noInvoice: row.referenceNo || row.invoiceNo || "Pembayaran",
+    customerName: row.customerName || row.name || "Pembayaran masuk",
+    amount: moneyValue(row),
+    status: row.status || "payment",
+    createdAt: row.paidAt || row.createdAt || row.created_at,
+  }));
+  const customerItems = customers.slice(0, 3).map((row) => ({
+    id: `customer-${row.id || row.customer_id}`,
+    noInvoice: row.customerCode || row.customer_id || "Pelanggan",
+    customerName: row.name || row.username || "Pelanggan baru",
+    amount: 0,
+    status: row.status === false ? "nonactive" : "active",
+    createdAt: row.createdAt || row.created_at,
+  }));
+
+  return [...paymentItems, ...invoiceItems, ...customerItems]
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+    .slice(0, 6);
+}
+
 function AdminDashboardPage() {
-  const user = useAuthStore((state) => state.user);
-  const isAdmin = user?.role === "admin";
-  const [ready, setReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState(emptySummary);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    setReady(true);
     setLoading(true);
 
-    // Fetch real metrics from DEKASIMAL API: POST /customer/list
-    api.post("/customer/list", {
-      pageSize: 1,
+    const listBody = (columnVisibility: Record<string, boolean> = {}) => ({
+      pageSize: 500,
       pageIndex: 0,
       sorting: [],
       columnFilters: [],
       globalFilter: "",
-      columnVisibility: { customer_id: true },
+      columnVisibility,
       withDeleted: false,
-    })
-      .then((res) => {
-        const total = res.data?.data?.total || res.data?.data?.count || (Array.isArray(res.data?.data?.data) ? res.data.data.data.length : 0);
-        setSummary((current) => ({
-          ...current,
-          totalPelanggan: total || current.totalPelanggan,
-        }));
-        setError("");
+    });
+
+    Promise.allSettled([
+      api.post("/customer/list", listBody({ customer_id: true, name: true, status: true, package_name: true, created_at: true, updated_at: true })),
+      api.post("/partner/list", listBody({ partner_id: true, name: true, status: true, package_name: true, created_at: true, updated_at: true })),
+      api.post("/admin/list", listBody({ admin_id: true, name: true, status: true, division: true })),
+      api.post("/location-point/list", listBody({ maps_id: true, name: true, type: true, coordinate: true })),
+      api.get("/internet-services?limit=5000&sort=latest"),
+      api.get("/finance?limit=5000&sort=latest"),
+    ])
+      .then((results) => {
+        const dataAt = (index: number) => results[index].status === "fulfilled" ? results[index].value.data : null;
+        const customerPayload = dataAt(0);
+        const partnerPayload = dataAt(1);
+        const adminPayload = dataAt(2);
+        const popPayload = dataAt(3);
+        const invoicePayload = dataAt(4);
+        const financePayload = dataAt(5);
+
+        const customers = payloadRows(customerPayload);
+        const partners = payloadRows(partnerPayload);
+        const admins = payloadRows(adminPayload);
+        const pops = payloadRows(popPayload);
+        const invoices = payloadRows(invoicePayload);
+        const payments = payloadRows(financePayload);
+
+        const paidInvoices = invoices.filter(invoicePaid);
+        const openInvoices = invoices.filter(invoiceOpen);
+        const paidPayments = payments.filter((row) => String(row.status || "").toLowerCase().includes("verified") || invoicePaid(row));
+        const revenueSource = paidPayments.length ? paidPayments : paidInvoices;
+        const pendapatan = revenueSource.reduce((sum, row) => sum + moneyValue(row), 0);
+        const tunggakan = openInvoices.reduce((sum, row) => sum + moneyValue(row), 0);
+        const pelangganAktif = customers.filter((row) => row.status === true || row.status === "active" || row.status === undefined).length;
+        const failedCoreCount = results
+          .slice(0, 4)
+          .filter((result) => result.status === "rejected")
+          .length;
+
+        setSummary({
+          ...emptySummary,
+          totalPelanggan: payloadTotal(customerPayload, customers),
+          totalBisnis: payloadTotal(partnerPayload, partners),
+          totalAdmin: payloadTotal(adminPayload, admins),
+          totalPop: payloadTotal(popPayload, pops),
+          pelangganAktif,
+          totalInvoice: payloadTotal(invoicePayload, invoices),
+          pendapatan,
+          tunggakan,
+          popularPackages: buildPopularPackages(customers, partners),
+          recentActivities: buildRecentActivities(customers, invoices, paidPayments),
+        });
+        setError(failedCoreCount ? `${failedCoreCount} endpoint utama belum tersedia/bermasalah, dashboard menampilkan data yang berhasil dimuat.` : "");
       })
       .catch(() => {
-        // Fallback to legacy GET /dashboard/summary
         api.get("/dashboard/summary")
           .then((res) => {
             setSummary({ ...emptySummary, ...res.data.data });
             setError("");
           })
-          .catch(() => {
-            // Quiet fallback without breaking UI
-            setError("");
-          });
+          .catch(() => setError("Gagal memuat dashboard dari API."));
       })
       .finally(() => setLoading(false));
   }, []);
-
-
-  const hasPieData = summary.invoiceStatus.some((item) => Number(item.value) > 0);
 
   return (
     <div>
@@ -99,107 +204,32 @@ function AdminDashboardPage() {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard icon={<Users size={22} />} label="Total Pelanggan" value={String(summary.totalPelanggan)} trend="Data real database" />
-          <StatCard icon={<Receipt size={22} />} label="Total Invoice" value={String(summary.totalInvoice)} trend="Data real database" accent="emerald" />
-          <StatCard icon={<Wallet size={22} />} label="Pendapatan" value={currency(summary.pendapatan)} trend="Invoice berstatus lunas" accent="amber" />
+          <StatCard icon={<Users size={22} />} label="Total Pelanggan" value={String(summary.totalPelanggan)} trend={`${summary.pelangganAktif} pelanggan aktif`} />
+          <StatCard icon={<Receipt size={22} />} label="Total Invoice" value={String(summary.totalInvoice)} trend="Faktur & tagihan dari API" accent="emerald" />
+          <StatCard icon={<Wallet size={22} />} label="Pendapatan" value={currency(summary.pendapatan)} trend="Pembayaran verified/lunas" accent="amber" />
           <StatCard icon={<TrendingUp size={22} />} label="Tunggakan" value={currency(summary.tunggakan)} trend="Invoice belum lunas" accent="rose" />
         </div>
       )}
 
-      {!isAdmin ? <div className="mt-6">
-        <Card className="overflow-hidden p-0">
-          <div className="bg-slate-600 px-5 py-3">
-            <h2 className="font-medium text-white">Penggunaan Harian</h2>
-          </div>
-          <div className="p-5">
-            <div className="h-80 w-full">
-              {loading || !ready ? <ShimmerBlock className="h-full rounded-xl" /> : (
-                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
-                  <AreaChart data={summary.dailyUsage} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorDownload" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#d946ef" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#d946ef" stopOpacity={0}/>
-                      </linearGradient>
-                      <linearGradient id="colorUpload" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis dataKey="time" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                    <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `${v} Mbps`} />
-                    <Tooltip 
-                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
-                      labelStyle={{ color: '#64748b', marginBottom: '4px', fontWeight: 'bold' }}
-                      formatter={(value: any, name: any) => [
-                        <span key={name} className="font-semibold text-slate-800">{value} Mbps</span>, 
-                        <span key={name + "label"} className={name === "Unduh" ? "text-fuchsia-600 font-medium" : "text-emerald-500 font-medium"}>{name}</span>
-                      ]}
-                    />
-                    <Area type="monotone" dataKey="download" name="Unduh" stroke="#d946ef" strokeWidth={2} fillOpacity={1} fill="url(#colorDownload)" />
-                    <Area type="monotone" dataKey="upload" name="Unggah" stroke="#22c55e" strokeWidth={2} fillOpacity={1} fill="url(#colorUpload)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-            <div className="mt-6 flex flex-wrap justify-center gap-2">
-              {['03 Mei 2026', '04 Mei 2026', '05 Mei 2026', '06 Mei 2026', '07 Mei 2026', '08 Mei 2026', '09 Mei 2026'].map((date, i) => (
-                <button 
-                  key={date} 
-                  className={`px-4 py-1.5 text-sm rounded-md transition-colors border ${
-                    i === 6 
-                      ? 'border-rose-400 text-rose-500 bg-white hover:bg-rose-50' 
-                      : 'border-sky-300 text-sky-500 bg-white hover:bg-sky-50'
-                  }`}
-                >
-                  {date}
-                </button>
-              ))}
-            </div>
-          </div>
-        </Card>
-      </div> : null}
-
-      <div className="mt-6 grid gap-6 xl:grid-cols-[1.5fr_0.9fr]">
-        <Card className="p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-bold text-slate-950">Pendapatan 6 Bulan Terakhir</h2>
-            <span className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-500">6 bulan</span>
-          </div>
-          <div className="h-80">
-            {loading || !ready ? <ShimmerBlock className="h-full rounded-xl" /> : (
-              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
-                <LineChart data={summary.revenue}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="month" stroke="#64748b" fontSize={12} />
-                  <YAxis stroke="#64748b" fontSize={12} tickFormatter={(v) => String(Number(v) / 1000000) + "jt"} />
-                  <Tooltip formatter={(value) => currency(String(value))} />
-                  <Line type="monotone" dataKey="value" stroke="#6366F1" strokeWidth={3} dot={{ r: 4 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </Card>
-        <Card className="p-5">
-          <h2 className="mb-4 font-bold text-slate-950">Status Invoice</h2>
-          <div className="h-64">
-            {loading || !ready ? <ShimmerBlock className="h-full rounded-xl" /> : hasPieData ? (
-              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
-                <PieChart>
-                  <Pie data={summary.invoiceStatus} innerRadius={62} outerRadius={95} paddingAngle={4} dataKey="value">
-                    {summary.invoiceStatus.map((item) => <Cell key={item.name} fill={item.color} />)}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : <div className="grid h-full place-items-center rounded-xl bg-slate-50 text-sm text-slate-500">Belum ada invoice</div>}
-          </div>
-          <div className="space-y-2">
-            {summary.invoiceStatus.map((item) => <div key={item.name} className="flex items-center justify-between text-sm"><span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />{item.name}</span><strong>{item.value}</strong></div>)}
-          </div>
-        </Card>
-      </div>
+      {!loading ? (
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <Card className="p-5">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Pelanggan Bisnis / Mitra</p>
+            <p className="mt-2 text-2xl font-black text-slate-950">{summary.totalBisnis}</p>
+            <p className="mt-1 text-sm text-slate-500">Akun bisnis dan mitra terdaftar.</p>
+          </Card>
+          <Card className="p-5">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">User Panel</p>
+            <p className="mt-2 text-2xl font-black text-slate-950">{summary.totalAdmin}</p>
+            <p className="mt-1 text-sm text-slate-500">Admin dan employee aktif di sistem.</p>
+          </Card>
+          <Card className="p-5">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">POP / Infrastruktur</p>
+            <p className="mt-2 text-2xl font-black text-slate-950">{summary.totalPop}</p>
+            <p className="mt-1 text-sm text-slate-500">Titik jaringan yang sudah terdata.</p>
+          </Card>
+        </div>
+      ) : null}
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_0.8fr]">
         <Card className="p-5">
@@ -212,18 +242,18 @@ function AdminDashboardPage() {
         </Card>
         <Card className="p-5">
           <h2 className="mb-4 font-bold text-slate-950">Paket Terlaris</h2>
-          <div className="h-64">
-            {loading || !ready ? <ShimmerBlock className="h-full rounded-xl" /> : (
-              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
-                <BarChart data={summary.popularPackages}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="name" fontSize={12} />
-                  <YAxis fontSize={12} allowDecimals={false} />
-                  <Bar dataKey="value" fill="#6366F1" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
+          {loading ? <ShimmerBlock className="h-64 rounded-xl" /> : (
+            <div className="space-y-3">
+              {summary.popularPackages.length ? summary.popularPackages.map((item) => (
+                <div key={item.name} className="rounded-xl bg-slate-50 p-3">
+                  <div className="flex items-center justify-between gap-4 text-sm">
+                    <span className="font-bold text-slate-800">{item.name}</span>
+                    <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-black text-indigo-700">{item.value}</span>
+                  </div>
+                </div>
+              )) : <div className="rounded-lg bg-slate-50 p-6 text-center text-sm text-slate-500">Belum ada data paket.</div>}
+            </div>
+          )}
         </Card>
       </div>
     </div>

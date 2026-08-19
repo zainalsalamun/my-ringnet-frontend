@@ -4,7 +4,20 @@ import { create } from "zustand";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-type User = { id: string; name: string; email: string; role: string };
+export type User = {
+  id?: string;
+  admin_id?: string | number;
+  name?: string;
+  username?: string;
+  email?: string;
+  role?: string;
+  position?: string;
+  division?: string;
+  phone?: string;
+  image?: string;
+  status?: boolean | string;
+  [key: string]: any;
+};
 
 type AuthState = {
   token: string | null;
@@ -20,16 +33,28 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   hydrated: false,
   setSession: (token, user) => {
-    localStorage.setItem("ringnet_token", token);
-    localStorage.setItem("ringnet_user", JSON.stringify(user));
-    set({ token, user, hydrated: true });
+    const normalizedUser: User = {
+      ...user,
+      id: String(user.id || user.admin_id || ""),
+      name: user.name || user.username || "User",
+      email: user.email || (user.username && user.username.includes("@") ? user.username : ""),
+      role: user.role || user.position || "admin",
+    };
+    if (typeof window !== "undefined") {
+      localStorage.setItem("ringnet_token", token);
+      localStorage.setItem("ringnet_user", JSON.stringify(normalizedUser));
+    }
+    set({ token, user: normalizedUser, hydrated: true });
   },
   logout: () => {
-    localStorage.removeItem("ringnet_token");
-    localStorage.removeItem("ringnet_user");
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("ringnet_token");
+      localStorage.removeItem("ringnet_user");
+    }
     set({ token: null, user: null, hydrated: true });
   },
   hydrate: () => {
+    if (typeof window === "undefined") return;
     const token = localStorage.getItem("ringnet_token");
     const saved = localStorage.getItem("ringnet_user");
     let user: User | null = null;
@@ -52,3 +77,4 @@ export default function useAuth() {
     if (!token) router.replace("/");
   }, [hydrate, router]);
 }
+

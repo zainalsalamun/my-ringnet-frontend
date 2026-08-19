@@ -1,12 +1,14 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { useAuthStore } from "@/hooks/useAuth";
-import api from "@/lib/api";
-import { BarChart3, BookOpenCheck, Cable, ChevronDown, CircleUserRound, FileCheck2, Headphones, MapPin, Network, PackageCheck, Radio, ReceiptText, Settings2 } from "lucide-react";
+import { mitraPortalService } from "@/services";
+import { BarChart3, ChevronDown, CircleUserRound, FileCheck2, Headphones, Network, ReceiptText, Settings2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 type MenuItem = {
@@ -30,9 +32,11 @@ export const getMitraMenuGroups = (pops: any[] = [], isAdmin: boolean = false): 
     key: "documents",
     label: "Legal",
     icon: FileCheck2,
-    items: isAdmin ? [
-      { label: "Data POP", href: "/users/pop" }
-    ] : [],
+    items: isAdmin
+      ? [{ label: "Data POP", href: "/users/pop" }]
+      : pops.length > 0
+        ? pops.map((p) => ({ label: `POP ${p.name || p.title || ""}`.trim(), href: "/mitra/legal" }))
+        : [],
   },
   {
     key: "tickets",
@@ -177,9 +181,10 @@ export default function MitraSidebar({ sidebarOpen, setSidebarOpen }: { sidebarO
   
   useEffect(() => {
     if (!token) return;
-    api.get('/mitra-portal/pops')
-      .then(res => {
-        if (res.data?.success && res.data?.data) setPops(res.data.data);
+    mitraPortalService
+      .getPops()
+      .then((data) => {
+        if (data) setPops(data);
       })
       .catch(console.error);
   }, [token]);

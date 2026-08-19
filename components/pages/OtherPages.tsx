@@ -3,12 +3,30 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import { Badge, Card, PageHeader, ShimmerBlock, StatCard } from "@/components/ui/AdminUI";
-import api from "@/lib/api";
 import { currency, date, monthName } from "@/lib/format";
-import { Ban, Building2, CheckCircle2, CreditCard, FileText, Mail, MapPin, MessageCircle, Phone, Printer, Receipt, Settings, Shield, Wallet } from "lucide-react";
+import { formatErrorMessage } from "@/lib/error";
+import { internetServiceService, financeService } from "@/services";
+import {
+  Ban,
+  Building2,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  CreditCard,
+  FileText,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Phone,
+  Printer,
+  Receipt,
+  Settings,
+  Shield,
+  Wallet,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 
 export function InvoiceDetailPage({ id }: { id: string }) {
   const [invoice, setInvoice] = useState<any | null>(null);
@@ -26,25 +44,26 @@ export function InvoiceDetailPage({ id }: { id: string }) {
       setPayment(null);
 
       try {
-        const [invoiceRes, settingsRes] = await Promise.all([
-          api.get("/internet-services/" + id),
-          api.get("/settings?limit=100&search=company_").catch(() => ({ data: { data: [] } })),
+        const [invoiceData, settingsData] = await Promise.all([
+          internetServiceService.getDetail(id),
+          internetServiceService.getSettings("company_"),
         ]);
 
         if (!active) return;
 
-        const invoiceData = invoiceRes.data.data;
         setInvoice(invoiceData);
-        setSettings(settingsRes.data.data || []);
+        setSettings(settingsData);
 
         const invoiceKeys = [invoiceData?.noInvoice, invoiceData?.noFaktur].filter(Boolean);
         if (invoiceKeys.length) {
           try {
             let foundPayment = null;
             for (const invoiceKey of invoiceKeys) {
-              const paymentRes = await api.get(`/finance?limit=1&search=${encodeURIComponent(invoiceKey)}`);
-              foundPayment = Array.isArray(paymentRes.data.data) ? paymentRes.data.data[0] || null : null;
-              if (foundPayment) break;
+              const paymentFound = await internetServiceService.getPaymentByInvoice(invoiceKey);
+              if (paymentFound) {
+                foundPayment = paymentFound;
+                break;
+              }
             }
             if (active) setPayment(foundPayment);
           } catch {
@@ -55,14 +74,16 @@ export function InvoiceDetailPage({ id }: { id: string }) {
         if (!active) return;
         setInvoice(null);
         setSettings([]);
-        setMessage(err.response?.data?.message || "Gagal memuat detail faktur dari database.");
+        setMessage(formatErrorMessage(err, "Gagal memuat detail faktur dari database."));
       } finally {
         if (active) setLoading(false);
       }
     }
 
     loadDetail();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   if (loading) {
@@ -85,7 +106,9 @@ export function InvoiceDetailPage({ id }: { id: string }) {
     return (
       <div className="space-y-4">
         <PageHeader title="Detail Faktur" subtitle="Data faktur tidak dapat dimuat dari backend." />
-        <div className="rounded-xl border border-rose-100 bg-rose-50 px-5 py-4 text-sm font-semibold text-rose-700">{message || "Faktur tidak ditemukan."}</div>
+        <div className="rounded-xl border border-rose-100 bg-rose-50 px-5 py-4 text-sm font-semibold text-rose-700">
+          {message || "Faktur tidak ditemukan."}
+        </div>
       </div>
     );
   }
@@ -112,7 +135,17 @@ export function InvoiceDetailPage({ id }: { id: string }) {
     <div className="invoice-detail-page space-y-6">
       <div className="rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm print:hidden">
         <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-500">
-          <span>Dashboard</span><span>/</span><Link href="/keuangan" className="hover:text-indigo-600">Keuangan</Link><span>/</span><Link href="/internet-services" className="text-indigo-600 hover:underline">Faktur & Tagihan</Link><span>/</span><span className="text-slate-800">{invoiceNumber}</span>
+          <span>Dashboard</span>
+          <span>/</span>
+          <Link href="/keuangan" className="hover:text-indigo-600">
+            Keuangan
+          </Link>
+          <span>/</span>
+          <Link href="/internet-services" className="text-indigo-600 hover:underline">
+            Faktur & Tagihan
+          </Link>
+          <span>/</span>
+          <span className="text-slate-800">{invoiceNumber}</span>
         </div>
       </div>
       {message ? <div className="mb-4 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-700 print:hidden">{message}</div> : null}
@@ -161,7 +194,9 @@ export function InvoiceDetailPage({ id }: { id: string }) {
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold text-slate-950">{invoice.customerName || customer.name || "Faktur Umum"}</h2>
-                  <p className="mt-2 text-sm font-semibold text-slate-500">ID Pelanggan : <span className="text-slate-800">{customer.customerCode || "-"}</span></p>
+                  <p className="mt-2 text-sm font-semibold text-slate-500">
+                    ID Pelanggan : <span className="text-slate-800">{customer.customerCode || "-"}</span>
+                  </p>
                   <div className="mt-4 space-y-2 text-sm font-semibold text-slate-600">
                     <p>{customer.address || "-"} <MapPin className="inline text-rose-500" size={16} /></p>
                     <p>{customer.email || "-"} <Mail className="inline text-cyan-500" size={16} /></p>
@@ -182,7 +217,9 @@ export function InvoiceDetailPage({ id }: { id: string }) {
               </div>
               <div className="text-left lg:text-right">
                 <h2 className="text-2xl font-bold text-slate-950">{invoice.customerName || customer.name || "Faktur Umum"}</h2>
-                <p className="mt-2 text-sm font-semibold text-slate-500">ID Pelanggan : <span className="text-slate-800">{customer.customerCode || "-"}</span></p>
+                <p className="mt-2 text-sm font-semibold text-slate-500">
+                  ID Pelanggan : <span className="text-slate-800">{customer.customerCode || "-"}</span>
+                </p>
                 <div className="mt-4 space-y-2 text-sm font-semibold text-slate-600">
                   <p>{customer.address || "-"}</p>
                   <p>{customer.email || "-"}</p>
@@ -211,7 +248,9 @@ export function InvoiceDetailPage({ id }: { id: string }) {
                     <tr key={`${item.name}-${index}`}>
                       <td className="border border-slate-200 px-4 py-4 text-center font-semibold text-slate-600">{index + 1}</td>
                       <td className="border border-slate-200 px-4 py-4 font-bold text-slate-700">{item.name}</td>
-                      <td className="border border-slate-200 px-4 py-4 text-center"><span className="rounded-md bg-blue-100 px-2 py-1 text-xs font-black text-blue-600">{item.quantity}</span></td>
+                      <td className="border border-slate-200 px-4 py-4 text-center">
+                        <span className="rounded-md bg-blue-100 px-2 py-1 text-xs font-black text-blue-600">{item.quantity}</span>
+                      </td>
                       <td className="border border-slate-200 px-4 py-4 text-right font-semibold text-slate-600">{currency(item.unitPrice)}</td>
                       <td className="border border-slate-200 px-4 py-4 text-right font-semibold text-slate-600">{currency(item.discount)}</td>
                       <td className="border border-slate-200 px-4 py-4 text-right font-semibold text-slate-600">{currency(item.total)}</td>
@@ -248,13 +287,18 @@ export function InvoiceDetailPage({ id }: { id: string }) {
             <div className="invoice-print-footer rounded-lg border border-slate-200 px-4 py-4 text-center">
               <h3 className="text-lg font-bold text-slate-950">{companyName}</h3>
               <p className="mt-1 text-xs font-semibold text-slate-500">{companyAddress}</p>
-              <p className="mt-1 text-xs font-semibold text-slate-500">{companyPhone}  •  {companyEmail}</p>
+              <p className="mt-1 text-xs font-semibold text-slate-500">
+                {companyPhone} • {companyEmail}
+              </p>
             </div>
           ) : (
             <div className="space-y-4 text-center">
               <DigitalQr value={paymentUrl} />
               <div className="rounded-lg bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-600">
-                Link Pembayaran : <a href={paymentUrl} className="text-blue-500 hover:underline" target="_blank" rel="noreferrer">{paymentUrl}</a>
+                Link Pembayaran :{" "}
+                <a href={paymentUrl} className="text-blue-500 hover:underline" target="_blank" rel="noreferrer">
+                  {paymentUrl}
+                </a>
               </div>
               <p className="font-bold text-slate-700">Faktur dibuat secara digital dan berlaku tanpa tanda tangan dan stempel</p>
               <p className="text-sm font-semibold text-slate-500">{date(invoice.createdAt || new Date())}</p>
@@ -269,24 +313,59 @@ export function InvoiceDetailPage({ id }: { id: string }) {
 
           {!isPaid ? (
             <div className="flex flex-wrap justify-center gap-3 border-t border-slate-100 pt-6">
-              <Link href={`/keuangan/new?invoice=${encodeURIComponent(invoice.noInvoice || invoice.noFaktur || invoiceNumber)}`} className="inline-flex h-11 items-center gap-2 rounded-lg bg-cyan-500 px-5 text-sm font-bold text-white shadow-sm shadow-cyan-100"><CreditCard size={18} /> Tambah Pembayaran</Link>
-              <Link href={`/internet-services/${invoice.id}/edit`} className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#5B9CE5] px-5 text-sm font-bold text-white shadow-sm shadow-blue-100"><FileText size={18} /> Ubah Tagihan</Link>
-              <button type="button" onClick={() => setMessage("Fitur pembatalan tagihan akan memakai status khusus pada tahap berikutnya.")} className="inline-flex h-11 items-center gap-2 rounded-lg bg-rose-500 px-5 text-sm font-bold text-white shadow-sm shadow-rose-100"><Ban size={18} /> Batalkan Tagihan</button>
-              <a href={`https://wa.me/${String(customer.phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(`Halo ${invoice.customerName || customer.name || ""}, berikut link pembayaran faktur ${invoiceNumber}: ${paymentUrl}`)}`} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center gap-2 rounded-lg bg-emerald-500 px-5 text-sm font-bold text-white shadow-sm shadow-emerald-100"><MessageCircle size={18} /> Kirim Pesan</a>
+              <Link
+                href={`/keuangan/new?invoice=${encodeURIComponent(invoice.noInvoice || invoice.noFaktur || invoiceNumber)}`}
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-cyan-500 px-5 text-sm font-bold text-white shadow-sm shadow-cyan-100"
+              >
+                <CreditCard size={18} /> Tambah Pembayaran
+              </Link>
+              <Link
+                href={`/internet-services/${invoice.id}/edit`}
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#5B9CE5] px-5 text-sm font-bold text-white shadow-sm shadow-blue-100"
+              >
+                <FileText size={18} /> Ubah Tagihan
+              </Link>
+              <button
+                type="button"
+                onClick={() => setMessage("Fitur pembatalan tagihan akan memakai status khusus pada tahap berikutnya.")}
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-rose-500 px-5 text-sm font-bold text-white shadow-sm shadow-rose-100"
+              >
+                <Ban size={18} /> Batalkan Tagihan
+              </button>
+              <a
+                href={`https://wa.me/${String(customer.phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(
+                  `Halo ${invoice.customerName || customer.name || ""}, berikut link pembayaran faktur ${invoiceNumber}: ${paymentUrl}`
+                )}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-emerald-500 px-5 text-sm font-bold text-white shadow-sm shadow-emerald-100"
+              >
+                <MessageCircle size={18} /> Kirim Pesan
+              </a>
             </div>
           ) : null}
         </div>
       </Card>
-      </div>
+    </div>
   );
 }
 
 function Info({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-lg bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</p><p className="mt-1 font-semibold text-slate-900">{value}</p></div>;
+  return (
+    <div className="rounded-lg bg-slate-50 p-4">
+      <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="mt-1 font-semibold text-slate-900">{value}</p>
+    </div>
+  );
 }
 
 function IconLine({ icon, value, accent = "text-rose-500" }: { icon: ReactNode; value: string; accent?: string }) {
-  return <div className="flex items-start gap-3"><span className={accent}>{icon}</span><span>{value || "-"}</span></div>;
+  return (
+    <div className="flex items-start gap-3">
+      <span className={accent}>{icon}</span>
+      <span>{value || "-"}</span>
+    </div>
+  );
 }
 
 function InvoiceInfoLine({ label, value }: { label: string; value: string }) {
@@ -325,13 +404,15 @@ function normalizeInvoiceItems(invoice: any) {
   }
 
   const amount = numberValue(invoice.amount);
-  return [{
-    name: invoice.serviceType || "Layanan Internet",
-    quantity: 1,
-    unitPrice: amount,
-    discount: 0,
-    total: amount,
-  }];
+  return [
+    {
+      name: invoice.serviceType || "Layanan Internet",
+      quantity: 1,
+      unitPrice: amount,
+      discount: 0,
+      total: amount,
+    },
+  ];
 }
 
 function safeJson(value: string) {
@@ -364,25 +445,24 @@ export function FinancePage() {
   const [partners, setPartners] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   useEffect(() => {
     setLoading(true);
     setError("");
-    Promise.all([
-      api.get("/finance?limit=5000"),
-      api.get("/internet-services?limit=5000"),
-      api.get("/partners?limit=5000"),
-    ])
-      .then(([paymentRes, invoiceRes, partnerRes]) => {
-        setPayments(Array.isArray(paymentRes.data.data) ? paymentRes.data.data : []);
-        setInvoices(Array.isArray(invoiceRes.data.data) ? invoiceRes.data.data : []);
-        setPartners(Array.isArray(partnerRes.data.data) ? partnerRes.data.data : []);
+    financeService
+      .getFinanceSummary()
+      .then((data) => {
+        setPayments(data.payments);
+        setInvoices(data.invoices);
+        setPartners(data.partners);
       })
       .catch((err) => {
         setPayments([]);
         setInvoices([]);
         setPartners([]);
-        setError(err.response?.data?.message || "Gagal memuat data keuangan dari database.");
+        setError(formatErrorMessage(err, "Gagal memuat data keuangan dari database."));
       })
       .finally(() => setLoading(false));
   }, []);
@@ -392,13 +472,18 @@ export function FinancePage() {
   const paymentTotal = paidPayments.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const outstandingTotal = unpaidInvoices.reduce((sum, item) => sum + Number(item.amount || item.grandTotal || 0), 0);
 
+  const totalPages = Math.max(1, Math.ceil(payments.length / pageSize));
+  const paginatedPayments = useMemo(() => payments.slice((page - 1) * pageSize, page * pageSize), [payments, page]);
+
   return (
     <div>
       <PageHeader title="Keuangan" subtitle="Monitoring pembayaran, tunggakan, dan cashflow." />
       {error ? <div className="mb-4 rounded-lg border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div> : null}
       {loading ? (
         <div className="grid gap-4 md:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, index) => <ShimmerBlock key={index} className="h-28 rounded-xl" />)}
+          {Array.from({ length: 3 }).map((_, index) => (
+            <ShimmerBlock key={index} className="h-28 rounded-xl" />
+          ))}
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-3">
@@ -408,15 +493,62 @@ export function FinancePage() {
         </div>
       )}
       <Card className="mt-6 p-5">
-        <h2 className="mb-4 font-bold text-slate-950">Rekonsiliasi Terbaru</h2>
-        {loading ? <div className="space-y-3">{Array.from({ length: 5 }).map((_, index) => <ShimmerBlock key={index} className="h-16 rounded-lg" />)}</div> : (
+        <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="font-bold text-slate-950">Rekonsiliasi Pembayaran</h2>
+            <p className="text-xs text-slate-500">Menampilkan {paginatedPayments.length} dari {payments.length} transaksi.</p>
+          </div>
+        </div>
+        {loading ? (
           <div className="space-y-3">
-            {payments.length ? payments.map((item) => (
-              <div key={item.id} className="flex items-center justify-between rounded-lg bg-slate-50 p-3">
-                <div><p className="font-semibold">{item.customerName}</p><p className="text-sm text-slate-500">{item.invoiceNo || item.referenceNo}</p></div>
-                <div className="text-right"><p className="font-bold">{currency(item.amount)}</p><Badge value={item.status} /></div>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <ShimmerBlock key={index} className="h-16 rounded-lg" />
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {paginatedPayments.length ? (
+              paginatedPayments.map((item) => (
+                <div key={item.id} className="flex items-center justify-between rounded-lg bg-slate-50 p-3">
+                  <div>
+                    <p className="font-semibold text-slate-900">{item.customerName || "Pelanggan"}</p>
+                    <p className="text-xs text-slate-500">{item.invoiceNo || item.referenceNo || "-"}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-slate-900">{currency(item.amount)}</p>
+                    <Badge value={item.status || "verified"} />
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-lg bg-slate-50 p-6 text-center text-sm font-semibold text-slate-500">
+                Belum ada data pembayaran.
               </div>
-            )) : <div className="rounded-lg bg-slate-50 p-6 text-center text-sm font-semibold text-slate-500">Belum ada data pembayaran.</div>}
+            )}
+
+            {payments.length > pageSize ? (
+              <div className="flex items-center justify-between border-t border-slate-100 pt-4 text-sm">
+                <span className="font-semibold text-slate-500">Halaman {page} dari {totalPages}</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={page === 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-600 disabled:opacity-40"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={page === totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-600 disabled:opacity-40"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
       </Card>
@@ -425,9 +557,52 @@ export function FinancePage() {
 }
 
 export function ReportsPage() {
-  return <div><PageHeader title="Laporan" subtitle="Laporan pelanggan, pendapatan, invoice, dan marketing." /><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{["Pendapatan Bulanan", "Aging Tunggakan", "Akuisisi Pelanggan", "Performa Mitra"].map((item) => <Card key={item} className="p-5"><FileText className="text-indigo-500" size={24} /><h2 className="mt-4 font-bold text-slate-950">{item}</h2><p className="mt-2 text-sm text-slate-500">Export PDF/XLS dan filter periode tersedia.</p><button className="mt-5 h-10 rounded-lg border border-slate-200 px-4 text-sm font-bold text-slate-700">Generate</button></Card>)}</div></div>;
+  return (
+    <div>
+      <PageHeader title="Laporan" subtitle="Laporan pelanggan, pendapatan, invoice, dan marketing." />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {["Pendapatan Bulanan", "Aging Tunggakan", "Akuisisi Pelanggan", "Performa Mitra"].map((item) => (
+          <Card key={item} className="p-5">
+            <FileText className="text-indigo-500" size={24} />
+            <h2 className="mt-4 font-bold text-slate-950">{item}</h2>
+            <p className="mt-2 text-sm text-slate-500">Export PDF/XLS dan filter periode tersedia.</p>
+            <button className="mt-5 h-10 rounded-lg border border-slate-200 px-4 text-sm font-bold text-slate-700">Generate</button>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function SettingsPage() {
-  return <div><PageHeader title="Pengaturan" subtitle="Konfigurasi sistem, profil perusahaan, dan keamanan." /><div className="grid gap-6 xl:grid-cols-2"><Card className="p-6"><Settings className="text-indigo-500" size={26} /><h2 className="mt-4 font-bold text-slate-950">Profil Perusahaan</h2><div className="mt-5 grid gap-4"><Info label="Nama" value="MyRingNet ISP" /><Info label="Domain API" value="http://localhost:3000/api" /><Info label="Zona Waktu" value="Asia/Jakarta" /></div></Card><Card className="p-6"><Shield className="text-emerald-500" size={26} /><h2 className="mt-4 font-bold text-slate-950">Keamanan</h2><div className="mt-5 space-y-3"><div className="flex items-center justify-between rounded-lg bg-slate-50 p-4"><span className="font-semibold">JWT Authentication</span><Badge value="active" /></div><div className="flex items-center justify-between rounded-lg bg-slate-50 p-4"><span className="font-semibold">Protected Routes</span><Badge value="active" /></div></div></Card></div></div>;
+  return (
+    <div>
+      <PageHeader title="Pengaturan" subtitle="Konfigurasi sistem, profil perusahaan, dan keamanan." />
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Card className="p-6">
+          <Settings className="text-indigo-500" size={26} />
+          <h2 className="mt-4 font-bold text-slate-950">Profil Perusahaan</h2>
+          <div className="mt-5 grid gap-4">
+            <Info label="Nama" value="MyRingNet ISP" />
+            <Info label="Domain API" value="https://dev-srv.dekadata.net/api/v1" />
+            <Info label="Zona Waktu" value="Asia/Jakarta (WIB)" />
+          </div>
+        </Card>
+        <Card className="p-6">
+          <Shield className="text-emerald-500" size={26} />
+          <h2 className="mt-4 font-bold text-slate-950">Keamanan & Autentikasi</h2>
+          <div className="mt-5 space-y-3">
+            <div className="flex items-center justify-between rounded-lg bg-slate-50 p-4">
+              <span className="font-semibold text-slate-700">JWT Authentication</span>
+              <Badge value="active" />
+            </div>
+            <div className="flex items-center justify-between rounded-lg bg-slate-50 p-4">
+              <span className="font-semibold text-slate-700">Protected Routes</span>
+              <Badge value="active" />
+            </div>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
 }

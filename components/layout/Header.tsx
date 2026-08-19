@@ -1,6 +1,6 @@
 "use client";
 
-import api from "@/lib/api";
+import { adminService } from "@/services";
 import { currency, date } from "@/lib/format";
 import { AlertTriangle, Bell, CheckCheck, ChevronDown, Clock, Headphones, LogOut, Menu, ReceiptText, Search, Settings, ShieldCheck, UserCog, UserPlus, WalletCards, X } from "lucide-react";
 import Link from "next/link";
@@ -76,10 +76,9 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
     if (!user) return;
     if (user.role === "mitra") return;
     
-    // Safely attempt notifications fetch
-    api.get("/dashboard/notifications")
-      .then((res) => {
-        const data = Array.isArray(res.data?.data) ? res.data.data : [];
+    adminService
+      .getNotifications()
+      .then((data) => {
         setItems(data);
         setSelected(null);
         setNotificationError("");
@@ -89,7 +88,6 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
         setSelected(null);
       });
   }, [user]);
-
 
   useEffect(() => {
     function closeOnOutside(event: MouseEvent) {
@@ -109,7 +107,7 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
     setItems((current) => current.map((entry) => entry.id === item.id ? nextItem : entry));
     setNotificationError("");
     try {
-      await api.post(`/dashboard/notifications/${encodeURIComponent(item.id)}/read`);
+      await adminService.markNotificationRead(item.id);
     } catch {
       setItems((current) => current.map((entry) => entry.id === item.id ? item : entry));
       setSelected(item);
@@ -126,7 +124,7 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
     setSelected((current) => current ? { ...current, isRead: true, readAt: current.readAt || now } : current);
     setNotificationError("");
     try {
-      await api.post("/dashboard/notifications/read-all", { notificationIds: unreadItems.map((item) => item.id) });
+      await adminService.markAllNotificationsRead(unreadItems.map((item) => item.id));
     } catch {
       setItems(previousItems);
       setSelected((current) => current ? previousItems.find((item) => item.id === current.id) || current : current);
@@ -136,7 +134,7 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
 
   async function handleLogout() {
     try {
-      await api.get("/admin/logout");
+      await adminService.logout();
     } catch {
       // Keep local logout responsive even if the remote session is already gone.
     }

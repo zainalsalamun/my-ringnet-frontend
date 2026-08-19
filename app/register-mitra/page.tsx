@@ -1,7 +1,8 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import api from "@/lib/api";
+import { authService } from "@/services";
+import { formatErrorMessage } from "@/lib/error";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Building2, CheckCircle2, FileCheck2, Handshake, Info, ShieldCheck, Upload, UserRoundPlus } from "lucide-react";
 import { FormEvent, ReactNode, useMemo, useState } from "react";
@@ -73,9 +74,14 @@ export default function RegisterMitraPage() {
     Object.entries(form).forEach(([key, value]) => body.append(key, value));
     Object.entries(files).forEach(([key, value]) => { if (value) body.append(key, value); });
     body.append("acceptedStatements", "true");
-    try { const response = await api.post("/auth/register-mitra", body); setResult(response.data.data); }
-    catch (err: any) { setError(err.response?.data?.message || "Pengajuan gagal dikirim. Silakan coba kembali."); }
-    finally { setLoading(false); }
+    try {
+      const data = await authService.registerMitra(body);
+      setResult(data);
+    } catch (err: any) {
+      setError(formatErrorMessage(err, "Pengajuan gagal dikirim. Silakan coba kembali."));
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (result) return <main className="grid min-h-screen place-items-center bg-slate-950 p-6"><div className="w-full max-w-xl rounded-3xl bg-white p-8 text-center shadow-2xl"><span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-100 text-emerald-600"><CheckCircle2 size={34} /></span><h1 className="mt-5 text-2xl font-black text-slate-950">Pengajuan Berhasil Dikirim</h1><p className="mt-3 text-sm leading-6 text-slate-600">Tim MyRingNet akan memeriksa identitas dan dokumen Anda. Akun baru dapat digunakan setelah disetujui administrator.</p><div className="mt-6 rounded-xl bg-slate-50 p-4 text-left text-sm"><p><span className="text-slate-500">Kode pengajuan:</span> <strong>{result.partnerCode}</strong></p><p className="mt-2"><span className="text-slate-500">Status:</span> <strong className="uppercase text-amber-600">Menunggu verifikasi</strong></p></div><Link href="/" className="mt-6 inline-flex h-11 items-center justify-center rounded-lg bg-indigo-600 px-6 text-sm font-bold text-white">Kembali ke Login</Link></div></main>;

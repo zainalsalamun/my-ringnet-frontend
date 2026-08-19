@@ -1,7 +1,7 @@
 "use client";
 
-import { Activity, Clock3, DatabaseZap, Network, RadioTower, ShieldCheck, Wifi } from "lucide-react";
-import { Badge, Card, DataTable, PageHeader, StatCard } from "@/components/ui/AdminUI";
+import { Activity, Clock3, DatabaseZap, Network, ShieldCheck, Wifi } from "lucide-react";
+import { Card, DataTable, PageHeader, StatCard } from "@/components/ui/AdminUI";
 
 type RadiusRow = { id: string; [key: string]: string };
 

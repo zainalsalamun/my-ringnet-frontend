@@ -1,4 +1,6 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable @next/next/no-img-element */
 
 import { Loader2, MapPin, Minus, Plus, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";

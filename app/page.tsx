@@ -1,23 +1,13 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-import api from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuth";
+import { formatErrorMessage } from "@/lib/error";
+import { authService } from "@/services";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { Eye, EyeOff, Lock, RadioTower, User, UserPlus, Wifi } from "lucide-react";
 import Link from "next/link";
-
-type LoginError = {
-  response?: {
-    status?: number;
-    data?: {
-      message?: string;
-      error?: string;
-      msg?: string;
-    };
-  };
-  message?: string;
-};
 
 type DekadataLoginData = {
   token?: string;
@@ -36,53 +26,29 @@ type DekadataLoginData = {
     [key: string]: unknown;
   };
   admin?: Record<string, unknown>;
-  data?: DekadataLoginData;
+  data?: any;
+  message?: string;
   [key: string]: unknown;
 };
-
-function getLoginErrorMessage(err: LoginError) {
-  if (!err.response) {
-    return "Server tidak merespons. Pastikan backend aktif dan koneksi internet stabil.";
-  }
-
-  const status = err.response.status || 0;
-  const serverMsg = err.response?.data?.message || err.response?.data?.error || err.response?.data?.msg;
-
-  if (serverMsg) {
-    return `Server (${status}): ${serverMsg}`;
-  }
-
-  if (status === 401) {
-    return "Username atau password tidak sesuai. Periksa kembali akun Anda.";
-  }
-
-  if (status === 400) {
-    return "Data login tidak valid. Periksa kembali input username dan password.";
-  }
-
-  if (status === 404) {
-    return "Endpoint atau akun tidak ditemukan di server.";
-  }
-
-  if (status >= 500) {
-    return `Server backend merespons error ${status} (Internal Server Error). Pastikan database di server backend dalam keadaan aktif.`;
-  }
-
-  return "Login gagal. Periksa username dan password Anda.";
-}
-
 
 export default function LoginPage() {
   const router = useRouter();
   const setSession = useAuthStore((state) => state.setSession);
   const logout = useAuthStore((state) => state.logout);
+  const token = useAuthStore((state) => state.token);
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberLogin, setRememberLogin] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (token) {
+      router.push("/dashboard");
+    }
+  }, [token, router]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -105,13 +71,11 @@ export default function LoginPage() {
 
     try {
       const cleanUsername = username.trim();
-      
-      // DEKASIMAL API login endpoint: POST /api/v1/admin/login with { username, password, remember }
-      const res = await api.post("/admin/login", {
+
+      const resData = (await authService.login({
         username: cleanUsername,
         password,
-        remember: rememberLogin,
-      });
+      })) as DekadataLoginData;
 
       if (rememberLogin) {
         window.localStorage.setItem("ringnet_saved_login_user", cleanUsername);
@@ -121,7 +85,6 @@ export default function LoginPage() {
         window.localStorage.removeItem("ringnet_saved_login_email");
       }
 
-      const resData = res.data as DekadataLoginData;
       const token =
         resData?.data?.token ||
         resData?.token ||
@@ -131,7 +94,7 @@ export default function LoginPage() {
         resData?.data?.authToken ||
         resData?.data?.jwt ||
         resData?.jwt;
-      
+
       let userData =
         resData?.data?.user ||
         resData?.data?.admin ||
@@ -144,16 +107,10 @@ export default function LoginPage() {
         throw new Error(message);
       }
 
-      // Fetch latest admin profile if token is available
       try {
-        const meRes = await api.get("/admin/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const meData = meRes.data as DekadataLoginData;
-        if (meData?.data) {
-          userData = meData.data.user || meData.data.admin || meData.data;
-        } else if (meData?.user || meData?.admin) {
-          userData = meData.user || meData.admin;
+        const meData = await authService.getMe(token);
+        if (meData) {
+          userData = meData.user || meData.admin || meData;
         }
       } catch {
         // Fallback to userData from login response
@@ -170,20 +127,21 @@ export default function LoginPage() {
 
       setSession(token, userData || { username: cleanUsername });
       router.push("/dashboard");
-    } catch (err) {
+    } catch (err: any) {
       logout();
-      setError(getLoginErrorMessage(err as LoginError));
+      setError(formatErrorMessage(err, "Login gagal. Periksa username dan password Anda."));
     } finally {
       setLoading(false);
     }
   }
 
-
   return (
     <main className="grid min-h-screen bg-slate-50 lg:grid-cols-[1.05fr_0.95fr]">
       <section className="relative hidden overflow-hidden bg-gradient-to-br from-indigo-950 via-indigo-800 to-slate-950 p-12 text-white lg:flex lg:flex-col lg:justify-between">
         <div>
-          <h1 className="text-3xl font-black tracking-tight">My<span className="text-indigo-300">Ring</span>Net</h1>
+          <h1 className="text-3xl font-black tracking-tight">
+            My<span className="text-indigo-300">Ring</span>Net
+          </h1>
           <p className="mt-2 text-sm text-indigo-100">ISP Management System</p>
         </div>
         <div className="relative mx-auto grid aspect-square w-[560px] max-w-full place-items-center rounded-full bg-white/5">

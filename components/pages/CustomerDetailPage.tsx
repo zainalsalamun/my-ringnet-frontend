@@ -18,18 +18,49 @@ export function CustomerDetailPage({ id }: { id: string }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-    setError("");
-    api.get("/customers/" + id + "/detail")
+    // Call DEKASIMAL API GET /api/v1/customer/read/{id}
+    api.get("/customer/read/" + id)
       .then((res) => {
-        const data = res.data.data;
-        setCustomer(data);
-        setInvoices(data.invoices || []);
-        setTickets(data.tickets || []);
+        const raw = res.data?.data || {};
+        const normalized = {
+          id: raw.customer_id || raw.id || id,
+          name: raw.name || raw.username || "-",
+          address: raw.address || "-",
+          area: raw.area || "-",
+          city: raw.city || raw.area || "-",
+          coordinate: raw.coordinate || "-",
+          phone: raw.phone || "-",
+          email: raw.email || "-",
+          ktp: raw.ktp || "-",
+          npwp: raw.npwp || "-",
+          customerType: raw.type || raw.customerType || "home",
+          supportPayment: raw.pay_support || raw.supportPayment || "-",
+          supportTechnical: raw.tech_support || raw.supportTechnical || "-",
+          walletBalance: raw.walletBalance || 0,
+          status: raw.status === false ? "nonactive" : (raw.status === true || raw.status === "active" ? "active" : raw.status || "active"),
+          createdAt: raw.created_at || raw.createdAt || new Date().toISOString(),
+          packageName: raw.package_name || raw.packageName || "BROADBAND FIBER",
+          invoices: raw.invoices || [],
+          tickets: raw.tickets || [],
+        };
+        setCustomer(normalized);
+        setInvoices(normalized.invoices);
+        setTickets(normalized.tickets);
       })
-      .catch((err) => setError(err.response?.data?.message || "Gagal memuat detail pelanggan dari database."))
+      .catch(() => {
+        // Fallback to legacy GET /customers/{id}/detail
+        api.get("/customers/" + id + "/detail")
+          .then((res) => {
+            const data = res.data?.data || {};
+            setCustomer(data);
+            setInvoices(data.invoices || []);
+            setTickets(data.tickets || []);
+          })
+          .catch((err) => setError(err.response?.data?.message || "Gagal memuat detail pelanggan dari database."));
+      })
       .finally(() => setLoading(false));
   }, [id]);
+
 
   if (loading) return <div className="p-10 text-center font-medium text-slate-500">Memuat detail pelanggan...</div>;
   if (!customer) return <div className="p-10 text-center font-medium text-slate-500">{error || "Pelanggan tidak ditemukan."}</div>;
@@ -94,7 +125,6 @@ export function CustomerDetailPage({ id }: { id: string }) {
       </div>
 
       <div className="mt-6 space-y-6">
-         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
          <DataTable title="Faktur & Tagihan" data={invoices} 
             columns={[
                // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -110,7 +140,6 @@ export function CustomerDetailPage({ id }: { id: string }) {
             ]} 
          />
 
-         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
          <DataTable title="Tiket" data={tickets} 
             columns={[
                // eslint-disable-next-line @typescript-eslint/no-explicit-any

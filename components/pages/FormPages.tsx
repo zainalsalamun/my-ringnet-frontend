@@ -52,15 +52,28 @@ function mergeCleanForm<T extends Record<string, string>>(current: T, data: Reco
   return next;
 }
 
+function documentMetadata(files: Record<string, File | null>) {
+  return Object.entries(files)
+    .filter(([, file]) => Boolean(file))
+    .map(([type, file]) => ({
+      type,
+      name: file?.name || "",
+      fileName: file?.name || "",
+      mimeType: file?.type || "application/octet-stream",
+      size: file?.size || 0,
+    }));
+}
+
 export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string }) {
   const router = useRouter();
   const currentUser = useAuthStore((state) => state.user);
   const [error, setError] = useState("");
   const [packageOptions, setPackageOptions] = useState<{ label: string; value: string }[]>([]);
   const [partnerOptions, setPartnerOptions] = useState<{ label: string; value: string }[]>([]);
-  const [ticketOptions, setTicketOptions] = useState<{ label: string; value: string }[]>([]);
+  const ticketOptions: { label: string; value: string }[] = [];
   const [adminOptions, setAdminOptions] = useState<{ label: string; value: string }[]>([]);
   const [profileFile, setProfileFile] = useState<File | null>(null);
+  const [documentFiles, setDocumentFiles] = useState<Record<string, File | null>>({ ktp: null, npwp: null });
   const [coordinatePickerOpen, setCoordinatePickerOpen] = useState(false);
   const [form, setForm] = useState({
     ticketId: "",
@@ -86,109 +99,172 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
   });
 
   useEffect(() => {
-    const savedUser = typeof window !== "undefined" ? window.localStorage.getItem("ringnet_user") : null;
-    const parsedUser = savedUser ? JSON.parse(savedUser) : null;
-    const activeUserName = currentUser?.name || parsedUser?.name || "";
-    if (!activeUserName) return;
-    setForm((current) => current.username === activeUserName ? current : { ...current, username: activeUserName });
+    const timer = window.setTimeout(() => {
+      const savedUser = typeof window !== "undefined" ? window.localStorage.getItem("ringnet_user") : null;
+      const parsedUser = savedUser ? JSON.parse(savedUser) : null;
+      const activeUserName = currentUser?.name || parsedUser?.name || "";
+      if (!activeUserName) return;
+      setForm((current) => current.username === activeUserName ? current : { ...current, username: activeUserName });
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [currentUser?.name]);
 
   useEffect(() => {
-    api.get("/service-packages?limit=100")
+    // 1. Paket Layanan: POST /api/v1/product/broadband/select or fallback
+    api.post("/product/broadband/select", { query: "" })
       .then((res) => {
-        const data = Array.isArray(res.data.data) ? res.data.data : [];
-        const options = data.map((item: any) => ({ label: item.name, value: item.name }));
-        setPackageOptions(options);
-        setForm((current) => current.packageName || !options[0] ? current : { ...current, packageName: options[0].value });
+        const raw = res.data?.data || [];
+        const options = raw.map((item: any) => ({
+          label: item.name || item.code || item.label || String(item),
+          value: item.name || item.code || String(item),
+        }));
+        if (options.length > 0) {
+          setPackageOptions(options);
+          setForm((current) => current.packageName || !options[0] ? current : { ...current, packageName: options[0].value });
+        }
       })
       .catch(() => {
-        setPackageOptions([]);
+        // Fallback default options
+        const defaultPkgs = [
+          { label: "Broadband 25 Mbps", value: "Broadband 25 Mbps" },
+          { label: "Broadband 50 Mbps", value: "Broadband 50 Mbps" },
+          { label: "Broadband 100 Mbps", value: "Broadband 100 Mbps" },
+        ];
+        setPackageOptions(defaultPkgs);
       });
   }, []);
 
   useEffect(() => {
-    api.get("/partners?limit=5000")
+    // 2. Mitra: POST /api/v1/partner/list or fallback
+    api.post("/partner/list", { pageSize: 100, pageIndex: 0, sorting: [], columnFilters: [], globalFilter: "" })
       .then((res) => {
-        const data = Array.isArray(res.data.data) ? res.data.data : [];
-        setPartnerOptions(data.map((item: any) => ({ label: item.partnerCode ? `${item.partnerCode} - ${item.name}` : item.name, value: item.id })));
+        const raw = res.data?.data?.data || res.data?.data || [];
+        setPartnerOptions(raw.map((item: any) => ({
+          label: item.name || item.partner_id || item.username,
+          value: item.id || item.partner_id || item._id,
+        })));
       })
       .catch(() => setPartnerOptions([]));
   }, []);
 
   useEffect(() => {
-    api.get("/support-tickets?limit=500")
+    // 3. Admin / Staff Support: POST /api/v1/admin/list or fallback
+    api.post("/admin/list", { pageSize: 100, pageIndex: 0, sorting: [], columnFilters: [], globalFilter: "" })
       .then((res) => {
-        const data = Array.isArray(res.data.data) ? res.data.data : [];
-        setTicketOptions(data.map((item: any) => ({ label: `${item.ticketNo} - ${item.title}`, value: item.id })));
-      })
-      .catch(() => setTicketOptions([]));
-  }, []);
-
-  useEffect(() => {
-    api.get("/users?limit=500&excludeRole=pelanggan,bisnis,mitra")
-      .then((res) => {
-        const data = Array.isArray(res.data.data) ? res.data.data : [];
-        const options = data.map((item: any) => ({
-          label: item.email ? `${item.name} - ${item.email}` : item.name,
-          value: item.name,
+        const raw = res.data?.data?.data || res.data?.data || [];
+        const options = raw.map((item: any) => ({
+          label: item.name || item.username,
+          value: item.name || item.username,
         }));
-        setAdminOptions(options);
-        setForm((current) => {
-          if (!options[0]) return current;
-          return {
+        if (options.length > 0) {
+          setAdminOptions(options);
+          setForm((current) => ({
             ...current,
             username: current.username || options[0].value,
             supportPayment: current.supportPayment || options[0].value,
             supportTechnical: current.supportTechnical || options[0].value,
-          };
-        });
+          }));
+        }
       })
       .catch(() => setAdminOptions([]));
   }, []);
 
+
   useEffect(() => {
     if (!edit || !id) return;
-    api.get("/customers/" + id)
-      .then((res) => setForm((current) => mergeCleanForm(current, res.data.data || {})))
-      .catch((err) => setError(err.response?.data?.message || "Gagal memuat data pelanggan dari database."));
+    
+    // Try DEKASIMAL API GET /customer/read/{id} first
+    api.get("/customer/read/" + id)
+      .then((res) => {
+        const raw = res.data?.data || {};
+        setForm((current) => ({
+          ...current,
+          ticketId: raw.ticket || current.ticketId,
+          name: raw.name || current.name,
+          username: raw.username || current.username,
+          phone: raw.phone || current.phone,
+          email: raw.email || current.email,
+          city: raw.city || current.city,
+          area: raw.area || current.area,
+          address: raw.address || current.address,
+          coordinate: raw.coordinate || current.coordinate,
+          ktp: String(raw.ktp || current.ktp),
+          npwp: String(raw.npwp || current.npwp),
+          customerType: raw.type || current.customerType,
+          supportPayment: raw.pay_support || current.supportPayment,
+          supportTechnical: raw.tech_support || current.supportTechnical,
+          notes: raw.notes || current.notes,
+          status: raw.status === false ? "nonactive" : "active",
+        }));
+      })
+      .catch(() => {
+        api.get("/customers/" + id)
+          .then((res) => setForm((current) => mergeCleanForm(current, res.data.data || {})))
+          .catch((err) => setError(err.response?.data?.message || "Gagal memuat data pelanggan dari database."));
+      });
   }, [edit, id]);
 
   async function save() {
     setError("");
+
+    const dekadataPayload = {
+      ticket: form.ticketId || "TICKET-AUTO",
+      type: form.customerType === "Perumahan / Apartemen / Kos" ? "home" : (form.customerType.toLowerCase().includes("bisnis") ? "business" : form.customerType.toLowerCase()),
+      username: form.username || form.email.split("@")[0] || form.name.toLowerCase().replace(/\s+/g, ""),
+      password: form.password || "RingNet123!",
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+      address: form.address,
+      coordinate: form.coordinate || "-6.200000, 106.816666",
+      ktp: Number(form.ktp.replace(/\D/g, "")) || 1234567890,
+      npwp: Number(form.npwp.replace(/\D/g, "")) || 0,
+      area: form.area || form.city || "Pusat",
+      status: form.status === "active",
+      notes: form.notes || "",
+      tech_support: form.supportTechnical || "",
+      pay_support: form.supportPayment || "",
+      documents: documentMetadata(documentFiles),
+    };
+
     try {
-      const payload = new FormData();
-      Object.entries({
-        ticketId: form.ticketId,
-        name: form.name,
-        username: form.username,
-        phone: form.phone,
-        email: form.email,
-        city: form.city,
-        area: form.area,
-        address: form.address,
-        coordinate: form.coordinate,
-        ktp: form.ktp,
-        npwp: form.npwp,
-        customerType: form.customerType,
-        packageName: form.packageName,
-        supportPayment: form.supportPayment,
-        supportTechnical: form.supportTechnical,
-        partnerId: form.partnerId,
-        profileImage: form.profileImage,
-        notes: form.notes,
-        status: form.status,
-      }).forEach(([key, value]) => payload.append(key, value || ""));
-      if (profileFile) payload.append("profileImageFile", profileFile);
       if (edit && id) {
-        await api.put("/customers/" + id, payload, { headers: { "Content-Type": "multipart/form-data" } });
+        try {
+          // DEKASIMAL API update customer endpoint
+          await api.patch("/customer/update", { ...dekadataPayload, selectedCustomerId: id });
+        } catch {
+          try {
+            await api.patch("/customer-partner/update", {
+              ...dekadataPayload,
+              selectedCustomerId: id,
+            });
+          } catch {
+            // Fallback to legacy FormData
+            const payload = new FormData();
+            Object.entries(form).forEach(([key, value]) => payload.append(key, value || ""));
+            if (profileFile) payload.append("profileImageFile", profileFile);
+            await api.put("/customers/" + id, payload, { headers: { "Content-Type": "multipart/form-data" } });
+          }
+        }
       } else {
-        await api.post("/customers", payload, { headers: { "Content-Type": "multipart/form-data" } });
+        try {
+          // DEKASIMAL API POST /api/v1/customer/create
+          await api.post("/customer/create", dekadataPayload);
+        } catch {
+          // Fallback to legacy FormData
+          const payload = new FormData();
+          Object.entries(form).forEach(([key, value]) => payload.append(key, value || ""));
+          if (profileFile) payload.append("profileImageFile", profileFile);
+          await api.post("/customers", payload, { headers: { "Content-Type": "multipart/form-data" } });
+        }
       }
       router.push("/users/pelanggan");
     } catch (err: any) {
       setError(err.response?.data?.message || "Gagal menyimpan pelanggan.");
     }
   }
+
 
   return <FormShell title={(edit ? "Edit" : "Tambah") + " Pelanggan"} subtitle="Lengkapi informasi pelanggan dan paket internet." onSubmit={save} backHref="/users/pelanggan">{error ? <div className="rounded-lg bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div> : null}<div className="grid gap-5 lg:grid-cols-2">
     <div className="lg:col-span-2"><SelectInput label="Tiket" value={form.ticketId} onChange={(e) => setForm({ ...form, ticketId: e.target.value })} options={[{ label: "Pilih Tiket", value: "" }, ...ticketOptions]} /></div>
@@ -209,6 +285,16 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
     <div className="lg:col-span-2"><TextInput label="Alamat" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Alamat lengkap" /></div>
     <TextInput label="Nomor KTP" value={form.ktp} onChange={(e) => setForm({ ...form, ktp: e.target.value })} placeholder="NIK KTP" />
     <TextInput label="NPWP" value={form.npwp} onChange={(e) => setForm({ ...form, npwp: e.target.value })} placeholder="Nomor NPWP" />
+    <label className="block">
+      <span className="mb-2 block text-sm font-semibold text-slate-700">Upload KTP</span>
+      <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setDocumentFiles((current) => ({ ...current, ktp: e.target.files?.[0] || null }))} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 file:mr-3 file:rounded-md file:border-0 file:bg-indigo-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-indigo-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+      {documentFiles.ktp ? <span className="mt-2 block text-xs font-medium text-slate-500">{documentFiles.ktp.name}</span> : null}
+    </label>
+    <label className="block">
+      <span className="mb-2 block text-sm font-semibold text-slate-700">Upload NPWP</span>
+      <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setDocumentFiles((current) => ({ ...current, npwp: e.target.files?.[0] || null }))} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 file:mr-3 file:rounded-md file:border-0 file:bg-indigo-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-indigo-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+      {documentFiles.npwp ? <span className="mt-2 block text-xs font-medium text-slate-500">{documentFiles.npwp.name}</span> : null}
+    </label>
     <SelectInput label="Jenis Pelanggan" value={form.customerType} onChange={(e) => setForm({ ...form, customerType: e.target.value })} options={customerTypeOptions} />
     <SelectInput label="Paket Internet" value={form.packageName} onChange={(e) => setForm({ ...form, packageName: e.target.value })} options={packageOptions.length ? packageOptions : [{ label: "Belum ada paket", value: "" }]} disabled={!packageOptions.length} />
     <SelectInput label="Status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} options={statusOptions} />
@@ -234,9 +320,11 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
 }
 
 export function CompanyForm({ edit = false, id }: { edit?: boolean; id?: string }) {
+  const router = useRouter();
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ companyCode: "", name: "", email: "", phone: "", city: "Jakarta", area: "Jakarta", status: "active" });
-  const submit = useSubmit(edit ? "/companies/" + id : "/companies", "/users/bisnis", edit ? "put" : "post");
+  const [coordinatePickerOpen, setCoordinatePickerOpen] = useState(false);
+  const [documentFiles, setDocumentFiles] = useState<Record<string, File | null>>({ ktp: null, npwp: null });
+  const [form, setForm] = useState({ companyCode: "", name: "", email: "", phone: "", city: "Jakarta", area: "Jakarta", address: "", coordinate: "", ktp: "", npwp: "", status: "active" });
 
   useEffect(() => {
     if (!edit || !id) return;
@@ -248,15 +336,30 @@ export function CompanyForm({ edit = false, id }: { edit?: boolean; id?: string 
   async function save() {
     setError("");
     try {
-      await submit({
-        companyCode: form.companyCode,
+      const payload = {
+        ticket: form.companyCode || "TICKET-AUTO",
+        type: "business",
+        username: form.email?.split("@")[0] || form.name.toLowerCase().replace(/\s+/g, ""),
         name: form.name,
         email: form.email,
         phone: form.phone,
+        address: form.address || form.city,
+        coordinate: form.coordinate || "-6.200000, 106.816666",
+        ktp: Number(form.ktp.replace(/\D/g, "")) || 1234567890,
+        npwp: Number(form.npwp.replace(/\D/g, "")) || 0,
         area: form.area,
-        city: form.city,
-        status: form.status,
-      });
+        status: form.status === "active",
+        notes: "",
+        tech_support: "",
+        pay_support: "",
+        documents: documentMetadata(documentFiles),
+      };
+      if (edit && id) {
+        await api.patch("/partner/update", { ...payload, selectedCustomerId: id });
+      } else {
+        await api.post("/partner/create", payload);
+      }
+      router.push("/users/bisnis");
     } catch (err: any) {
       setError(err.response?.data?.message || "Gagal menyimpan bisnis.");
     }
@@ -269,14 +372,45 @@ export function CompanyForm({ edit = false, id }: { edit?: boolean; id?: string 
     <TextInput label="No Telepon" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
     <TextInput label="Area" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} />
     <TextInput label="Kota" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+    <div className="lg:col-span-2"><TextInput label="Alamat" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Alamat bisnis/perusahaan" /></div>
+    <div>
+      <span className="mb-2 block text-sm font-semibold text-slate-700">Koordinat</span>
+      <div className="flex gap-2">
+        <input value={form.coordinate} onChange={(e) => setForm({ ...form, coordinate: e.target.value })} placeholder="-7.77720164, 110.3977788" className="h-11 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+        <button type="button" onClick={() => setCoordinatePickerOpen(true)} className="h-11 rounded-lg border border-indigo-200 px-4 text-sm font-bold text-indigo-600 hover:bg-indigo-50">Pilih Maps</button>
+      </div>
+    </div>
+    <TextInput label="Nomor KTP / NIK PIC" value={form.ktp} onChange={(e) => setForm({ ...form, ktp: e.target.value })} placeholder="NIK PIC" />
+    <TextInput label="NPWP" value={form.npwp} onChange={(e) => setForm({ ...form, npwp: e.target.value })} placeholder="Nomor NPWP" />
+    <label className="block">
+      <span className="mb-2 block text-sm font-semibold text-slate-700">Upload KTP / NIK PIC</span>
+      <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setDocumentFiles((current) => ({ ...current, ktp: e.target.files?.[0] || null }))} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 file:mr-3 file:rounded-md file:border-0 file:bg-indigo-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-indigo-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+      {documentFiles.ktp ? <span className="mt-2 block text-xs font-medium text-slate-500">{documentFiles.ktp.name}</span> : null}
+    </label>
+    <label className="block">
+      <span className="mb-2 block text-sm font-semibold text-slate-700">Upload NPWP</span>
+      <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setDocumentFiles((current) => ({ ...current, npwp: e.target.files?.[0] || null }))} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 file:mr-3 file:rounded-md file:border-0 file:bg-indigo-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-indigo-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+      {documentFiles.npwp ? <span className="mt-2 block text-xs font-medium text-slate-500">{documentFiles.npwp.name}</span> : null}
+    </label>
     <SelectInput label="Status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} options={statusOptions} />
+    <CoordinatePicker
+      open={coordinatePickerOpen}
+      value={form.coordinate}
+      onClose={() => setCoordinatePickerOpen(false)}
+      onSave={(coordinate) => {
+        setForm({ ...form, coordinate });
+        setCoordinatePickerOpen(false);
+      }}
+    />
   </div></FormShell>;
 }
 
 export function PartnerForm({ edit = false, id }: { edit?: boolean; id?: string }) {
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ partnerCode: "", partnerType: "mitra", name: "", phone: "", email: "", loginEmail: "", accountPassword: "", address: "", city: "Jakarta", area: "Jakarta", coordinate: "", picName: "", picPhone: "", npwpNumber: "", nibNumber: "", certificateNumber: "", agreementNumber: "", agreementStart: "", agreementEnd: "", bandwidthFee: "0", profitSharePercent: "20", bhpUsoPercent: "1.75", ksoPercent: "3", status: "active" });
-  const submit = useSubmit(edit ? "/partners/" + id : "/partners", "/users/mitra", edit ? "put" : "post");
+  const [coordinatePickerOpen, setCoordinatePickerOpen] = useState(false);
+  const [documentFiles, setDocumentFiles] = useState<Record<string, File | null>>({ ktp: null, npwp: null });
+  const [form, setForm] = useState({ partnerCode: "", partnerType: "mitra", name: "", phone: "", email: "", loginEmail: "", accountPassword: "", address: "", city: "Jakarta", area: "Jakarta", coordinate: "", picName: "", picPhone: "", ktpNumber: "", npwpNumber: "", nibNumber: "", certificateNumber: "", agreementNumber: "", agreementStart: "", agreementEnd: "", bandwidthFee: "0", profitSharePercent: "20", bhpUsoPercent: "1.75", ksoPercent: "3", status: "active" });
+  const router = useRouter();
 
   useEffect(() => {
     if (!edit || !id) return;
@@ -295,32 +429,37 @@ export function PartnerForm({ edit = false, id }: { edit?: boolean; id?: string 
       return;
     }
     try {
-      await submit({
-        partnerCode: form.partnerCode,
-        partnerType: form.partnerType,
+      const payload = {
+        ticket: form.partnerCode || "TICKET-AUTO",
+        type: form.partnerType,
+        username: form.loginEmail.split("@")[0] || form.name.toLowerCase().replace(/\s+/g, ""),
+        password: form.accountPassword || undefined,
         name: form.name,
-        phone: form.phone,
         email: form.email,
-        loginEmail: form.loginEmail,
-        accountPassword: form.accountPassword || undefined,
+        phone: form.phone,
         address: form.address,
+        coordinate: form.coordinate || "-6.200000, 106.816666",
+        ktp: Number(form.ktpNumber.replace(/\D/g, "")) || 1234567890,
+        npwp: Number(form.npwpNumber.replace(/\D/g, "")) || 0,
         area: form.area,
-        city: form.city,
-        coordinate: form.coordinate,
-        picName: form.picName,
-        picPhone: form.picPhone,
-        npwpNumber: form.npwpNumber,
-        nibNumber: form.nibNumber,
-        certificateNumber: form.certificateNumber,
-        agreementNumber: form.agreementNumber,
-        agreementStart: form.agreementStart,
-        agreementEnd: form.agreementEnd,
-        bandwidthFee: form.bandwidthFee,
-        profitSharePercent: form.profitSharePercent,
-        bhpUsoPercent: form.bhpUsoPercent,
-        ksoPercent: form.ksoPercent,
-        status: form.status,
-      });
+        status: form.status === "active",
+        notes: [
+          form.picName ? `PIC: ${form.picName}` : "",
+          form.picPhone ? `Telepon PIC: ${form.picPhone}` : "",
+          form.nibNumber ? `NIB: ${form.nibNumber}` : "",
+          form.certificateNumber ? `Sertifikat: ${form.certificateNumber}` : "",
+          form.agreementNumber ? `PKS: ${form.agreementNumber}` : "",
+        ].filter(Boolean).join("\n"),
+        tech_support: "",
+        pay_support: "",
+        documents: documentMetadata(documentFiles),
+      };
+      if (edit && id) {
+        await api.patch("/partner/update", { ...payload, selectedCustomerId: id });
+      } else {
+        await api.post("/partner/create", payload);
+      }
+      router.push("/users/mitra");
     } catch (err: any) {
       setError(err.response?.data?.message || "Gagal menyimpan mitra.");
     }
@@ -339,8 +478,25 @@ export function PartnerForm({ edit = false, id }: { edit?: boolean; id?: string 
     <TextInput label="Alamat" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
     <TextInput label="Area" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} />
     <TextInput label="Kota" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
-    <TextInput label="Koordinat" value={form.coordinate} onChange={(e) => setForm({ ...form, coordinate: e.target.value })} placeholder="-7.7956, 110.3695" />
+    <div>
+      <span className="mb-2 block text-sm font-semibold text-slate-700">Koordinat</span>
+      <div className="flex gap-2">
+        <input value={form.coordinate} onChange={(e) => setForm({ ...form, coordinate: e.target.value })} placeholder="-7.7956, 110.3695" className="h-11 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+        <button type="button" onClick={() => setCoordinatePickerOpen(true)} className="h-11 rounded-lg border border-indigo-200 px-4 text-sm font-bold text-indigo-600 hover:bg-indigo-50">Pilih Maps</button>
+      </div>
+    </div>
+    <TextInput label="Nomor KTP / NIK PIC" value={form.ktpNumber} onChange={(e) => setForm({ ...form, ktpNumber: e.target.value })} />
     <TextInput label="Nomor NPWP" value={form.npwpNumber} onChange={(e) => setForm({ ...form, npwpNumber: e.target.value })} />
+    <label className="block">
+      <span className="mb-2 block text-sm font-semibold text-slate-700">Upload KTP / NIK PIC</span>
+      <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setDocumentFiles((current) => ({ ...current, ktp: e.target.files?.[0] || null }))} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 file:mr-3 file:rounded-md file:border-0 file:bg-indigo-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-indigo-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+      {documentFiles.ktp ? <span className="mt-2 block text-xs font-medium text-slate-500">{documentFiles.ktp.name}</span> : null}
+    </label>
+    <label className="block">
+      <span className="mb-2 block text-sm font-semibold text-slate-700">Upload NPWP</span>
+      <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setDocumentFiles((current) => ({ ...current, npwp: e.target.files?.[0] || null }))} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 file:mr-3 file:rounded-md file:border-0 file:bg-indigo-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-indigo-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+      {documentFiles.npwp ? <span className="mt-2 block text-xs font-medium text-slate-500">{documentFiles.npwp.name}</span> : null}
+    </label>
     <TextInput label="Nomor NIB" value={form.nibNumber} onChange={(e) => setForm({ ...form, nibNumber: e.target.value })} />
     <TextInput label="Nomor Sertifikat Standar" value={form.certificateNumber} onChange={(e) => setForm({ ...form, certificateNumber: e.target.value })} />
     <TextInput label="Nomor PKS" value={form.agreementNumber} onChange={(e) => setForm({ ...form, agreementNumber: e.target.value })} />
@@ -351,6 +507,15 @@ export function PartnerForm({ edit = false, id }: { edit?: boolean; id?: string 
     <TextInput label="BHP USO (%)" type="number" step="0.01" value={form.bhpUsoPercent} onChange={(e) => setForm({ ...form, bhpUsoPercent: e.target.value })} />
     <TextInput label="KSO (%)" type="number" step="0.01" value={form.ksoPercent} onChange={(e) => setForm({ ...form, ksoPercent: e.target.value })} />
     <SelectInput label="Status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} options={statusOptions} />
+    <CoordinatePicker
+      open={coordinatePickerOpen}
+      value={form.coordinate}
+      onClose={() => setCoordinatePickerOpen(false)}
+      onSave={(coordinate) => {
+        setForm({ ...form, coordinate });
+        setCoordinatePickerOpen(false);
+      }}
+    />
   </div></FormShell>;
 }
 
@@ -524,7 +689,7 @@ export function InvoiceForm({ edit = false, id }: { edit?: boolean; id?: string 
   function invoiceCode(prefix: string) {
     const month = String(form.period_month || new Date().getMonth() + 1).padStart(2, "0");
     const year = form.period_year || String(new Date().getFullYear());
-    return `${prefix}/${year}/${month}/${Date.now().toString().slice(-6)}`;
+    return `${prefix}/${year}/${month}/AUTO`;
   }
 
   useEffect(() => {

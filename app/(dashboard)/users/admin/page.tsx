@@ -1,1 +1,5 @@
-import { UsersPage } from "@/components/pages/ListPages"; export default function Page(){ return <UsersPage role="admin" title="Admin" />; }
+import { AdminUsersPage } from "@/components/pages/UserAccessPages";
+
+export default function Page() {
+  return <AdminUsersPage />;
+}

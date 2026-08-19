@@ -7,7 +7,7 @@ import { useAuthStore } from "@/hooks/useAuth";
 import { Badge, Card, DataTable, PageHeader, TableSkeleton } from "@/components/ui/AdminUI";
 import { currency, date, monthName } from "@/lib/format";
 import Link from "next/link";
-import { ArrowDownUp, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, FileText, Filter, Grid3X3, List, ListFilter, MinusCircle, Phone, PlusCircle, Power, RefreshCw, Search, Store, Trash2, Upload, UserPlus } from "lucide-react";
+import { ArrowDownUp, Building2, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, FileText, Filter, Grid3X3, List, ListFilter, Mail, MinusCircle, Phone, PlusCircle, Power, RefreshCw, Search, Store, Trash2, Upload, UserPlus, Users } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 
@@ -444,6 +444,19 @@ function CustomerActionMenu({ row, onClose, onDelete }: { row: any; onClose: () 
   );
 }
 
+function BusinessActionMenu({ row, onClose, onDelete }: { row: any; onClose: () => void; onDelete: (row: any) => void }) {
+  return (
+    <div className="absolute right-4 top-16 z-20 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white text-left shadow-xl">
+      <Link onClick={onClose} href={`/users/bisnis/${row.id}`} className="block px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Detail Bisnis</Link>
+      <Link onClick={onClose} href={`/users/bisnis/${row.id}/edit`} className="block px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Edit Data</Link>
+      <Link onClick={onClose} href={`/internet-services?companyId=${encodeURIComponent(row.id)}`} className="block px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Faktur & Tagihan</Link>
+      <Link onClick={onClose} href={`/dokumen/nik-npwp?companyId=${encodeURIComponent(row.id)}`} className="block px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Dokumen Legal</Link>
+      <Link onClick={onClose} href={`/mitra/sla?companyId=${encodeURIComponent(row.id)}`} className="block px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">SLA</Link>
+      <button type="button" onClick={() => { onClose(); onDelete(row); }} className="block w-full px-4 py-3 text-left text-sm font-semibold text-rose-600 hover:bg-rose-50">Hapus Bisnis</button>
+    </div>
+  );
+}
+
 function CustomerPagination({ page, maxPage, total, pageSize, onPageChange }: { page: number; maxPage: number; total: number; pageSize: number; onPageChange: Dispatch<SetStateAction<number>> }) {
   const start = total ? (page - 1) * pageSize + 1 : 0;
   const end = Math.min(total, page * pageSize);
@@ -463,23 +476,268 @@ function CustomerPagination({ page, maxPage, total, pageSize, onPageChange }: { 
 
 
 export function CompaniesPage() {
-  const { rows, setRows, toast, setToast, loading } = useRows<any>("/companies?limit=5000");
+  const [rows, setRows] = useState<any[]>([]);
+  const [toast, setToast] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [openActionId, setOpenActionId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
+  const load = () => {
+    setLoading(true);
+    setToast("");
+    api.get("/companies?limit=5000")
+      .then((res) => {
+        const raw = Array.isArray(res.data?.data) ? res.data.data : res.data?.data?.data || res.data?.rows || [];
+        const normalized = raw.map((item: any) => ({
+          id: item.id || item.partner_id || item.customer_id,
+          companyCode: item.companyCode || item.partnerCode || item.partner_id || item.customer_id || String(item.id || "").slice(0, 8),
+          name: item.name || item.company_name || item.username || "-",
+          email: item.email || "-",
+          phone: item.phone || item.pic_phone || "-",
+          picName: item.pic_name || item.picName || item.contact_person || "-",
+          area: item.area || "-",
+          city: item.city || item.regency || "-",
+          address: item.address || "-",
+          packageName: item.package_name || item.packageName || item.product || item.product_name || "-",
+          packagePrice: item.package_price || item.price || item.monthly_fee || null,
+          businessType: item.partner_type || item.partnerType || item.type || "Bisnis/Enterprise",
+          status: item.status === false ? "nonactive" : (item.status === true || item.status === "active" ? "active" : item.status || "active"),
+          lastActivity: item.updated_at || item.created_at || item.createdAt || null,
+        }));
+        setRows(normalized);
+      })
+      .catch(() => {
+        setRows([]);
+        setToast("Gagal memuat data pelanggan bisnis dari server.");
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const filteredRows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return rows.filter((row) => {
+      const matchQuery = !q || [
+        row.companyCode,
+        row.name,
+        row.email,
+        row.phone,
+        row.picName,
+        row.area,
+        row.city,
+        row.address,
+        row.packageName,
+        row.businessType,
+      ].some((value) => String(value || "").toLowerCase().includes(q));
+      const matchStatus = statusFilter === "all" || String(row.status || "").toLowerCase() === statusFilter;
+      return matchQuery && matchStatus;
+    });
+  }, [rows, query, statusFilter]);
+
+  const maxPage = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const paginatedRows = useMemo(() => filteredRows.slice((page - 1) * pageSize, page * pageSize), [filteredRows, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, statusFilter, viewMode]);
+
+  useEffect(() => {
+    if (page <= maxPage) return;
+    setPage(maxPage);
+  }, [maxPage, page]);
+
+  const stats = useMemo(() => {
+    const active = rows.filter((row) => String(row.status || "").toLowerCase() === "active").length;
+    const withPic = rows.filter((row) => row.picName && row.picName !== "-").length;
+    return {
+      total: rows.length,
+      active,
+      inactive: Math.max(0, rows.length - active),
+      withPic,
+    };
+  }, [rows]);
+
+  async function handleDelete(row: any) {
+    try {
+      await api.delete(`/companies/${row.id}`);
+      setRows((current) => current.filter((item) => item.id !== row.id));
+      setToast("Pelanggan bisnis berhasil dihapus.");
+    } catch (err: any) {
+      setToast(err.response?.data?.message || "Gagal menghapus pelanggan bisnis.");
+    }
+  }
+
+  async function handleToggleStatus(row: any) {
+    const nextActive = String(row.status || "").toLowerCase() !== "active";
+    const nextStatus = nextActive ? "active" : "nonactive";
+    setRows((current) => current.map((item) => item.id === row.id ? { ...item, status: nextStatus } : item));
+    try {
+      await api.patch(`/companies/${row.id}`, { status: nextActive });
+      setToast(`Status ${row.name} berhasil diubah.`);
+    } catch (err: any) {
+      setRows((current) => current.map((item) => item.id === row.id ? { ...item, status: row.status } : item));
+      setToast(err.response?.data?.message || "Gagal mengubah status pelanggan bisnis.");
+    }
+  }
+
   return (
-    <div>
-      <PageHeader title="Bisnis / Perusahaan" subtitle="Kelola data PT, CV, instansi, kantor, dan pelanggan enterprise." actionHref="/users/bisnis/new" actionLabel="Tambah Bisnis" />
-      <Toast message={toast} />
-      {loading ? <TableSkeleton columns={6} /> :
-      <DataTable data={rows as any[]} editBasePath="/users/bisnis" onDelete={(row) => deleteRow("/companies", row, setRows as any, setToast, "Bisnis berhasil dihapus.")}
-        columns={[
-          { key: "companyCode", header: "ID Mitra", render: (row: any) => <Link href={`/users/bisnis/${row.id}`} className="font-semibold text-indigo-600 hover:underline">{row.companyCode || "-"}</Link> },
-          { key: "name", header: "Nama Perusahaan / Instansi", render: (row: any) => <span className="font-semibold text-slate-900">{row.name}</span> },
-          { key: "email", header: "Email" },
-          { key: "phone", header: "Kontak" },
-          { key: "area", header: "Area" },
-          { key: "status", header: "Status", render: (row: any) => <Badge value={row.status || "active"} /> },
-        ]}
+    <div className="space-y-6">
+      <PageHeader
+        title="Pelanggan Bisnis"
+        subtitle="Kelola data PT, CV, instansi, kantor, dan pelanggan enterprise."
+        rightContent={
+          <Link href="/users/bisnis/new" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-bold text-white shadow-sm shadow-indigo-200 transition hover:bg-indigo-500">
+            <PlusCircle size={18} /> Bisnis Baru
+          </Link>
+        }
       />
-      }
+      <Toast message={toast} />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <CustomerMetricCard icon={<Building2 size={22} />} label="Total Bisnis" value={String(stats.total)} accent="text-indigo-600" />
+        <CustomerMetricCard icon={<CheckCircle2 size={22} />} label="Aktif" value={String(stats.active)} accent="text-blue-600" />
+        <CustomerMetricCard icon={<MinusCircle size={22} />} label="Tidak Aktif" value={String(stats.inactive)} accent="text-amber-600" />
+        <CustomerMetricCard icon={<Users size={22} />} label="Data PIC" value={String(stats.withPic)} accent="text-emerald-600" />
+      </div>
+
+      <section>
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-xl font-bold tracking-tight text-slate-950">Daftar Pelanggan Bisnis</h2>
+            <p className="mt-1 text-sm text-slate-500">Menampilkan {paginatedRows.length} dari {filteredRows.length} pelanggan bisnis.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari..." className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100" />
+            </div>
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700">
+              <option value="all">Semua Status</option>
+              <option value="active">Aktif</option>
+              <option value="nonactive">Tidak Aktif</option>
+            </select>
+            <button type="button" onClick={load} className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50" title="Refresh">
+              <RefreshCw size={18} />
+            </button>
+            <button type="button" className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50" title="Export">
+              <Upload size={18} />
+            </button>
+            <div className="flex rounded-xl bg-slate-100 p-1">
+              <button type="button" onClick={() => setViewMode("list")} className={"grid h-9 w-10 place-items-center rounded-lg " + (viewMode === "list" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500")} title="Tampilan list"><List size={18} /></button>
+              <button type="button" onClick={() => setViewMode("grid")} className={"grid h-9 w-10 place-items-center rounded-lg " + (viewMode === "grid" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500")} title="Tampilan grid"><Grid3X3 size={18} /></button>
+            </div>
+          </div>
+        </div>
+
+        {loading ? <TableSkeleton columns={8} /> : viewMode === "list" ? (
+          <Card className="overflow-visible">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1180px] text-left text-sm">
+                <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-700">
+                  <tr>
+                    <CustomerTh>Status</CustomerTh>
+                    <CustomerTh>ID Bisnis</CustomerTh>
+                    <CustomerTh>Nama</CustomerTh>
+                    <CustomerTh>Kontak</CustomerTh>
+                    <CustomerTh>Produk</CustomerTh>
+                    <CustomerTh>Jenis</CustomerTh>
+                    <CustomerTh>Aktivitas</CustomerTh>
+                    <CustomerTh className="text-right">Aksi</CustomerTh>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {paginatedRows.map((row) => (
+                    <tr key={row.id} className="bg-white hover:bg-slate-50/80">
+                      <td className="px-4 py-5">
+                        <button type="button" onClick={() => handleToggleStatus(row)} className={"relative h-7 w-14 rounded-full transition " + (String(row.status).toLowerCase() === "active" ? "bg-blue-600" : "bg-slate-300")} title="Ubah status">
+                          <span className={"absolute top-1 h-5 w-5 rounded-full bg-white shadow transition " + (String(row.status).toLowerCase() === "active" ? "left-8" : "left-1")} />
+                        </button>
+                      </td>
+                      <td className="px-4 py-5">
+                        <Link href={`/users/bisnis/${row.id}`} className="font-bold text-indigo-600 hover:underline">{row.companyCode || row.id.slice(0, 8)}</Link>
+                      </td>
+                      <td className="px-4 py-5">
+                        <div className="flex items-center gap-3">
+                          <CustomerAvatar name={row.name} code={row.companyCode} />
+                          <div>
+                            <Link href={`/users/bisnis/${row.id}`} className="font-bold text-indigo-600 hover:underline">{row.name}</Link>
+                            <p className="mt-1 text-xs font-semibold text-slate-500">{[row.area, row.city].filter(Boolean).join("  |  ") || row.address || "-"}</p>
+                            <p className="mt-1 text-xs text-slate-400">PIC: {row.picName || "-"}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-5">
+                        <div className="space-y-2">
+                          <PhonePill phone={row.phone} />
+                          {row.email && row.email !== "-" ? <a href={`mailto:${row.email}`} className="flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-indigo-600"><Mail size={13} /> {row.email}</a> : null}
+                        </div>
+                      </td>
+                      <td className="px-4 py-5">
+                        <ProductPill name={row.packageName} price={row.packagePrice} />
+                      </td>
+                      <td className="px-4 py-5">
+                        <TypePill type={row.businessType || "Bisnis/Enterprise"} />
+                      </td>
+                      <td className="px-4 py-5">
+                        <div className="font-bold text-slate-800">{row.lastActivity ? date(row.lastActivity) : "-"}</div>
+                      </td>
+                      <td className="relative px-4 py-5 text-right">
+                        <button type="button" onClick={() => setOpenActionId(openActionId === row.id ? null : row.id)} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 hover:bg-slate-50">
+                          <ListFilter size={17} /> Pilih Aksi <ChevronDown size={15} />
+                        </button>
+                        {openActionId === row.id ? (
+                          <BusinessActionMenu row={row} onClose={() => setOpenActionId(null)} onDelete={handleDelete} />
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                  {!paginatedRows.length ? (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-16 text-center text-sm font-semibold text-slate-500">Data pelanggan bisnis tidak ditemukan.</td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+            <CustomerPagination page={page} maxPage={maxPage} total={filteredRows.length} pageSize={pageSize} onPageChange={setPage} />
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {paginatedRows.map((row) => (
+              <Card key={row.id} className="p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <CustomerAvatar name={row.name} code={row.companyCode} />
+                    <div>
+                      <Link href={`/users/bisnis/${row.id}`} className="font-black text-indigo-600 hover:underline">{row.name}</Link>
+                      <p className="mt-1 text-xs font-semibold text-slate-500">{row.companyCode}</p>
+                    </div>
+                  </div>
+                  <Badge value={row.status} />
+                </div>
+                <div className="mt-4 space-y-3">
+                  <PhonePill phone={row.phone} />
+                  <ProductPill name={row.packageName} price={row.packagePrice} />
+                  <TypePill type={row.businessType || "Bisnis/Enterprise"} />
+                </div>
+                <div className="mt-5 flex gap-2">
+                  <Link href={`/users/bisnis/${row.id}`} className="flex-1 rounded-lg bg-indigo-600 px-3 py-2 text-center text-sm font-bold text-white">Detail</Link>
+                  <Link href={`/users/bisnis/${row.id}/edit`} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700">Edit</Link>
+                </div>
+              </Card>
+            ))}
+            <div className="md:col-span-2 xl:col-span-3">
+              <CustomerPagination page={page} maxPage={maxPage} total={filteredRows.length} pageSize={pageSize} onPageChange={setPage} />
+            </div>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
@@ -546,15 +804,21 @@ function invoiceStatus(row: any, now: Date | null) {
 }
 
 function invoicePurpose(row: any) {
-  const code = row.customer?.customerCode;
-  const name = row.customer?.name || row.customerName;
+  const code = safeText(row.customer?.customerCode);
+  const name = safeText(row.customer?.name || row.customerName);
   return code ? `${code} - ${name}` : name || "-";
 }
 
 function invoiceName(row: any) {
-  if (row.invoiceName) return row.invoiceName;
+  if (row.invoiceName) return safeText(row.invoiceName);
   if (row.periodMonth && row.periodYear) return `Periode ${monthName(row.periodMonth)} ${row.periodYear}`;
-  return row.serviceType || "-";
+  return safeText(row.serviceType);
+}
+
+function safeText(value: any, fallback = "-") {
+  if (value === null || value === undefined || value === "") return fallback;
+  if (typeof value === "object") return String(value.name || value.customer_id || value._id || value.id || fallback);
+  return String(value);
 }
 
 function AddInvoiceMenu() {
@@ -786,7 +1050,7 @@ export function InternetServicesPage() {
                         <td className="border-b border-slate-100 px-4 py-4 font-semibold">{invoicePurpose(row)}</td>
                         <td className="border-b border-slate-100 px-4 py-4 font-semibold">{currency(row.amount)}</td>
                         <td className="border-b border-slate-100 px-4 py-4">{invoiceName(row)}</td>
-                        <td className="border-b border-slate-100 px-4 py-4">{row.customer?.supportPayment || row.supportPayment || "-"}</td>
+                        <td className="border-b border-slate-100 px-4 py-4">{safeText(row.customer?.supportPayment || row.supportPayment)}</td>
                         {canDeleteInvoice ? (
                           <td className="border-b border-slate-100 px-4 py-4">
                             <button
@@ -807,7 +1071,7 @@ export function InternetServicesPage() {
                               <div>
                                 <div className="text-xs font-bold uppercase tracking-wide text-slate-400">Autentikasi</div>
                                 <div className="mt-1 inline-flex items-center gap-2 text-sm font-semibold text-indigo-600">
-                                  {row.customer?.email || row.customer?.username || row.customerName || "-"}
+                                  {safeText(row.customer?.email || row.customer?.username || row.customerName)}
                                   <Power size={16} className="text-rose-500" />
                                 </div>
                               </div>

@@ -3,19 +3,16 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import api from "@/lib/api";
-import { Badge, Card, DataTable, PageHeader, SelectInput, StatSkeleton, TableSkeleton, TextInput } from "@/components/ui/AdminUI";
+import { Badge, Card, DataTable, PageHeader, SelectInput, StatSkeleton, TableSkeleton, TextArea, TextInput } from "@/components/ui/AdminUI";
 import { date } from "@/lib/format";
 import { useAuthStore } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Power, ShieldAlert, ShieldCheck, UserCog, Users } from "lucide-react";
+import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { ArrowLeft, BriefcaseBusiness, KeyRound, Mail, Phone, Power, Save, ShieldAlert, ShieldCheck, UserCog, UserPlus, Users } from "lucide-react";
 
-const roleOptions = [
+const panelRoleOptions = [
   { label: "Super Admin", value: "super_admin" },
   { label: "Admin", value: "admin" },
-  { label: "Pelanggan", value: "pelanggan" },
-  { label: "Bisnis", value: "bisnis" },
-  { label: "Mitra", value: "mitra" },
 ];
 
 const statusOptions = [
@@ -38,6 +35,16 @@ const managementStatusOptions = [
   ...statusOptions,
 ];
 
+const divisionOptions = [
+  { label: "Management", value: "Management" },
+  { label: "Operational", value: "Operational" },
+  { label: "NOC / Teknis", value: "NOC / Teknis" },
+  { label: "Billing / Keuangan", value: "Billing / Keuangan" },
+  { label: "Customer Service", value: "Customer Service" },
+  { label: "Legal", value: "Legal" },
+  { label: "Sales / Marketing", value: "Sales / Marketing" },
+];
+
 const roleLabel = (role?: string) => {
   const labels: Record<string, string> = {
     super_admin: "Super Admin",
@@ -48,6 +55,25 @@ const roleLabel = (role?: string) => {
   };
   return labels[String(role)] || role || "-";
 };
+
+function UserFormSection({ icon, title, description, children }: { icon: ReactNode; title: string; description: string; children: ReactNode }) {
+  return (
+    <section className="relative rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-col gap-3 rounded-t-2xl border-b border-slate-100 bg-slate-50/80 px-5 py-4 sm:flex-row sm:items-center">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-indigo-50 text-indigo-600">
+          {icon}
+        </div>
+        <div>
+          <h2 className="text-base font-black text-slate-950">{title}</h2>
+          <p className="mt-0.5 text-sm text-slate-500">{description}</p>
+        </div>
+      </div>
+      <div className="grid gap-5 p-5 lg:grid-cols-2">
+        {children}
+      </div>
+    </section>
+  );
+}
 
 export function UserManagementPage() {
   const currentUser = useAuthStore((state) => state.user);
@@ -256,11 +282,18 @@ export function UserFormPage({ edit = false, id, backHref = "/users", defaultRol
   const currentUser = useAuthStore((state) => state.user);
   const isAdmin = currentUser?.role === "admin";
   const [loading, setLoading] = useState(edit);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
     name: "",
+    username: "",
     email: "",
+    phone: "",
+    address: "",
+    division: defaultRole === "super_admin" ? "Management" : "Operational",
+    position: "",
     password: "",
+    passwordConfirmation: "",
     role: defaultRole,
     status: "active",
   });
@@ -274,8 +307,14 @@ export function UserFormPage({ edit = false, id, backHref = "/users", defaultRol
         const user = res.data.data;
         setForm({
           name: user.name || user.username || "",
+          username: user.username || "",
           email: user.email || user.username || "",
+          phone: user.phone || "",
+          address: user.address || "",
+          division: user.division || (user.super ? "Management" : "Operational"),
+          position: user.position || (user.super ? "super_admin" : "admin"),
           password: "",
+          passwordConfirmation: "",
           role: user.division || user.position || (user.super ? "super_admin" : "admin"),
           status: user.status === true || user.status === "active" ? "active" : "nonactive",
         });
@@ -286,8 +325,14 @@ export function UserFormPage({ edit = false, id, backHref = "/users", defaultRol
             const user = res.data.data;
             setForm({
               name: user.name || "",
+              username: user.username || user.email?.split("@")[0] || "",
               email: user.email || "",
+              phone: user.phone || "",
+              address: user.address || "",
+              division: user.division || "Operational",
+              position: user.position || user.role || "admin",
               password: "",
+              passwordConfirmation: "",
               role: user.role || "admin",
               status: user.status || "active",
             });
@@ -301,21 +346,30 @@ export function UserFormPage({ edit = false, id, backHref = "/users", defaultRol
 
   async function submit() {
     setError("");
-    if (!form.name || !form.email) {
-      setError("Nama dan email wajib diisi.");
+    if (saving) return;
+    if (!form.name || !form.username || !form.email) {
+      setError("Nama, username, dan email wajib diisi.");
       return;
     }
     if (!edit && !form.password) {
       setError("Password wajib diisi untuk user baru.");
       return;
     }
+    if (form.password && form.password !== form.passwordConfirmation) {
+      setError("Konfirmasi password tidak sama.");
+      return;
+    }
 
     const payload: any = {
       name: form.name,
-      username: form.email.split("@")[0] || form.name.toLowerCase().replace(/\s+/g, ""),
+      username: form.username,
       email: form.email,
-      position: form.role,
-      division: form.role === "super_admin" ? "Management" : "Operational",
+      phone: form.phone || "-",
+      address: form.address || "-",
+      position: form.position || (form.role === "super_admin" ? "Super Admin" : "Administrator"),
+      division: form.division || (form.role === "super_admin" ? "Management" : "Operational"),
+      role: form.role,
+      super: form.role === "super_admin",
       status: form.status === "active",
     };
     if (form.password) {
@@ -323,6 +377,7 @@ export function UserFormPage({ edit = false, id, backHref = "/users", defaultRol
     }
 
     try {
+      setSaving(true);
       if (edit) {
         try {
           await api.patch("/admin/update", { selectedAdminId: id, ...payload });
@@ -331,18 +386,28 @@ export function UserFormPage({ edit = false, id, backHref = "/users", defaultRol
         }
       } else {
         try {
-          await api.post("/admin/create", {
-            ...payload,
-            address: "-",
-            phone: "-",
-          });
+          await api.post("/admin/create", payload);
         } catch {
-          await api.post("/users", form);
+          const legacyPayload = {
+            name: form.name,
+            username: form.username,
+            email: form.email,
+            phone: form.phone,
+            address: form.address,
+            division: form.division,
+            position: form.position,
+            password: form.password,
+            role: form.role,
+            status: form.status,
+          };
+          await api.post("/users", legacyPayload);
         }
       }
       router.push(backHref);
     } catch (error: any) {
       setError(error.response?.data?.message || "Gagal menyimpan data administrator.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -356,8 +421,45 @@ export function UserFormPage({ edit = false, id, backHref = "/users", defaultRol
 
   return (
     <div>
-      <PageHeader title={edit ? "Edit User" : "Tambah User"} subtitle={isAdminProfileForm ? "Admin hanya dapat memperbarui nama, email, dan password akun sendiri." : "Atur identitas akun, role, password, dan status akses."} />
-      <Card className="p-6">
+      <PageHeader
+        title={edit ? "Edit User" : "Tambah User"}
+        subtitle={isAdminProfileForm ? "Admin hanya dapat memperbarui nama, email, dan password akun sendiri." : "Lengkapi identitas, akses login, divisi, dan status akun panel."}
+        rightContent={(
+          <button
+            type="button"
+            onClick={() => router.push(backHref)}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-indigo-200 hover:text-indigo-600"
+          >
+            <ArrowLeft size={16} /> Kembali
+          </button>
+        )}
+      />
+
+      <div className="mb-6 grid gap-4 lg:grid-cols-3">
+        <Card className="p-5 lg:col-span-2">
+          <div className="flex gap-4">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-indigo-600 text-white shadow-sm shadow-indigo-200">
+              {edit ? <UserCog size={22} /> : <UserPlus size={22} />}
+            </div>
+            <div>
+              <p className="text-lg font-black text-slate-950">{edit ? "Perbarui akun pengguna" : "Buat akun pengguna panel"}</p>
+              <p className="mt-1 text-sm leading-6 text-slate-500">
+                Form ini dipakai untuk akun administrator internal. Data pelanggan, pelanggan bisnis, reseller/mitra, dan POP tetap dibuat melalui menu masing-masing.
+              </p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-5">
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Status Form</p>
+          <div className="mt-3 flex items-center gap-3">
+            <Badge value={edit ? "Edit Data" : "User Baru"} />
+            <Badge value={form.status === "active" ? "Aktif" : "Nonaktif"} />
+          </div>
+          <p className="mt-4 text-xs leading-5 text-slate-500">Password hanya dikirim saat diisi. Untuk edit user, kosongkan password jika tidak ingin mengganti.</p>
+        </Card>
+      </div>
+
+      <div>
         {error ? <div className="mb-5 rounded-lg bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div> : null}
         {isProtectedSuperAdmin ? (
           <div className="mb-5 flex gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -365,20 +467,64 @@ export function UserFormPage({ edit = false, id, backHref = "/users", defaultRol
             <p><strong>Super admin dilindungi.</strong> Role tidak bisa diturunkan dan akun ini tidak bisa dihapus.</p>
           </div>
         ) : null}
-        <form onSubmit={(event) => { event.preventDefault(); submit(); }} className="space-y-6">
-          <div className="grid gap-5 lg:grid-cols-2">
+
+        <form onSubmit={(event) => { event.preventDefault(); submit(); }} className="space-y-5">
+          <UserFormSection
+            icon={<UserCog size={20} />}
+            title="Informasi Pengguna"
+            description="Data utama yang tampil di tabel user management."
+          >
             <TextInput label="Nama Lengkap" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Contoh: Admin Operasional" />
-            <TextInput label="Email" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} placeholder="admin@ringnet.com" />
-            <SelectInput label="Role" value={form.role} disabled={isProtectedSuperAdmin || isAdminProfileForm} onChange={(event) => setForm({ ...form, role: event.target.value })} options={roleOptions} />
-            <SelectInput label="Status" value={form.status} disabled={isAdminProfileForm} onChange={(event) => setForm({ ...form, status: event.target.value })} options={statusOptions} />
+            <TextInput label="Email" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value, username: form.username || event.target.value.split("@")[0] })} placeholder="admin@ringnet.com" />
+            <TextInput label="No. Telepon" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} placeholder="08xxxxxxxxxx" />
+            <TextInput label="Username" value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} placeholder="Contoh: admin.operasional" />
+            <div className="lg:col-span-2">
+              <TextArea label="Alamat" value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} placeholder="Alamat domisili atau kantor user" />
+            </div>
+          </UserFormSection>
+
+          <UserFormSection
+            icon={<BriefcaseBusiness size={20} />}
+            title="Divisi & Hak Akses"
+            description="Atur divisi kerja, jabatan, role akses, dan status akun."
+          >
+            <SelectInput label="Divisi" value={form.division} disabled={isAdminProfileForm} onChange={(event) => setForm({ ...form, division: event.target.value })} options={divisionOptions} />
+            <TextInput label="Posisi / Jabatan" value={form.position} disabled={isAdminProfileForm} onChange={(event) => setForm({ ...form, position: event.target.value })} placeholder="Contoh: Staff NOC" />
+            <SelectInput label="Role Akses Panel" value={form.role} disabled={isProtectedSuperAdmin || isAdminProfileForm} onChange={(event) => setForm({ ...form, role: event.target.value, division: event.target.value === "super_admin" ? "Management" : form.division })} options={panelRoleOptions} />
+            <SelectInput label="Status Akun" value={form.status} disabled={isAdminProfileForm} onChange={(event) => setForm({ ...form, status: event.target.value })} options={statusOptions} />
+          </UserFormSection>
+
+          <UserFormSection
+            icon={<KeyRound size={20} />}
+            title="Keamanan Login"
+            description="Gunakan password kuat untuk akun baru atau saat mengganti password."
+          >
             <TextInput label={edit ? "Password Baru (opsional)" : "Password"} type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} placeholder={edit ? "Kosongkan jika tidak diubah" : "Masukkan password"} />
-          </div>
-          <div className="flex justify-end gap-3 border-t border-slate-100 pt-5">
-            <button type="button" onClick={() => router.push(backHref)} className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700">Batal</button>
-            <button className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#6366F1] px-5 text-sm font-semibold text-white shadow-sm shadow-indigo-200"><UserCog size={16} /> {isAdminProfileForm ? "Simpan Profil" : "Simpan User"}</button>
+            <TextInput label="Konfirmasi Password" type="password" value={form.passwordConfirmation} onChange={(event) => setForm({ ...form, passwordConfirmation: event.target.value })} placeholder={edit ? "Isi jika mengubah password" : "Ulangi password"} />
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 lg:col-span-2">
+              <p className="font-bold text-slate-900">Ringkasan akun</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <span className="inline-flex items-center gap-2"><Mail size={16} className="text-slate-400" /> {form.email || "Email belum diisi"}</span>
+                <span className="inline-flex items-center gap-2"><Phone size={16} className="text-slate-400" /> {form.phone || "Telepon belum diisi"}</span>
+              </div>
+            </div>
+          </UserFormSection>
+
+          <div className="sticky bottom-0 z-10 -mx-1 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-xl shadow-slate-900/8 backdrop-blur">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-slate-500">
+                Pastikan email dan username unik agar tidak ditolak oleh API saat disimpan.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button type="button" onClick={() => router.push(backHref)} className="h-11 rounded-xl border border-slate-200 px-5 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">Batal</button>
+                <button disabled={saving} className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#2563EB] px-6 text-sm font-bold text-white shadow-sm shadow-blue-200 transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none">
+                  <Save size={16} /> {saving ? "Menyimpan..." : isAdminProfileForm ? "Simpan Profil" : "Simpan User"}
+                </button>
+              </div>
+            </div>
           </div>
         </form>
-      </Card>
+      </div>
     </div>
   );
 }

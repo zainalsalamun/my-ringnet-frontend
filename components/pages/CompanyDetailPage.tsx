@@ -1,4 +1,6 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import api from "@/lib/api";
 import { Badge, Card, DataTable, PageHeader } from "@/components/ui/AdminUI";
@@ -25,8 +27,34 @@ export default function CompanyDetailPage({ id }: { id: string }) {
   useEffect(() => {
     setLoading(true);
     setError("");
-    api.get(`/companies/${id}/detail`)
-      .then((res) => setCompany(res.data.data))
+    api.get(`/companies/${id}`)
+      .then((res) => {
+        const raw = res.data?.data || {};
+        setCompany({
+          id: raw.id || raw.partner_id || raw.customer_id || id,
+          companyCode: raw.companyCode || raw.partnerCode || raw.partner_id || raw.customer_id || id,
+          name: raw.name || raw.company_name || raw.username || "-",
+          email: raw.email || "-",
+          phone: raw.phone || raw.pic_phone || "-",
+          area: raw.area || "-",
+          city: raw.city || raw.regency || "-",
+          address: raw.address || "-",
+          coordinate: raw.coordinate || "",
+          status: raw.status === false ? "nonactive" : (raw.status === true || raw.status === "active" ? "active" : raw.status || "active"),
+          ktp: raw.ktp || raw.pic_ktp || "-",
+          npwp: raw.npwp || "-",
+          nib: raw.nib || "-",
+          picName: raw.pic_name || raw.picName || raw.contact_person || "-",
+          picPhone: raw.pic_phone || raw.picPhone || "-",
+          picEmail: raw.pic_email || raw.picEmail || "-",
+          packageName: raw.package_name || raw.packageName || raw.product || "-",
+          createdAt: raw.created_at || raw.createdAt || new Date().toISOString(),
+          customers: raw.customers || [],
+          products: raw.products || (raw.package_name || raw.packageName || raw.product ? [{ id: "main-product", name: raw.package_name || raw.packageName || raw.product, capacity: raw.capacity || "-", price: raw.package_price || raw.price || 0, vlanId: raw.vlan_id || "-" }] : []),
+          invoices: raw.invoices || [],
+          tickets: raw.tickets || [],
+        });
+      })
       .catch((err) => setError(err.response?.data?.message || "Gagal memuat detail bisnis dari database."))
       .finally(() => setLoading(false));
   }, [id]);
@@ -54,16 +82,20 @@ export default function CompanyDetailPage({ id }: { id: string }) {
       <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
         <Card className="p-5">
           <InfoRow label="Status" value={<Badge value={company.status || "active"} />} action={<Link href={`/users/bisnis/${company.id}/edit`} className="text-[#6366F1]"><Edit size={16} /></Link>} />
-          <InfoRow label="ID Mitra" value={company.companyCode || "-"} />
-          <InfoRow label="Nama Pengguna" value={company.name || "-"} />
-          <InfoRow label="Alamat" value={[company.area, company.city].filter(Boolean).join(", ") || "-"} />
+          <InfoRow label="ID Bisnis" value={company.companyCode || "-"} />
+          <InfoRow label="Nama Perusahaan" value={company.name || "-"} />
+          <InfoRow label="Alamat" value={company.address || [company.area, company.city].filter(Boolean).join(", ") || "-"} />
           <InfoRow label="Area" value={company.area || "-"} />
           <InfoRow label="Kota" value={company.city || "-"} />
           <InfoRow label="Nomor Telepon" value={company.phone || "-"} />
           <InfoRow label="Alamat Surel" value={company.email || "-"} />
-          <InfoRow label="KTP" value="-" />
-          <InfoRow label="NPWP" value="-" />
+          <InfoRow label="PIC" value={company.picName || "-"} />
+          <InfoRow label="Kontak PIC" value={[company.picPhone, company.picEmail].filter(Boolean).join(" / ") || "-"} />
+          <InfoRow label="KTP" value={company.ktp || "-"} />
+          <InfoRow label="NPWP" value={company.npwp || "-"} />
+          <InfoRow label="NIB" value={company.nib || "-"} />
           <InfoRow label="Jenis Pelanggan" value="Perusahaan" />
+          <InfoRow label="Produk" value={company.packageName || "-"} />
           <InfoRow label="Dompet" value={currency(0)} />
           <InfoRow label="Tanggal" value={date(company.createdAt)} />
           <div className="pt-5">

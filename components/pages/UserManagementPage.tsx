@@ -8,7 +8,7 @@ import { date } from "@/lib/format";
 import { useAuthStore } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ShieldAlert, ShieldCheck, UserCog, Users } from "lucide-react";
+import { Power, ShieldAlert, ShieldCheck, UserCog, Users } from "lucide-react";
 
 const roleOptions = [
   { label: "Super Admin", value: "super_admin" },
@@ -61,24 +61,62 @@ export function UserManagementPage() {
   const load = useCallback(() => {
     setLoading(true);
     setToast("");
-    const params = new URLSearchParams({ limit: "100" });
-    if (!isAdmin) {
-      if (roleFilter === "panel") params.set("excludeRole", "pelanggan");
-      else if (roleFilter !== "all") params.set("role", roleFilter);
-      if (statusFilter !== "all") params.set("status", statusFilter);
-    }
 
-    api.get("/users?" + params.toString())
+    // Try DEKASIMAL API POST /admin/list first, fallback to GET /users
+    api.post("/admin/list", {
+      pageSize: 100,
+      pageIndex: 0,
+      sorting: [],
+      columnFilters: [],
+      globalFilter: "",
+      columnVisibility: {
+        select: true,
+        admin_id: true,
+        name: true,
+        status: true,
+        division: true,
+        position: true,
+        last_login: true,
+      },
+    })
       .then((res) => {
-        const data = Array.isArray(res.data.data) ? res.data.data : [];
-        const visibleRows = isAdmin
-          ? data.filter((row: any) => row.id === currentUser?.id || row.email === currentUser?.email)
-          : data;
-        setRows(visibleRows);
+        const rawData = res.data?.data?.data || res.data?.data || res.data?.rows || res.data?.list || [];
+        const normalized = rawData.map((item: any) => ({
+          id: item.admin_id || item.id,
+          adminId: item.admin_id || item.adminId,
+          name: item.name || item.username,
+          email: item.email || item.username,
+          username: item.username,
+          role: item.division || item.position || (item.super ? "super_admin" : "admin"),
+          position: item.position || "-",
+          division: item.division || "-",
+          status: item.status === true || item.status === "active" ? "active" : "nonactive",
+          createdAt: item.created_at || item.createdAt || new Date().toISOString(),
+          lastLogin: item.last_login || "-",
+        }));
+        setRows(normalized);
       })
       .catch(() => {
-        setRows([]);
-        setToast("Gagal memuat data user. Pastikan backend aktif dan sesi login valid.");
+        // Fallback to legacy GET /users
+        const params = new URLSearchParams({ limit: "100" });
+        if (!isAdmin) {
+          if (roleFilter === "panel") params.set("excludeRole", "pelanggan");
+          else if (roleFilter !== "all") params.set("role", roleFilter);
+          if (statusFilter !== "all") params.set("status", statusFilter);
+        }
+
+        api.get("/users?" + params.toString())
+          .then((res) => {
+            const data = Array.isArray(res.data.data) ? res.data.data : [];
+            const visibleRows = isAdmin
+              ? data.filter((row: any) => row.id === currentUser?.id || row.email === currentUser?.email)
+              : data;
+            setRows(visibleRows);
+          })
+          .catch(() => {
+            setRows([]);
+            setToast("Gagal memuat data administrator dari backend.");
+          });
       })
       .finally(() => setLoading(false));
   }, [currentUser?.email, currentUser?.id, isAdmin, roleFilter, statusFilter]);
@@ -89,7 +127,7 @@ export function UserManagementPage() {
 
   const stats = useMemo(() => {
     const active = rows.filter((row) => (row.status || "active") === "active").length;
-    const superAdmins = rows.filter((row) => row.role === "super_admin").length;
+    const superAdmins = rows.filter((row) => row.role === "super_admin" || String(row.role).toLowerCase().includes("super")).length;
     return { active, superAdmins };
   }, [rows]);
 
@@ -104,13 +142,34 @@ export function UserManagementPage() {
     }
 
     try {
-      await api.delete("/users/" + row.id);
+      try {
+        await api.delete(`/admin/delete/${row.id}`);
+      } catch {
+        await api.delete(`/users/${row.id}`);
+      }
       setRows((current) => current.filter((item) => item.id !== row.id));
-      setToast("User berhasil dihapus.");
+      setToast("Administrator berhasil dihapus.");
     } catch (error: any) {
-      setToast(error.response?.data?.message || "Gagal menghapus user.");
+      setToast(error.response?.data?.message || "Gagal menghapus administrator.");
     }
   }
+
+  async function handleToggleStatus(row: any) {
+    try {
+      await api.patch("/admin/change-status", { id: row.id });
+      setRows((current) =>
+        current.map((item) =>
+          item.id === row.id
+            ? { ...item, status: item.status === "active" ? "nonactive" : "active" }
+            : item
+        )
+      );
+      setToast("Status administrator berhasil diperbarui.");
+    } catch {
+      setToast("Gagal memperbarui status administrator.");
+    }
+  }
+
 
   return (
     <div>
@@ -167,6 +226,16 @@ export function UserManagementPage() {
         editBasePath="/users"
         onDelete={handleDelete}
         canDelete={(row: any) => !isAdmin && row.role !== "super_admin"}
+        extraActions={(row: any) => !isAdmin && row.role !== "super_admin" ? (
+          <button
+            type="button"
+            onClick={() => handleToggleStatus(row)}
+            className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 text-slate-600 hover:border-amber-200 hover:bg-amber-50 hover:text-amber-600"
+            title={row.status === "active" ? "Nonaktifkan user" : "Aktifkan user"}
+          >
+            <Power size={15} />
+          </button>
+        ) : null}
         searchPlaceholder="Cari nama, email, role..."
         columns={[
           { key: "name", header: "Nama", render: (row: any) => <span className="font-semibold text-slate-900">{row.name}</span> },
@@ -198,19 +267,34 @@ export function UserFormPage({ edit = false, id, backHref = "/users", defaultRol
 
   useEffect(() => {
     if (!edit || !id) return;
-    api.get("/users/" + id)
+    
+    // Try GET /admin/read/{id} first, fallback to /users/{id}
+    api.get("/admin/read/" + id)
       .then((res) => {
         const user = res.data.data;
         setForm({
-          name: user.name || "",
-          email: user.email || "",
+          name: user.name || user.username || "",
+          email: user.email || user.username || "",
           password: "",
-          role: user.role || "admin",
-          status: user.status || "active",
+          role: user.division || user.position || (user.super ? "super_admin" : "admin"),
+          status: user.status === true || user.status === "active" ? "active" : "nonactive",
         });
       })
       .catch(() => {
-        setError("Gagal memuat data user dari database.");
+        api.get("/users/" + id)
+          .then((res) => {
+            const user = res.data.data;
+            setForm({
+              name: user.name || "",
+              email: user.email || "",
+              password: "",
+              role: user.role || "admin",
+              status: user.status || "active",
+            });
+          })
+          .catch(() => {
+            setError("Gagal memuat data administrator dari backend.");
+          });
       })
       .finally(() => setLoading(false));
   }, [edit, id]);
@@ -226,17 +310,42 @@ export function UserFormPage({ edit = false, id, backHref = "/users", defaultRol
       return;
     }
 
-    const payload = { ...form };
-    if (edit && !payload.password) delete (payload as any).password;
+    const payload: any = {
+      name: form.name,
+      username: form.email.split("@")[0] || form.name.toLowerCase().replace(/\s+/g, ""),
+      email: form.email,
+      position: form.role,
+      division: form.role === "super_admin" ? "Management" : "Operational",
+      status: form.status === "active",
+    };
+    if (form.password) {
+      payload.password = form.password;
+    }
 
     try {
-      if (edit) await api.put("/users/" + id, payload);
-      else await api.post("/users", payload);
+      if (edit) {
+        try {
+          await api.patch("/admin/update", { selectedAdminId: id, ...payload });
+        } catch {
+          await api.put("/users/" + id, { ...form });
+        }
+      } else {
+        try {
+          await api.post("/admin/create", {
+            ...payload,
+            address: "-",
+            phone: "-",
+          });
+        } catch {
+          await api.post("/users", form);
+        }
+      }
       router.push(backHref);
     } catch (error: any) {
-      setError(error.response?.data?.message || "Gagal menyimpan user.");
+      setError(error.response?.data?.message || "Gagal menyimpan data administrator.");
     }
   }
+
 
   if (loading) {
     return <Card className="p-8 text-sm text-slate-500">Memuat data user...</Card>;

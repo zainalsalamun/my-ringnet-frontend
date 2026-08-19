@@ -4,78 +4,180 @@ import api from "@/lib/api";
 import { useAuthStore } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
-import { Lock, Mail, RadioTower, UserPlus, Wifi } from "lucide-react";
+import { Eye, EyeOff, Lock, RadioTower, User, UserPlus, Wifi } from "lucide-react";
 import Link from "next/link";
 
-function getLoginErrorMessage(err: any) {
+type LoginError = {
+  response?: {
+    status?: number;
+    data?: {
+      message?: string;
+      error?: string;
+      msg?: string;
+    };
+  };
+  message?: string;
+};
+
+type DekadataLoginData = {
+  token?: string;
+  accessToken?: string;
+  access_token?: string;
+  authToken?: string;
+  jwt?: string;
+  user?: {
+    user?: string;
+    name?: string;
+    username?: string;
+    email?: string;
+    role?: string;
+    admin_id?: string | number;
+    id?: string | number;
+    [key: string]: unknown;
+  };
+  admin?: Record<string, unknown>;
+  data?: DekadataLoginData;
+  [key: string]: unknown;
+};
+
+function getLoginErrorMessage(err: LoginError) {
   if (!err.response) {
-    return "Server tidak merespons. Pastikan backend aktif dan koneksi API benar.";
+    return "Server tidak merespons. Pastikan backend aktif dan koneksi internet stabil.";
   }
 
-  const status = err.response.status;
-  const rawMessage = String(err.response?.data?.message || "").toLowerCase();
+  const status = err.response.status || 0;
+  const serverMsg = err.response?.data?.message || err.response?.data?.error || err.response?.data?.msg;
 
-  if (rawMessage.includes("wrong password") || rawMessage.includes("password salah")) {
-    return "Password salah. Masukkan password yang sesuai untuk akun ini.";
-  }
-
-  if (rawMessage.includes("user not found") || rawMessage.includes("email tidak terdaftar")) {
-    return "Email tidak terdaftar. Periksa kembali alamat email Anda.";
+  if (serverMsg) {
+    return `Server (${status}): ${serverMsg}`;
   }
 
   if (status === 401) {
-    return "Email atau password tidak sesuai. Periksa kembali data login Anda.";
+    return "Username atau password tidak sesuai. Periksa kembali akun Anda.";
+  }
+
+  if (status === 400) {
+    return "Data login tidak valid. Periksa kembali input username dan password.";
   }
 
   if (status === 404) {
-    return "Akun tidak ditemukan. Pastikan email sudah terdaftar.";
+    return "Endpoint atau akun tidak ditemukan di server.";
   }
 
   if (status >= 500) {
-    return "Server sedang bermasalah. Coba beberapa saat lagi atau hubungi administrator.";
+    return `Server backend merespons error ${status} (Internal Server Error). Pastikan database di server backend dalam keadaan aktif.`;
   }
 
-  return err.response?.data?.message || "Login gagal. Periksa email dan password Anda.";
+  return "Login gagal. Periksa username dan password Anda.";
 }
+
 
 export default function LoginPage() {
   const router = useRouter();
   const setSession = useAuthStore((state) => state.setSession);
   const logout = useAuthStore((state) => state.logout);
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberEmail, setRememberEmail] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberLogin, setRememberLogin] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+
   useEffect(() => {
-    const savedEmail = window.localStorage.getItem("ringnet_saved_login_email") || "";
-    if (savedEmail) {
-      setEmail(savedEmail);
-      setRememberEmail(true);
-    }
+    const timer = window.setTimeout(() => {
+      const saved =
+        window.localStorage.getItem("ringnet_saved_login_user") ||
+        window.localStorage.getItem("ringnet_saved_login_email") ||
+        "";
+      if (saved) {
+        setUsername(saved);
+        setRememberLogin(true);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setLoading(true);
     setError("");
+
     try {
-      const res = await api.post("/auth/login", { email, password });
-      if (rememberEmail) {
-        window.localStorage.setItem("ringnet_saved_login_email", email);
+      const cleanUsername = username.trim();
+      
+      // DEKASIMAL API login endpoint: POST /api/v1/admin/login with { username, password, remember }
+      const res = await api.post("/admin/login", {
+        username: cleanUsername,
+        password,
+        remember: rememberLogin,
+      });
+
+      if (rememberLogin) {
+        window.localStorage.setItem("ringnet_saved_login_user", cleanUsername);
+        window.localStorage.setItem("ringnet_saved_login_email", cleanUsername);
       } else {
+        window.localStorage.removeItem("ringnet_saved_login_user");
         window.localStorage.removeItem("ringnet_saved_login_email");
       }
-      setSession(res.data.data.token, res.data.data.user);
+
+      const resData = res.data as DekadataLoginData;
+      const token =
+        resData?.data?.token ||
+        resData?.token ||
+        resData?.authToken ||
+        resData?.data?.accessToken ||
+        resData?.accessToken ||
+        resData?.data?.authToken ||
+        resData?.data?.jwt ||
+        resData?.jwt;
+      
+      let userData =
+        resData?.data?.user ||
+        resData?.data?.admin ||
+        resData?.user ||
+        resData?.admin ||
+        resData?.data;
+
+      if (!token) {
+        const message = typeof resData?.message === "string" ? resData.message : "Token autentikasi tidak ditemukan.";
+        throw new Error(message);
+      }
+
+      // Fetch latest admin profile if token is available
+      try {
+        const meRes = await api.get("/admin/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const meData = meRes.data as DekadataLoginData;
+        if (meData?.data) {
+          userData = meData.data.user || meData.data.admin || meData.data;
+        } else if (meData?.user || meData?.admin) {
+          userData = meData.user || meData.admin;
+        }
+      } catch {
+        // Fallback to userData from login response
+      }
+
+      if (userData && typeof userData === "object" && "user" in userData && !("name" in userData)) {
+        userData = {
+          ...userData,
+          name: String(userData.user || cleanUsername),
+          username: cleanUsername,
+          role: "admin",
+        };
+      }
+
+      setSession(token, userData || { username: cleanUsername });
       router.push("/dashboard");
-    } catch (err: any) {
+    } catch (err) {
       logout();
-      setError(getLoginErrorMessage(err));
+      setError(getLoginErrorMessage(err as LoginError));
     } finally {
       setLoading(false);
     }
   }
+
 
   return (
     <main className="grid min-h-screen bg-slate-50 lg:grid-cols-[1.05fr_0.95fr]">
@@ -99,30 +201,56 @@ export default function LoginPage() {
           <p className="mt-2 text-sm text-slate-500">Silakan masuk untuk melanjutkan.</p>
           {error ? <p className="mt-4 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
           <label className="mt-6 block">
-            <span className="mb-2 block text-sm font-semibold text-slate-700">Email</span>
+            <span className="mb-2 block text-sm font-semibold text-slate-700">Username atau Email</span>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="email@ringnet.com" className="h-11 w-full rounded-lg border border-slate-200 pl-10 pr-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <input
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                placeholder="username atau email@ringnet.com"
+                required
+                className="h-11 w-full rounded-lg border border-slate-200 pl-10 pr-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              />
             </div>
           </label>
           <label className="mt-4 block">
             <span className="mb-2 block text-sm font-semibold text-slate-700">Password</span>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" placeholder="Masukkan password" className="h-11 w-full rounded-lg border border-slate-200 pl-10 pr-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" />
+              <input
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                type={showPassword ? "text" : "password"}
+                placeholder="Masukkan password"
+                required
+                className="h-11 w-full rounded-lg border border-slate-200 pl-10 pr-10 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
           </label>
+
           <label className="mt-4 flex items-center gap-3 text-sm font-semibold text-slate-600">
             <input
               type="checkbox"
-              checked={rememberEmail}
-              onChange={(event) => setRememberEmail(event.target.checked)}
+              checked={rememberLogin}
+              onChange={(event) => setRememberLogin(event.target.checked)}
               className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
             />
-            Simpan email login
+            Simpan data login
           </label>
-          <button disabled={loading} className="mt-6 h-11 w-full rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 text-sm font-bold text-white shadow-lg shadow-indigo-200 disabled:opacity-70">{loading ? "Memproses..." : "Masuk"}</button>
-          <Link href="/register-mitra" className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 text-sm font-bold text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100"><UserPlus size={17} /> Daftar sebagai Reseller / Mitra</Link>
+          <button disabled={loading} className="mt-6 h-11 w-full rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 text-sm font-bold text-white shadow-lg shadow-indigo-200 disabled:opacity-70">
+            {loading ? "Memproses..." : "Masuk"}
+          </button>
+          <Link href="/register-mitra" className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 text-sm font-bold text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100">
+            <UserPlus size={17} /> Daftar sebagai Reseller / Mitra
+          </Link>
           <p className="mt-6 text-center text-xs text-slate-400">© 2026 MyRingNet. All rights reserved.</p>
         </form>
       </section>

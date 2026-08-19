@@ -1,0 +1,1055 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal">
+   <Alignment ss:Vertical="Center"/>
+   <Borders/>
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#1E293B"/>
+   <Interior/>
+   <NumberFormat/>
+   <Protection/>
+  </Style>
+  <Style ss:ID="HeaderStyle">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/>
+   </Borders>
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#FFFFFF" ss:Bold="1"/>
+   <Interior ss:Color="#4338CA" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="TitleStyle">
+   <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="16" ss:Color="#1E1B4B" ss:Bold="1"/>
+  </Style>
+  <Style ss:ID="SubtitleStyle">
+   <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>
+   <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#64748B" ss:Italic="1"/>
+  </Style>
+  <Style ss:ID="CellStyle">
+   <Alignment ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+   </Borders>
+   <Font ss:FontName="Calibri" ss:Size="10" ss:Color="#1E293B"/>
+  </Style>
+  <Style ss:ID="CenterCell">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+   </Borders>
+   <Font ss:FontName="Calibri" ss:Size="10" ss:Color="#1E293B"/>
+  </Style>
+  <Style ss:ID="GroupCell">
+   <Alignment ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+   </Borders>
+   <Font ss:FontName="Calibri" ss:Size="10" ss:Color="#4338CA" ss:Bold="1"/>
+   <Interior ss:Color="#EEF2FF" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="MethodGET">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+   </Borders>
+   <Font ss:FontName="Calibri" ss:Size="10" ss:Color="#047857" ss:Bold="1"/>
+   <Interior ss:Color="#ECFDF5" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="MethodPOST">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+   </Borders>
+   <Font ss:FontName="Calibri" ss:Size="10" ss:Color="#1D4ED8" ss:Bold="1"/>
+   <Interior ss:Color="#EFF6FF" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="MethodPATCH">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+   </Borders>
+   <Font ss:FontName="Calibri" ss:Size="10" ss:Color="#B45309" ss:Bold="1"/>
+   <Interior ss:Color="#FFFBEB" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="MethodPUT">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+   </Borders>
+   <Font ss:FontName="Calibri" ss:Size="10" ss:Color="#D97706" ss:Bold="1"/>
+   <Interior ss:Color="#FEF3C7" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="MethodDELETE">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+   </Borders>
+   <Font ss:FontName="Calibri" ss:Size="10" ss:Color="#B91C1C" ss:Bold="1"/>
+   <Interior ss:Color="#FEF2F2" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="StatusDone">
+   <Alignment ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+   </Borders>
+   <Font ss:FontName="Calibri" ss:Size="10" ss:Color="#047857" ss:Bold="1"/>
+   <Interior ss:Color="#F0FDF4" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="StatusWarn">
+   <Alignment ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0"/>
+   </Borders>
+   <Font ss:FontName="Calibri" ss:Size="10" ss:Color="#B45309" ss:Bold="1"/>
+   <Interior ss:Color="#FFFBEB" ss:Pattern="Solid"/>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="Ceklist Integrasi Sidebar">
+  <Table ss:ExpandedColumnCount="12" x:FullColumns="1" x:FullRows="1" ss:DefaultRowHeight="20">
+   <Column ss:AutoFitWidth="0" ss:Width="35"/>
+   <Column ss:AutoFitWidth="0" ss:Width="160"/>
+   <Column ss:AutoFitWidth="0" ss:Width="140"/>
+   <Column ss:AutoFitWidth="0" ss:Width="150"/>
+   <Column ss:AutoFitWidth="0" ss:Width="130"/>
+   <Column ss:AutoFitWidth="0" ss:Width="65"/>
+   <Column ss:AutoFitWidth="0" ss:Width="260"/>
+   <Column ss:AutoFitWidth="0" ss:Width="300"/>
+   <Column ss:AutoFitWidth="0" ss:Width="190"/>
+   <Column ss:AutoFitWidth="0" ss:Width="160"/>
+   <Column ss:AutoFitWidth="0" ss:Width="110"/>
+   <Column ss:AutoFitWidth="0" ss:Width="340"/>
+   
+   <Row ss:Height="26">
+    <Cell ss:MergeAcross="11" ss:StyleID="TitleStyle"><Data ss:Type="String">DOKUMENTASI CEKLIST INTEGRASI API DEKASIMAL SESUAI SIDEBAR MY-RINGNET</Data></Cell>
+   </Row>
+   <Row ss:Height="18">
+    <Cell ss:MergeAcross="11" ss:StyleID="SubtitleStyle"><Data ss:Type="String">Khusus Pemetaan Menu Sidebar Aktif | Total Endpoint Terpilih: 60 | Terakhir Diselaraskan: 18/8/2026</Data></Cell>
+   </Row>
+   <Row ss:Height="10"></Row>
+   
+   <Row ss:Height="26">
+    <Cell ss:StyleID="HeaderStyle"><Data ss:Type="String">No</Data></Cell>
+    <Cell ss:StyleID="HeaderStyle"><Data ss:Type="String">Grup Sidebar</Data></Cell>
+    <Cell ss:StyleID="HeaderStyle"><Data ss:Type="String">Menu Sidebar FE</Data></Cell>
+    <Cell ss:StyleID="HeaderStyle"><Data ss:Type="String">Rute URL FE</Data></Cell>
+    <Cell ss:StyleID="HeaderStyle"><Data ss:Type="String">Modul Backend</Data></Cell>
+    <Cell ss:StyleID="HeaderStyle"><Data ss:Type="String">Method</Data></Cell>
+    <Cell ss:StyleID="HeaderStyle"><Data ss:Type="String">Endpoint Path</Data></Cell>
+    <Cell ss:StyleID="HeaderStyle"><Data ss:Type="String">Deskripsi / Fungsi API</Data></Cell>
+    <Cell ss:StyleID="HeaderStyle"><Data ss:Type="String">Status API di Backend</Data></Cell>
+    <Cell ss:StyleID="HeaderStyle"><Data ss:Type="String">Status Halaman FE</Data></Cell>
+    <Cell ss:StyleID="HeaderStyle"><Data ss:Type="String">Prioritas</Data></Cell>
+    <Cell ss:StyleID="HeaderStyle"><Data ss:Type="String">Langkah Aksi Integrasi</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">1</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Menu Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Dashboard</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/dashboard</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Dashboard / Analytics</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/customer/list (Aggregate)</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Statistik total pelanggan aktif untuk ringkasan dashboard</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Ambil total customer, business, &amp; partner untuk widget dashboard</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">2</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Menu Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Dashboard</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/dashboard</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Dashboard / Analytics</Data></Cell>
+    <Cell ss:StyleID="MethodGET"><Data ss:Type="String">GET</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/broadband/list-status</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Statistik status layanan broadband (aktif, isolir, suspend)</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tampilkan grafik donut/pie status jaringan &amp; layanan</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">3</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Administrator</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Administrator</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/admin/login</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Autentikasi admin dan mendapatkan Bearer token</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Hubungkan form login Next.js ke endpoint login admin baru</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">4</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Administrator</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Administrator</Data></Cell>
+    <Cell ss:StyleID="MethodGET"><Data ss:Type="String">GET</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/admin/me</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Mendapatkan profil dan role admin yang sedang login</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Simpan sesi user di Zustand auth store</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">5</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Administrator</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Administrator</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/admin/list</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Daftar tabel admin dengan pagination, filter divisi, &amp; sorting</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tampilkan di tabel halaman User Management (/users)</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">6</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Administrator</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users/new</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Administrator</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/admin/create</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Menambahkan akun administrator baru beserta divisi &amp; jabatan</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Kirim payload form tambah admin</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">7</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Administrator</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users/[id]/edit</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Administrator</Data></Cell>
+    <Cell ss:StyleID="MethodGET"><Data ss:Type="String">GET</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/admin/read/{id}</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Detail data administrator berdasarkan ID</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Isi data awal form edit admin</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">8</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Administrator</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users/[id]/edit</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Administrator</Data></Cell>
+    <Cell ss:StyleID="MethodPATCH"><Data ss:Type="String">PATCH</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/admin/update</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Memperbarui informasi profil dan penugasan admin</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Simpan perubahan data admin</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">9</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Administrator</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Administrator</Data></Cell>
+    <Cell ss:StyleID="MethodPATCH"><Data ss:Type="String">PATCH</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/admin/change-status</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Toggle status aktif / non-aktif administrator</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tombol aktif/non-aktif di baris tabel</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">10</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Administrator</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Administrator</Data></Cell>
+    <Cell ss:StyleID="MethodDELETE"><Data ss:Type="String">DELETE</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/admin/delete/{id}</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Menghapus akun administrator</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Aksi tombol hapus admin</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">11</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Pelanggan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users/pelanggan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Customer</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/customer/list</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Daftar pelanggan residensial (Datatable, filter kota, &amp; paket)</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Hubungkan tabel /users/pelanggan ke API</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">12</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Pelanggan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users/pelanggan/new</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Customer</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/customer/create</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Pendaftaran pelanggan baru, alamat, koordinat, &amp; paket layanan</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Submit formulir tambah pelanggan</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">13</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Pelanggan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users/pelanggan/[id]</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Customer</Data></Cell>
+    <Cell ss:StyleID="MethodGET"><Data ss:Type="String">GET</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/customer/read/{id}</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Mendapatkan detail profil, status koneksi, &amp; layanan pelanggan</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tampilkan di halaman detail pelanggan</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">14</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Pelanggan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users/pelanggan/[id]/edit</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Customer</Data></Cell>
+    <Cell ss:StyleID="MethodPATCH"><Data ss:Type="String">PATCH</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/customer/update/{id}</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Update data pelanggan (kontak, alamat, paket, &amp; status)</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Submit form edit pelanggan</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">15</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Pelanggan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users/pelanggan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Customer</Data></Cell>
+    <Cell ss:StyleID="MethodDELETE"><Data ss:Type="String">DELETE</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/customer/delete/{id}</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Hapus data pelanggan</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Aksi hapus pelanggan pada tabel</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">16</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Bisnis</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users/bisnis</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Business</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/business/list</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Daftar pelanggan perusahaan/korporasi dengan pagination &amp; filter</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Hubungkan tabel /users/bisnis ke API</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">17</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Bisnis</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users/bisnis/new</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Business</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/business/create</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tambah data perusahaan baru, PIC, NPWP, &amp; kontak bisnis</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Submit formulir tambah bisnis</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">18</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Bisnis</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users/bisnis/[id]</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Business</Data></Cell>
+    <Cell ss:StyleID="MethodGET"><Data ss:Type="String">GET</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/business/read/{id}</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Detail informasi perusahaan, legalitas, &amp; produk yang digunakan</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tampilkan di halaman detail bisnis</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">19</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Bisnis</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users/bisnis/[id]/edit</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Business</Data></Cell>
+    <Cell ss:StyleID="MethodPATCH"><Data ss:Type="String">PATCH</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/business/update/{id}</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Perbarui informasi perusahaan</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Submit form edit bisnis</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">20</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Bisnis</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users/bisnis</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Business</Data></Cell>
+    <Cell ss:StyleID="MethodDELETE"><Data ss:Type="String">DELETE</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/business/delete/{id}</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Hapus data perusahaan</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Aksi hapus perusahaan</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">21</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Mitra</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users/mitra</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Partner</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/partner/list</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Daftar mitra bisnis / reseller ISP RingNet</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Hubungkan tabel /users/mitra ke API</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">22</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Mitra</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users/mitra/new</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Partner</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/partner/create</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tambah mitra baru, komisi sharing, &amp; legalitas kemitraan</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Submit form tambah mitra</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">23</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Mitra</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users/mitra/[id]</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Partner</Data></Cell>
+    <Cell ss:StyleID="MethodGET"><Data ss:Type="String">GET</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/partner/read/{id}</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Detail mitra, profil, saldo komisi, &amp; pelanggan di bawah mitra</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tampilkan di halaman detail mitra</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">24</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Mitra</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users/mitra</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Partner</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/customer-partner/list</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Daftar pelanggan yang terdaftar melalui jalur mitra tertentu</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tampilkan tabel relasi pelanggan mitra</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">25</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">POP</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users/pop</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Location Point</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/location-point/list</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Daftar Point of Presence (POP) dengan filter type: pop</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi (via Location Point)</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Kirim query filter type: &apos;pop&apos; untuk menampilkan daftar POP</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">26</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">POP</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users/pop</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Location Point</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/location-point/pop-select</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Pencarian titik POP untuk pilihan dropdown / select option</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Gunakan pada dropdown pilihan POP di seluruh form</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">27</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">POP</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users/pop/new</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Location Point</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/location-point/create</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tambah data POP baru, koordinat peta, alamat, &amp; data PIC</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Submit formulir POP baru beserta koordinat lat/lng</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">28</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">POP</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users/pop/[id]</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Location Point</Data></Cell>
+    <Cell ss:StyleID="MethodGET"><Data ss:Type="String">GET</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/location-point/read/{id}</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Mendapatkan data lengkap titik POP</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Load detail POP di halaman edit</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">29</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">POP</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/users/pop/[id]/edit</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Location Point</Data></Cell>
+    <Cell ss:StyleID="MethodPUT"><Data ss:Type="String">PUT</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/location-point/update/{id}</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Update data POP, koordinat, dan status</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Submit update data POP</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">30</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Data Teknis &gt; Perangkat Aktif</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">OLT</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/mitra/olt</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Location Point / Utils</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/location-point/list</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Daftar perangkat OLT (Filter type: &apos;olt&apos; / &apos;active-node&apos;)</Data></Cell>
+    <Cell ss:StyleID="StatusWarn"><Data ss:Type="String">⚠️ Perlu Mapping (via Location Point)</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P2 - Operasional</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tampilkan OLT sebagai node aktif di tabel /mitra/olt</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">31</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Data Teknis &gt; Perangkat Aktif</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">OLT</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/mitra/olt</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Utils</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/utils/snmp-interfaces</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Monitoring port &amp; interface PON OLT via SNMP</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Ada Komponen</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P2 - Operasional</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tampilkan status port PON OLT</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">32</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Data Teknis &gt; Perangkat Aktif</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Router</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/mitra/router</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Radius NAS</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/radius-nas/list</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Daftar Router Gateway / NAS MikroTik terhubung</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Hubungkan tabel router ke endpoint radius-nas</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">33</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Data Teknis &gt; Perangkat Aktif</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Switch</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/mitra/switch</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Location Point</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/location-point/list</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Daftar perangkat Switch Distribusi / Akses (Filter type: &apos;switch&apos;)</Data></Cell>
+    <Cell ss:StyleID="StatusWarn"><Data ss:Type="String">⚠️ Perlu Mapping (via Location Point)</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P2 - Operasional</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tampilkan daftar Switch di halaman /mitra/switch</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">34</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Data Teknis &gt; Perangkat Pasif</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">OTB</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/mitra/otb</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Location Point</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/location-point/list</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Daftar Optical Termination Box (OTB) dengan filter type: &apos;otb&apos;</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi (via Location Point)</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P2 - Operasional</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tampilkan data OTB dan kapasitas port terminasi</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">35</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Data Teknis &gt; Perangkat Pasif</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">ODC</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/mitra/odc</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Location Point</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/location-point/list</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Daftar Optical Distribution Cabinet (ODC) dengan filter type: &apos;odc&apos;</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi (via Location Point)</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P2 - Operasional</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tampilkan data ODC dan splitter distribusi</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">36</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Data Teknis &gt; Perangkat Pasif</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">ODP</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/mitra/odp</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Location Point</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/location-point/list</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Daftar Optical Distribution Point (ODP) dengan filter type: &apos;odp&apos;</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi (via Location Point)</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P2 - Operasional</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tampilkan ODP, nomor tiang, port terisi/kosong, &amp; koordinat</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">37</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Data Teknis &gt; Perangkat Pasif</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Kabel</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/mitra/kabel</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Fiber Optic</Data></Cell>
+    <Cell ss:StyleID="MethodGET"><Data ss:Type="String">GET</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/fiber-cables/list</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Daftar bentangan kabel Fiber Optic beserta kapasitas core &amp; rute</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi (Dedicated API)</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Hubungkan tabel kabel FO ke endpoint fiber-cables</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">38</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Data Teknis &gt; Perangkat Pasif</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Kabel</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/mitra/kabel/new</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Fiber Optic</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/fiber-cables/create</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tambah data bentangan kabel FO baru (Core 12/24/48/96)</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Submit formulir penambahan kabel FO</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">39</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Data Teknis &gt; Perangkat Pasif</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Kabel</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/mitra/kabel</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Fiber Optic</Data></Cell>
+    <Cell ss:StyleID="MethodGET"><Data ss:Type="String">GET</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/fiber-cables/core-capacities</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Daftar opsi standar kapasitas core kabel optik</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Isi pilihan dropdown kapasitas core kabel</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">40</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Data Teknis</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Map Infrastruktur</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/mitra/infrastruktur</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Location Point</Data></Cell>
+    <Cell ss:StyleID="MethodGET"><Data ss:Type="String">GET</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/location-point/map-markers</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Ambil seluruh titik marker infrastruktur (POP, ODC, ODP, Closure) untuk peta</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi (Dedicated API)</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Render marker geografis di peta Leaflet / Mapbox / Google Maps</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">41</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Data Teknis</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Map Infrastruktur</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/mitra/infrastruktur</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Location Point</Data></Cell>
+    <Cell ss:StyleID="MethodGET"><Data ss:Type="String">GET</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/location-point/map-marker-types</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Daftar tipe marker node yang tersedia untuk filter layer peta</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tampilkan kontrol checklist filter layer pada peta</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">42</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Data Teknis</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Map Infrastruktur</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/mitra/infrastruktur</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Location Point</Data></Cell>
+    <Cell ss:StyleID="MethodGET"><Data ss:Type="String">GET</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/location-point/report/{mapsId}</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Data lengkap sambungan kabel &amp; core splicing pada suatu titik node</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Ada Komponen</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P2 - Operasional</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Modal popup detail splicing saat marker di peta diklik</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">43</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Data Teknis &gt; Radius</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">NAS / Router</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/radius/nas-router</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Radius NAS</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/radius-nas/list</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Daftar server NAS / MikroTik yang terdaftar di Radius</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Hubungkan tabel NAS Router ke API</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">44</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Data Teknis &gt; Radius</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">NAS / Router</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/radius/nas-router/new</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Radius NAS</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/radius-nas/create</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tambah router NAS baru (IP, Secret Key, Tipe MikroTik)</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Submit form tambah NAS</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">45</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Data Teknis &gt; Radius</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Autentikasi</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/radius/autentikasi</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Internet Broadband</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/broadband/list</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Daftar akun PPPoE / IPoE pelanggan broadband yang aktif</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tampilkan username PPPoE, password, profil, &amp; status akun</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">46</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Data Teknis &gt; Radius</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Autentikasi</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/radius/autentikasi</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Network IPv4</Data></Cell>
+    <Cell ss:StyleID="MethodGET"><Data ss:Type="String">GET</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/network/ipv4/select-radius</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Pilihan alokasi IP Pool untuk user radius</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Dropdown pilihan IP pool pada user broadband</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">47</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Data Teknis &gt; Radius</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Grup Profil</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/radius/grup-profil</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Broadband Profile</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/broadband-profile/list</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Daftar paket profil kecepatan bandwidth (Rate Limit)</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Hubungkan tabel grup profil ke API</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">48</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Data Teknis &gt; Radius</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Grup Profil</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/radius/grup-profil/new</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Broadband Profile</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/broadband-profile/create</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tambah profil paket kecepatan (Download, Upload, Burst, Pool)</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Submit form paket profil baru</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">49</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Data Teknis &gt; Radius</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Sesi Pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/radius/sesi-pengguna</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Internet Broadband</Data></Cell>
+    <Cell ss:StyleID="MethodGET"><Data ss:Type="String">GET</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/broadband/list-status</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Ringkasan sesi pengguna aktif, uptime, dan kuota pemakaian</Data></Cell>
+    <Cell ss:StyleID="StatusWarn"><Data ss:Type="String">⚠️ Menggunakan Status Layanan</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P2 - Operasional</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tampilkan statistik status sesi online pelanggan</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">50</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Data Teknis &gt; Radius</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Riwayat</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/radius/riwayat</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Internet Broadband</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/broadband/list</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Log riwayat koneksi akun pelanggan</Data></Cell>
+    <Cell ss:StyleID="StatusWarn"><Data ss:Type="String">⚠️ Menggunakan Log Layanan</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P2 - Operasional</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tampilkan riwayat perubahan status &amp; koneksi</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">51</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pelanggan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">SLA Pelanggan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/mitra/sla</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Internet Broadband</Data></Cell>
+    <Cell ss:StyleID="MethodGET"><Data ss:Type="String">GET</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/broadband/related/{id}</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Monitoring SLA uptime dan performa layanan pelanggan</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P2 - Operasional</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tampilkan persentase SLA uptime pelanggan di /mitra/sla</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">52</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Keuangan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Keuangan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/keuangan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Finance Invoice</Data></Cell>
+    <Cell ss:StyleID="MethodGET"><Data ss:Type="String">GET</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/finance/invoice-customer/related/{id}</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Histori tagihan dan invoice per pelanggan</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tampilkan daftar invoice dan status bayar di /keuangan</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">53</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Keuangan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Faktur &amp; Tagihan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/internet-services</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Internet Broadband</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/broadband/list</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Daftar tagihan rutin bulanan layanan internet</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Hubungkan tabel tagihan layanan ke endpoint</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">54</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Dokumen</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Dokumen Legalitas</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/dokumen/legalitas</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Public</Data></Cell>
+    <Cell ss:StyleID="MethodGET"><Data ss:Type="String">GET</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/public-docs/baa/{code}</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Melihat &amp; download Berita Acara Aktivasi (BAA)</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P2 - Operasional</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tombol cetak/view dokumen BAA</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">55</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Dokumen</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Dokumen Legalitas</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/dokumen/legalitas</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Public</Data></Cell>
+    <Cell ss:StyleID="MethodGET"><Data ss:Type="String">GET</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/public-docs/bap/{code}</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Melihat &amp; download Berita Acara Pemasangan (BAP)</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P2 - Operasional</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tombol cetak/view dokumen BAP</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">56</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Dokumen</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Dokumen Legalitas</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/dokumen/legalitas</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Files</Data></Cell>
+    <Cell ss:StyleID="MethodGET"><Data ss:Type="String">GET</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/file/customer-ktp/{id}</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Akses file foto KTP pelanggan terunggah</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P2 - Operasional</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Preview gambar KTP pelanggan di modal / detail page</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">57</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengaturan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Paket Layanan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/pengaturan/paket-layanan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Paket Broadband</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/product/broadband/list</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Katalog daftar paket internet broadband (FTTH)</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tampilkan tabel katalog paket di /pengaturan/paket-layanan</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">58</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengaturan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Paket Layanan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/pengaturan/paket-layanan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Dedicated Internet</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/product/dedicated-internet/list</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Katalog paket Dedicated Internet untuk corporate</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P2 - Operasional</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tampilkan tab Dedicated Internet</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">59</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengaturan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Paket Layanan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/pengaturan/paket-layanan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Data Access</Data></Cell>
+    <Cell ss:StyleID="MethodPOST"><Data ss:Type="String">POST</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/product/data-access/list</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Katalog paket Data Access (Metro-E / VPN)</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P2 - Operasional</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Tampilkan tab Data Access</Data></Cell>
+   </Row>
+   <Row ss:Height="22">
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="Number">60</Data></Cell>
+    <Cell ss:StyleID="GroupCell"><Data ss:Type="String">Pengaturan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Pengaturan Umum</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/pengaturan</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Privilege</Data></Cell>
+    <Cell ss:StyleID="MethodGET"><Data ss:Type="String">GET</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">/api/v1/privilege/me</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Melihat hak akses menu dan permission user saat ini</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">✅ Siap Integrasi</Data></Cell>
+    <Cell ss:StyleID="StatusDone"><Data ss:Type="String">Sudah Ada Halaman (Ready)</Data></Cell>
+    <Cell ss:StyleID="CenterCell"><Data ss:Type="String">P1 - Utama</Data></Cell>
+    <Cell ss:StyleID="CellStyle"><Data ss:Type="String">Role-based access control (RBAC) di frontend</Data></Cell>
+   </Row>
+  </Table>
+  <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+   <PageSetup>
+    <Layout x:Orientation="Landscape"/>
+   </PageSetup>
+   <FitToPage/>
+   <Print>
+    <ValidPrinterInfo/>
+    <PaperSizeIndex>9</PaperSizeIndex>
+    <HorizontalResolution>600</HorizontalResolution>
+    <VerticalResolution>600</VerticalResolution>
+   </Print>
+   <Selected/>
+   <FreezePanes/>
+   <FrozenNoSplit/>
+   <SplitPane>
+    <TopRowBottomPane>4</TopRowBottomPane>
+    <LeftColumnRightPane>0</LeftColumnRightPane>
+    <ActivePane>2</ActivePane>
+   </SplitPane>
+   <Panes>
+    <Pane>
+     <Number>3</Number>
+    </Pane>
+    <Pane>
+     <Number>2</Number>
+     <ActiveRow>4</ActiveRow>
+    </Pane>
+   </Panes>
+   <ProtectObjects>False</ProtectObjects>
+   <ProtectScenarios>False</ProtectScenarios>
+  </WorksheetOptions>
+ </Worksheet>
+</Workbook>

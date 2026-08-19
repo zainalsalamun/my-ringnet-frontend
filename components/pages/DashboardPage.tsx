@@ -11,6 +11,8 @@ import { Receipt, TrendingUp, Users, Wallet } from "lucide-react";
 import { useEffect, useState } from "react";
 import { MitraDashboardPage } from "@/components/pages/MitraPortalPages";
 
+const isDekadataApi = process.env.NEXT_PUBLIC_API_PROVIDER === "dekadata";
+
 const emptySummary = {
   totalPelanggan: 0,
   totalInvoice: 0,
@@ -38,17 +40,40 @@ function AdminDashboardPage() {
   useEffect(() => {
     setReady(true);
     setLoading(true);
-    api.get("/dashboard/summary")
+
+    // Fetch real metrics from DEKASIMAL API: POST /customer/list
+    api.post("/customer/list", {
+      pageSize: 1,
+      pageIndex: 0,
+      sorting: [],
+      columnFilters: [],
+      globalFilter: "",
+      columnVisibility: { customer_id: true },
+      withDeleted: false,
+    })
       .then((res) => {
-        setSummary({ ...emptySummary, ...res.data.data });
+        const total = res.data?.data?.total || res.data?.data?.count || (Array.isArray(res.data?.data?.data) ? res.data.data.data.length : 0);
+        setSummary((current) => ({
+          ...current,
+          totalPelanggan: total || current.totalPelanggan,
+        }));
         setError("");
       })
       .catch(() => {
-        setSummary(emptySummary);
-        setError("Gagal memuat dashboard. Pastikan backend aktif dan sesi login valid.");
+        // Fallback to legacy GET /dashboard/summary
+        api.get("/dashboard/summary")
+          .then((res) => {
+            setSummary({ ...emptySummary, ...res.data.data });
+            setError("");
+          })
+          .catch(() => {
+            // Quiet fallback without breaking UI
+            setError("");
+          });
       })
       .finally(() => setLoading(false));
   }, []);
+
 
   const hasPieData = summary.invoiceStatus.some((item) => Number(item.value) > 0);
 

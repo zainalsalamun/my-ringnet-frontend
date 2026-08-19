@@ -31,6 +31,12 @@ http://localhost:3001
 
 Panduan migrasi dan deployment VPS dikelola di repository backend: `my-ringnet-backend/DEPLOYMENT.md`.
 
+Standar struktur project, routing, API proxy, error handling, dan theme ada di:
+
+```text
+docs/project-structure-standard.md
+```
+
 Credential seed yang tersedia:
 
 ```text
@@ -92,6 +98,7 @@ NEXT_PUBLIC_API=http://localhost:3000/api
 
 ```text
 app/
+├── (auth)/
 ├── (dashboard)/
 │   ├── dashboard/
 │   ├── dokumen/
@@ -106,8 +113,30 @@ app/
 │   ├── radius/
 │   └── users/
 │       └── pop/
+├── api/
+│   ├── [...path]/
+│   │   └── route.ts
+│   └── _lib/
+│       ├── compatibility.ts
+│       ├── constants.ts
+│       ├── http.ts
+│       ├── normalizers.ts
+│       ├── proxy.ts
+│       └── types.ts
 ├── layout.tsx
 └── page.tsx
+
+src/
+├── config/
+│   ├── routes.ts
+│   ├── sidebar.ts
+│   └── theme.ts
+└── lib/
+    └── api/
+        ├── client.ts
+        ├── endpoints.ts
+        ├── errors.ts
+        └── index.ts
 
 components/
 ├── layout/
@@ -125,7 +154,9 @@ components/
 
 ## Integrasi API
 
-Axios instance berada di `lib/api.ts` dan otomatis menambahkan token dari `localStorage`:
+Axios instance utama berada di `src/lib/api/client.ts`.
+
+Untuk menjaga kompatibilitas import lama, `lib/api.ts` tetap tersedia sebagai re-export. Axios otomatis menambahkan token dari `localStorage`:
 
 ```text
 ringnet_token

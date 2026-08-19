@@ -1,9 +1,23 @@
 import axios from "axios";
 
+const getBaseURL = () => {
+  if (typeof window !== "undefined") {
+    // Gunakan Next.js rewrite proxy untuk menghilangkan CORS policy blocking
+    return "/api/v1";
+  }
+  return process.env.NEXT_PUBLIC_API || "https://dev-srv.dekadata.net/api/v1";
+};
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API,
-  withCredentials: true,
+  baseURL: getBaseURL(),
+  headers: {
+    "Accept": "application/json",
+    "Content-Type": "application/json",
+  },
 });
+
+
+
 
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
@@ -12,6 +26,7 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
 
 api.interceptors.response.use(
   (response) => response,

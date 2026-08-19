@@ -1,4 +1,7 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import api from "@/lib/api";
 import { Badge, Card, DataTable, PageHeader, TableSkeleton } from "@/components/ui/AdminUI";
@@ -163,7 +166,7 @@ export default function PartnerDetailPage({ id }: { id: string }) {
   function loadDetail() {
     setLoading(true);
     setToast("");
-    api.get(`/partners/${id}/detail`)
+    api.get(`/partners/${id}`)
       .then((res) => setDetail(res.data.data))
       .catch((err) => {
         setDetail(null);

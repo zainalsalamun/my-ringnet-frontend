@@ -1,20 +1,17 @@
-import api from "@/lib/api";
+import api from "@/src/lib/api/client";
+import { API_ENDPOINTS } from "@/src/lib/api/endpoints";
+import type { AxiosRequestConfig } from "axios";
 
 export const authApi = {
-  async login(payload: { username?: string; email?: string; password?: string }) {
-    const res = await api.post("/admin/login", payload);
-    return res.data;
+  login(payload: { username: string; password: string; remember?: boolean }) {
+    return api.post(API_ENDPOINTS.auth.login, payload);
   },
 
-  async getMe(token?: string) {
-    const res = await api.get("/admin/me", {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    });
-    return res.data?.data;
+  me(config?: AxiosRequestConfig) {
+    return api.get(API_ENDPOINTS.auth.me, config);
   },
 
-  async registerMitra(body: FormData) {
-    const res = await api.post("/auth/register-mitra", body);
-    return res.data?.data;
+  logout() {
+    return api.get(API_ENDPOINTS.auth.logout);
   },
 };

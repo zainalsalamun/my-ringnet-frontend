@@ -1,88 +1,81 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import api from "@/lib/api";
+import api from "@/src/lib/api/client";
+import { API_ENDPOINTS } from "@/src/lib/api/endpoints";
 
 export const mitraPortalApi = {
-  async getSummary() {
-    const res = await api.get("/mitra-portal/summary");
-    return res.data?.data;
+  register(payload: FormData) {
+    return api.post(API_ENDPOINTS.mitraPortal.register, payload);
   },
 
-  async getProfile() {
-    const res = await api.get("/mitra-portal/profile");
-    return res.data?.data;
+  pops() {
+    return api.get(API_ENDPOINTS.mitraPortal.pops);
   },
 
-  async updateProfile(data: any) {
-    const res = await api.put("/mitra-portal/profile", data);
-    return res.data?.data;
+  summary() {
+    return api.get(API_ENDPOINTS.mitraPortal.summary);
   },
 
-  async uploadSignature(file: File) {
-    const body = new FormData();
-    body.append("file", file);
-    const res = await api.put("/mitra-portal/profile/signature", body);
-    return res.data?.data;
+  contentDocuments(category: string) {
+    return api.get(API_ENDPOINTS.mitraPortal.contentDocuments, { params: { category } });
   },
 
-  async getProducts() {
-    const res = await api.get("/mitra-portal/products");
-    return Array.isArray(res.data?.data) ? res.data.data : [];
+  documentList(params: Record<string, string>) {
+    return api.get(API_ENDPOINTS.documents.list, { params });
   },
 
-  async getCustomers() {
-    const res = await api.get("/mitra-portal/customers");
-    return Array.isArray(res.data?.data) ? res.data.data : [];
+  createDocument(payload: FormData, admin = false) {
+    return api.post(admin ? API_ENDPOINTS.documents.create : API_ENDPOINTS.mitraPortal.documents, payload);
   },
 
-  async getFinance() {
-    const res = await api.get("/mitra-portal/finance");
-    return res.data?.data;
+  removeDocument(id: string, admin = false) {
+    return api.delete(`${admin ? API_ENDPOINTS.documents.create : API_ENDPOINTS.mitraPortal.documents}/${id}`);
   },
 
-  async getInvoices() {
-    const res = await api.get("/mitra-portal/invoices");
-    return Array.isArray(res.data?.data) ? res.data.data : [];
+  profile() {
+    return api.get(API_ENDPOINTS.mitraPortal.profile);
   },
 
-  async getTickets() {
-    const res = await api.get("/mitra-portal/tickets");
-    return Array.isArray(res.data?.data) ? res.data.data : [];
+  updateProfile(payload: Record<string, unknown>) {
+    return api.put(API_ENDPOINTS.mitraPortal.profile, payload);
   },
 
-  async createTicket(formData: FormData) {
-    return api.post("/mitra-portal/tickets", formData);
+  updateProfileSignature(payload: FormData) {
+    return api.put(API_ENDPOINTS.mitraPortal.profileSignature, payload);
   },
 
-  async getContentDocuments(category: string) {
-    const res = await api.get(`/mitra-portal/content-documents?category=${category}`);
-    return Array.isArray(res.data?.data) ? res.data.data : [];
+  products() {
+    return api.get(API_ENDPOINTS.mitraPortal.products);
   },
 
-  async uploadDocument(formData: FormData) {
-    return api.post("/mitra-portal/documents", formData);
+  customers() {
+    return api.get(API_ENDPOINTS.mitraPortal.customers);
   },
 
-  async deleteDocument(id: string) {
-    return api.delete(`/mitra-portal/documents/${id}`);
+  finance() {
+    return api.get(API_ENDPOINTS.mitraPortal.finance);
   },
 
-  async getPops() {
-    const res = await api.get("/mitra-portal/pops");
-    return Array.isArray(res.data?.data) ? res.data.data : [];
+  invoices() {
+    return api.get(API_ENDPOINTS.mitraPortal.invoices);
   },
 
-  async getAiChatHistory() {
-    const res = await api.get("/mitra-portal/ai-chat/history");
-    return res.data?.data;
+  tickets() {
+    return api.get(API_ENDPOINTS.mitraPortal.tickets);
   },
 
-  async sendAiChat(payload: { conversationId?: string | null; division?: string; subject?: string; message: string }) {
-    const res = await api.post("/mitra-portal/ai-chat", payload);
-    return res.data?.data;
+  createTicket(payload: FormData) {
+    return api.post(API_ENDPOINTS.mitraPortal.tickets, payload);
   },
 
-  async registerMitra(payload: any) {
-    const res = await api.post("/auth/register-mitra", payload);
-    return res.data?.data;
+  aiChatHistory() {
+    return api.get(API_ENDPOINTS.mitraPortal.aiChatHistory);
+  },
+
+  sendAiChat(payload: {
+    conversationId: string | null;
+    division: string;
+    subject: string;
+    message: string;
+  }) {
+    return api.post(API_ENDPOINTS.mitraPortal.aiChat, payload);
   },
 };

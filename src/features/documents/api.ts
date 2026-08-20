@@ -1,62 +1,40 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import api from "@/lib/api";
+import api from "@/src/lib/api/client";
+import { API_ENDPOINTS } from "@/src/lib/api/endpoints";
 
-export interface DocumentItem {
-  id: string;
-  name: string;
-  documentNo?: string;
-  description?: string;
-  filePath?: string;
-  category?: any;
-  categorySlug?: string;
-  popId?: string;
-  partnerId?: string;
-  createdAt?: string;
-  expiredDate?: string;
-  [key: string]: any;
-}
-
-export const documentApi = {
-  async getDocuments(categorySlug?: string, popId?: string): Promise<DocumentItem[]> {
-    const params = new URLSearchParams();
-    if (categorySlug) params.append("categorySlug", categorySlug);
-    if (popId) params.append("popId", popId);
-    const query = params.toString() ? `?${params.toString()}` : "";
-    const res = await api.get(`/documents${query}`);
-    return Array.isArray(res.data?.data) ? res.data.data : [];
+export const documentsApi = {
+  categories() {
+    return api.get(API_ENDPOINTS.documents.categories);
   },
 
-  async getDocumentDetail(id: string) {
-    const res = await api.get(`/documents/${id}`);
-    return res.data?.data;
+  createCategory(payload: { name: string }) {
+    return api.post(API_ENDPOINTS.documents.categories, payload);
   },
 
-  async getCategories() {
-    const res = await api.get("/document-categories");
-    return Array.isArray(res.data?.data) ? res.data.data : [];
+  updateCategory(id: string, payload: { name: string }) {
+    return api.put(API_ENDPOINTS.documents.categoryDetail(id), payload);
   },
 
-  async createCategory(name: string) {
-    return api.post("/document-categories", { name });
+  removeCategory(id: string) {
+    return api.delete(API_ENDPOINTS.documents.categoryDetail(id));
   },
 
-  async updateCategory(id: string, name: string) {
-    return api.put(`/document-categories/${id}`, { name });
+  list(params?: URLSearchParams | Record<string, string | number | boolean>) {
+    return api.get(API_ENDPOINTS.documents.list, { params });
   },
 
-  async deleteCategory(id: string) {
-    return api.delete(`/document-categories/${id}`);
+  detail(id: string) {
+    return api.get(API_ENDPOINTS.documents.detail(id));
   },
 
-  async uploadDocument(formData: FormData) {
-    return api.post("/documents", formData);
+  create(payload: Record<string, unknown> | FormData) {
+    return api.post(API_ENDPOINTS.documents.create, payload);
   },
 
-  async updateDocument(id: string, formData: FormData) {
-    return api.put(`/documents/${id}`, formData);
+  update(id: string, payload: Record<string, unknown> | FormData) {
+    return api.put(API_ENDPOINTS.documents.update(id), payload);
   },
 
-  async deleteDocument(id: string) {
-    return api.delete(`/documents/${id}`);
+  remove(id: string) {
+    return api.delete(API_ENDPOINTS.documents.delete(id));
   },
 };

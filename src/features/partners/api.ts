@@ -1,89 +1,52 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import api from "@/lib/api";
+import api from "@/src/lib/api/client";
+import { API_ENDPOINTS } from "@/src/lib/api/endpoints";
 
-export interface PartnerItem {
-  id: string;
-  partnerCode: string;
-  name: string;
-  phone: string;
-  email: string;
-  area: string;
-  city: string;
-  partnerType: string;
-  status: string;
-  [key: string]: any;
-}
-
-export const partnerApi = {
-  async getList(): Promise<PartnerItem[]> {
-    const res = await api.get("/partners?limit=5000");
-    return Array.isArray(res.data?.data) ? res.data.data : [];
+export const partnersApi = {
+  list(params?: URLSearchParams | Record<string, string | number | boolean>) {
+    return api.get(API_ENDPOINTS.partners.list, { params });
   },
 
-  async getListForSelect(): Promise<any[]> {
-    try {
-      const res = await api.post("/partner/list", {
-        pageSize: 100,
-        pageIndex: 0,
-        sorting: [],
-        columnFilters: [],
-        globalFilter: "",
-      });
-      return res.data?.data?.data || res.data?.data || res.data?.rows || [];
-    } catch {
-      return this.getList();
-    }
+  rawList(body: Record<string, unknown>) {
+    return api.post(API_ENDPOINTS.partners.rawList, body);
   },
 
-  async getDetail(id: string) {
-    const res = await api.get(`/partners/${id}`);
-    return res.data?.data;
+  rawCreate(payload: Record<string, unknown>) {
+    return api.post(API_ENDPOINTS.partners.rawCreate, payload);
   },
 
-  async getAvailableCustomers(partnerId: string, search: string = "", limit: number = 50) {
-    const res = await api.get(`/partners/${partnerId}/available-customers`, {
-      params: { search, limit },
-    });
-    return Array.isArray(res.data?.data) ? res.data.data : [];
+  rawUpdate(payload: Record<string, unknown>) {
+    return api.patch(API_ENDPOINTS.partners.rawUpdate, payload);
   },
 
-  async assignCustomers(partnerId: string, customerIds: string[]) {
-    const res = await api.post(`/partners/${partnerId}/customers`, { customerIds });
-    return res.data?.data;
+  create(payload: Record<string, unknown>) {
+    return api.post(API_ENDPOINTS.partners.create, payload);
   },
 
-  async removeCustomer(partnerId: string, customerId: string) {
-    const res = await api.delete(`/partners/${partnerId}/customers/${customerId}`);
-    return res.data?.data;
+  detail(id: string) {
+    return api.get(API_ENDPOINTS.partners.detail(id));
   },
 
-  async updateRegistrationStatus(partnerId: string, payload: { status: string; reviewNotes?: string }) {
-    const res = await api.patch(`/partners/${partnerId}/registration-status`, payload);
-    return res.data?.data;
+  update(id: string, payload: Record<string, unknown>) {
+    return api.patch(API_ENDPOINTS.partners.update(id), payload);
   },
 
-  async decideRegistration(partnerId: string, payload: { decision: "approved" | "rejected"; notes?: string }) {
-    const res = await api.put(`/partners/${partnerId}/registration-decision`, payload);
-    return res.data;
+  remove(id: string) {
+    return api.delete(API_ENDPOINTS.partners.delete(id));
   },
 
-  async create(payload: any) {
-    try {
-      return await api.post("/partner/create", payload);
-    } catch {
-      return await api.post("/partners", payload);
-    }
+  availableCustomers(id: string, params?: URLSearchParams | Record<string, string | number | boolean>) {
+    return api.get(API_ENDPOINTS.partners.availableCustomers(id), { params });
   },
 
-  async update(id: string, payload: any) {
-    try {
-      return await api.patch("/partner/update", { ...payload, selectedCustomerId: id });
-    } catch {
-      return await api.put(`/partners/${id}`, payload);
-    }
+  attachCustomers(id: string, customerIds: string[]) {
+    return api.post(API_ENDPOINTS.partners.customers(id), { customerIds });
   },
 
-  async delete(id: string) {
-    return api.delete(`/partners/${id}`);
+  detachCustomer(id: string, customerId: string) {
+    return api.delete(API_ENDPOINTS.partners.customer(id, customerId));
+  },
+
+  registrationDecision(id: string, payload: { decision: "approved" | "rejected"; notes: string }) {
+    return api.put(API_ENDPOINTS.partners.registrationDecision(id), payload);
   },
 };

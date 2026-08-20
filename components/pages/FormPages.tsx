@@ -463,33 +463,19 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
 
             {/* Dukungan Teknis & Pembayaran (PIC Support) */}
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 border-t border-slate-100 pt-4">
-              <div>
-                <label className="mb-1.5 block text-xs font-bold text-slate-700">Dukungan Teknis (Technical Support)</label>
-                <select
-                  value={form.supportTechnical}
-                  onChange={(e) => setForm({ ...form, supportTechnical: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
-                >
-                  <option value="">Pilih Petugas Teknis</option>
-                  {adminOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
+              <SelectInput
+                label="Dukungan Teknis (Technical Support)"
+                value={form.supportTechnical}
+                onChange={(e) => setForm({ ...form, supportTechnical: e.target.value })}
+                options={[{ label: "Pilih Petugas Teknis", value: "" }, ...adminOptions]}
+              />
 
-              <div>
-                <label className="mb-1.5 block text-xs font-bold text-slate-700">Dukungan Pembayaran (Billing Support)</label>
-                <select
-                  value={form.supportPayment}
-                  onChange={(e) => setForm({ ...form, supportPayment: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
-                >
-                  <option value="">Pilih Petugas Billing</option>
-                  {adminOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
+              <SelectInput
+                label="Dukungan Pembayaran (Billing Support)"
+                value={form.supportPayment}
+                onChange={(e) => setForm({ ...form, supportPayment: e.target.value })}
+                options={[{ label: "Pilih Petugas Billing", value: "" }, ...adminOptions]}
+              />
             </div>
           </Card>
         </div>
@@ -511,19 +497,14 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
               />
             </div>
 
-            <div>
-              <label className="mb-1.5 block text-xs font-bold text-slate-700">Mitra / Partner Reseller</label>
-              <select
-                value={form.partnerId}
-                onChange={(e) => setForm({ ...form, partnerId: e.target.value })}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
-              >
-                <option value="">Tanpa Mitra (Direct RingNet)</option>
-                {partnerOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
+            <SelectInput
+              label="Mitra / Partner Reseller"
+              value={form.partnerId}
+              onChange={(e) => setForm({ ...form, partnerId: e.target.value })}
+              options={[{ label: "Tanpa Mitra (Direct RingNet)", value: "" }, ...partnerOptions]}
+              searchable
+              searchPlaceholder="Cari ID mitra atau nama..."
+            />
           </Card>
 
           {/* Card 2: Kredensial Akun & Status */}
@@ -561,33 +542,22 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
               </div>
             </div>
 
-            <div>
-              <label className="mb-1.5 block text-xs font-bold text-slate-700">Status Akun</label>
-              <select
-                value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value })}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
-              >
-                <option value="active">Aktif</option>
-                <option value="nonactive">Nonaktif</option>
-              </select>
-            </div>
+            <SelectInput
+              label="Status Akun"
+              value={form.status}
+              onChange={(e) => setForm({ ...form, status: e.target.value })}
+              options={statusOptions}
+            />
           </Card>
 
           {/* Card 3: Tipe & Lokasi Pelanggan */}
           <Card className="p-5 space-y-4">
-            <div>
-              <label className="mb-1.5 block text-xs font-bold text-slate-700">Jenis Pelanggan *</label>
-              <select
-                value={form.customerType}
-                onChange={(e) => setForm({ ...form, customerType: e.target.value })}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
-              >
-                {customerTypeOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
+            <SelectInput
+              label="Jenis Pelanggan *"
+              value={form.customerType}
+              onChange={(e) => setForm({ ...form, customerType: e.target.value })}
+              options={customerTypeOptions}
+            />
 
             <div>
               <label className="mb-1.5 block text-xs font-bold text-slate-700">Area Layanan / Kota *</label>
@@ -638,31 +608,23 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
 
             {showTechnicalSection ? (
               <div className="space-y-4 pt-2 border-t border-slate-100">
-                <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">Paket Internet</label>
-                  <select
-                    value={form.packageName}
-                    onChange={(e) => setForm({ ...form, packageName: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
-                  >
-                    {packageOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
+                <SelectInput
+                  label="Paket Internet"
+                  value={form.packageName}
+                  onChange={(e) => setForm({ ...form, packageName: e.target.value })}
+                  options={packageOptions.length ? packageOptions : [{ label: "Belum ada paket", value: "" }]}
+                />
 
-                <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">Siklus Billing</label>
-                  <select
-                    value={form.billingCycle}
-                    onChange={(e) => setForm({ ...form, billingCycle: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
-                  >
-                    <option value="monthly">Bulanan</option>
-                    <option value="yearly">Tahunan</option>
-                    <option value="one_time">Sekali Bayar</option>
-                  </select>
-                </div>
+                <SelectInput
+                  label="Siklus Billing"
+                  value={form.billingCycle}
+                  onChange={(e) => setForm({ ...form, billingCycle: e.target.value })}
+                  options={[
+                    { label: "Bulanan", value: "monthly" },
+                    { label: "Tahunan", value: "yearly" },
+                    { label: "Sekali Bayar", value: "one_time" },
+                  ]}
+                />
 
                 <div>
                   <label className="mb-1 block text-xs font-bold text-slate-700">Username PPPoE</label>

@@ -21,8 +21,8 @@ export function DocumentCategoryPage() {
   function load() {
     setLoading(true);
     documentsApi.categories()
-      .then(res => setRows(res.data.data))
-      .catch(() => setToast("Gagal memuat kategori."))
+      .then(res => setRows(Array.isArray(res.data?.data) ? res.data.data : []))
+      .catch(() => setRows([]))
       .finally(() => setLoading(false));
   }
 

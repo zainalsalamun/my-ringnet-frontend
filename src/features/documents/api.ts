@@ -2,8 +2,14 @@ import api from "@/src/lib/api/client";
 import { API_ENDPOINTS } from "@/src/lib/api/endpoints";
 
 export const documentsApi = {
-  categories() {
-    return api.get(API_ENDPOINTS.documents.categories);
+  async categories() {
+    try {
+      const res = await api.get(API_ENDPOINTS.documents.categories);
+      if (Array.isArray(res.data?.data)) return res;
+      return { data: { data: [] } };
+    } catch {
+      return { data: { data: [] } };
+    }
   },
 
   createCategory(payload: { name: string }) {

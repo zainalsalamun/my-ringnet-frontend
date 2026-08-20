@@ -5,18 +5,10 @@
 import { Badge, Card, PageHeader, ShimmerBlock, StatCard } from "@/components/ui/AdminUI";
 import { useAuthStore } from "@/hooks/useAuth";
 import { currency } from "@/lib/format";
-import { formatErrorMessage } from "@/lib/error";
-import {
-  adminService,
-  companyService,
-  customerService,
-  financeService,
-  internetServiceService,
-  popService,
-} from "@/services";
 import { Receipt, TrendingUp, Users, Wallet } from "lucide-react";
 import { useEffect, useState } from "react";
 import { MitraDashboardPage } from "@/components/pages/MitraPortalPages";
+import { dashboardApi } from "@/src/features/dashboard/api";
 
 const emptySummary = {
   totalPelanggan: 0,
@@ -31,8 +23,25 @@ const emptySummary = {
   recentActivities: [] as any[],
 };
 
+function payloadRows(payload: any): any[] {
+  const data = payload?.data;
+  if (Array.isArray(data?.markers)) return data.markers;
+  if (Array.isArray(data?.features)) return data.features;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(payload?.markers)) return payload.markers;
+  if (Array.isArray(payload?.features)) return payload.features;
+  if (Array.isArray(payload?.rows)) return payload.rows;
+  if (Array.isArray(payload?.list)) return payload.list;
+  return [];
+}
+
+function payloadTotal(payload: any, rows: any[]) {
+  return Number(payload?.meta?.total || payload?.data?.total || payload?.data?.count || payload?.totalDocs || payload?.total || rows.length || 0);
+}
+
 function moneyValue(row: any) {
-  return Number(row.amount || row.grandTotal || row.total || row.price || row.packagePrice || row.monthlyPrice || 0) || 0;
+  return Number(row.amount || row.grandTotal || row.total || row.price || row.package_price || row.monthly_fee || 0) || 0;
 }
 
 function invoicePaid(row: any) {
@@ -80,12 +89,12 @@ function buildRecentActivities(customers: any[], invoices: any[], payments: any[
     createdAt: row.paidAt || row.createdAt || row.created_at,
   }));
   const customerItems = customers.slice(0, 3).map((row) => ({
-    id: `customer-${row.id || row.customerCode}`,
-    noInvoice: row.customerCode || "Pelanggan",
-    customerName: row.name || "Pelanggan baru",
+    id: `customer-${row.id || row.customer_id}`,
+    noInvoice: row.customerCode || row.customer_id || "Pelanggan",
+    customerName: row.name || row.username || "Pelanggan baru",
     amount: 0,
     status: row.status === false ? "nonactive" : "active",
-    createdAt: row.lastActivity || row.createdAt,
+    createdAt: row.createdAt || row.created_at,
   }));
 
   return [...paymentItems, ...invoiceItems, ...customerItems]
@@ -102,20 +111,28 @@ function AdminDashboardPage() {
     setLoading(true);
 
     Promise.allSettled([
-      customerService.getList(),
-      companyService.getList(),
-      adminService.getList(),
-      popService.getList(),
-      internetServiceService.getList(),
-      financeService.getList(),
+      dashboardApi.getCustomerSummaryData(),
+      dashboardApi.getPartnerSummaryData(),
+      dashboardApi.getAdminSummaryData(),
+      dashboardApi.getLocationSummaryData(),
+      dashboardApi.getInvoices(),
+      dashboardApi.getPayments(),
     ])
-      .then(([custRes, compRes, adminRes, popRes, invRes, finRes]) => {
-        const customers = custRes.status === "fulfilled" ? custRes.value : [];
-        const companies = compRes.status === "fulfilled" ? compRes.value : [];
-        const admins = adminRes.status === "fulfilled" ? adminRes.value : [];
-        const pops = popRes.status === "fulfilled" ? popRes.value : [];
-        const invoices = invRes.status === "fulfilled" ? invRes.value : [];
-        const payments = finRes.status === "fulfilled" ? finRes.value : [];
+      .then((results) => {
+        const dataAt = (index: number) => results[index].status === "fulfilled" ? results[index].value.data : null;
+        const customerPayload = dataAt(0);
+        const partnerPayload = dataAt(1);
+        const adminPayload = dataAt(2);
+        const popPayload = dataAt(3);
+        const invoicePayload = dataAt(4);
+        const financePayload = dataAt(5);
+
+        const customers = payloadRows(customerPayload);
+        const partners = payloadRows(partnerPayload);
+        const admins = payloadRows(adminPayload);
+        const pops = payloadRows(popPayload);
+        const invoices = payloadRows(invoicePayload);
+        const payments = payloadRows(financePayload);
 
         const paidInvoices = invoices.filter(invoicePaid);
         const openInvoices = invoices.filter(invoiceOpen);
@@ -123,139 +140,108 @@ function AdminDashboardPage() {
         const revenueSource = paidPayments.length ? paidPayments : paidInvoices;
         const pendapatan = revenueSource.reduce((sum, row) => sum + moneyValue(row), 0);
         const tunggakan = openInvoices.reduce((sum, row) => sum + moneyValue(row), 0);
-        const pelangganAktif = customers.filter((row) => row.status === "active").length;
+        const pelangganAktif = customers.filter((row) => row.status === true || row.status === "active" || row.status === undefined).length;
+        const failedCoreCount = results
+          .slice(0, 4)
+          .filter((result) => result.status === "rejected")
+          .length;
 
         setSummary({
           ...emptySummary,
-          totalPelanggan: customers.length,
-          totalBisnis: companies.length,
-          totalAdmin: admins.length,
-          totalPop: pops.length,
+          totalPelanggan: payloadTotal(customerPayload, customers),
+          totalBisnis: payloadTotal(partnerPayload, partners),
+          totalAdmin: payloadTotal(adminPayload, admins),
+          totalPop: payloadTotal(popPayload, pops),
           pelangganAktif,
-          totalInvoice: invoices.length,
+          totalInvoice: payloadTotal(invoicePayload, invoices),
           pendapatan,
           tunggakan,
-          popularPackages: buildPopularPackages(customers, companies),
+          popularPackages: buildPopularPackages(customers, partners),
           recentActivities: buildRecentActivities(customers, invoices, paidPayments),
         });
-        setError("");
+        setError(failedCoreCount ? `${failedCoreCount} endpoint utama belum tersedia/bermasalah, dashboard menampilkan data yang berhasil dimuat.` : "");
       })
-      .catch((err) => {
-        setError(formatErrorMessage(err, "Gagal memuat ringkasan dashboard."));
+      .catch(() => {
+        dashboardApi.getSummaryFallback()
+          .then((res) => {
+            setSummary({ ...emptySummary, ...res.data.data });
+            setError("");
+          })
+          .catch(() => setError("Gagal memuat dashboard dari API."));
       })
       .finally(() => setLoading(false));
   }, []);
 
   return (
     <div>
-      <PageHeader title="Dashboard" subtitle="Ringkasan operasional bisnis, status pelanggan, tagihan, dan pendapatan terkini." />
-
-      {error ? (
-        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
-          {error}
-        </div>
-      ) : null}
+      <PageHeader title="Dashboard" subtitle="Ringkasan performa bisnis dan operasional ISP Anda." />
+      {error ? <div className="mb-4 rounded-lg border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div> : null}
 
       {loading ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <ShimmerBlock key={i} className="h-32" />
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Card key={index} className="p-5">
+              <div className="flex items-center gap-4">
+                <ShimmerBlock className="h-12 w-12 rounded-xl" />
+                <div className="flex-1 space-y-2">
+                  <ShimmerBlock className="h-3 w-28" />
+                  <ShimmerBlock className="h-8 w-36" />
+                  <ShimmerBlock className="h-3 w-32" />
+                </div>
+              </div>
+            </Card>
           ))}
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            icon={<TrendingUp size={22} />}
-            label="Total Pelanggan"
-            value={String(summary.totalPelanggan)}
-            trend={`${summary.pelangganAktif} pelanggan aktif`}
-          />
-          <StatCard
-            icon={<Wallet size={22} />}
-            label="Pendapatan"
-            value={currency(summary.pendapatan)}
-            trend="Pembayaran billing terverifikasi"
-            accent="emerald"
-          />
-          <StatCard
-            icon={<Receipt size={22} />}
-            label="Tunggakan"
-            value={currency(summary.tunggakan)}
-            trend={`${summary.totalInvoice} total faktur diterbitkan`}
-            accent="rose"
-          />
-          <StatCard
-            icon={<Users size={22} />}
-            label="Akses Panel"
-            value={String(summary.totalAdmin)}
-            trend={`${summary.totalBisnis} akun bisnis / partner`}
-            accent="amber"
-          />
+          <StatCard icon={<Users size={22} />} label="Total Pelanggan" value={String(summary.totalPelanggan)} trend={`${summary.pelangganAktif} pelanggan aktif`} />
+          <StatCard icon={<Receipt size={22} />} label="Total Invoice" value={String(summary.totalInvoice)} trend="Faktur & tagihan dari API" accent="emerald" />
+          <StatCard icon={<Wallet size={22} />} label="Pendapatan" value={currency(summary.pendapatan)} trend="Pembayaran verified/lunas" accent="amber" />
+          <StatCard icon={<TrendingUp size={22} />} label="Tunggakan" value={currency(summary.tunggakan)} trend="Invoice belum lunas" accent="rose" />
         </div>
       )}
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-3">
-        <Card className="p-5 xl:col-span-2">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-            <div>
-              <h2 className="text-base font-black text-slate-950">Aktivitas Terkini</h2>
-              <p className="text-xs text-slate-500">Transaksi, faktur terbaru, dan pendaftaran pelanggan.</p>
-            </div>
-            <span className="rounded-md bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-600">Realtime API</span>
-          </div>
+      {!loading ? (
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <Card className="p-5">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Pelanggan Bisnis / Mitra</p>
+            <p className="mt-2 text-2xl font-black text-slate-950">{summary.totalBisnis}</p>
+            <p className="mt-1 text-sm text-slate-500">Akun bisnis dan mitra terdaftar.</p>
+          </Card>
+          <Card className="p-5">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">User Panel</p>
+            <p className="mt-2 text-2xl font-black text-slate-950">{summary.totalAdmin}</p>
+            <p className="mt-1 text-sm text-slate-500">Admin dan employee aktif di sistem.</p>
+          </Card>
+          <Card className="p-5">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">POP / Infrastruktur</p>
+            <p className="mt-2 text-2xl font-black text-slate-950">{summary.totalPop}</p>
+            <p className="mt-1 text-sm text-slate-500">Titik jaringan yang sudah terdata.</p>
+          </Card>
+        </div>
+      ) : null}
 
-          {loading ? (
-            <div className="mt-4 space-y-3">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <ShimmerBlock key={i} className="h-14" />
-              ))}
-            </div>
-          ) : !summary.recentActivities.length ? (
-            <p className="py-12 text-center text-sm font-semibold text-slate-400">Belum ada aktivitas transaksi.</p>
-          ) : (
-            <div className="mt-4 divide-y divide-slate-100">
-              {summary.recentActivities.map((act) => (
-                <div key={act.id} className="flex items-center justify-between py-3">
-                  <div className="min-w-0 pr-4">
-                    <p className="truncate text-sm font-bold text-slate-900">{act.customerName}</p>
-                    <p className="text-xs text-slate-500">{act.noInvoice}</p>
-                  </div>
-                  <div className="text-right">
-                    {act.amount > 0 ? (
-                      <p className="text-sm font-bold text-slate-900">{currency(act.amount)}</p>
-                    ) : null}
-                    <Badge value={act.status} />
-                  </div>
-                </div>
-              ))}
+      <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_0.8fr]">
+        <Card className="p-5">
+          <h2 className="mb-4 font-bold text-slate-950">Aktivitas Terbaru</h2>
+          {loading ? <div className="space-y-3">{Array.from({ length: 4 }).map((_, index) => <ShimmerBlock key={index} className="h-16 rounded-lg" />)}</div> : (
+            <div className="space-y-4">
+              {summary.recentActivities.length ? summary.recentActivities.map((item) => <div key={item.id} className="flex items-center justify-between rounded-lg bg-slate-50 p-3"><div><p className="font-semibold text-slate-800">{item.noInvoice}</p><p className="text-sm text-slate-500">{item.customerName} - {currency(item.amount)}</p></div><Badge value={item.status} /></div>) : <div className="rounded-lg bg-slate-50 p-6 text-center text-sm text-slate-500">Belum ada aktivitas invoice.</div>}
             </div>
           )}
         </Card>
-
         <Card className="p-5">
-          <div className="border-b border-slate-100 pb-4">
-            <h2 className="text-base font-black text-slate-950">Paket Layanan Populer</h2>
-            <p className="text-xs text-slate-500">Distribusi paket pelanggan & bisnis.</p>
-          </div>
-
-          {loading ? (
-            <div className="mt-4 space-y-3">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <ShimmerBlock key={i} className="h-10" />
-              ))}
-            </div>
-          ) : !summary.popularPackages.length ? (
-            <p className="py-12 text-center text-sm font-semibold text-slate-400">Belum ada data paket layanan.</p>
-          ) : (
-            <div className="mt-4 space-y-3">
-              {summary.popularPackages.map((pkg) => (
-                <div key={pkg.name} className="flex items-center justify-between rounded-lg bg-slate-50 p-3">
-                  <span className="text-sm font-bold text-slate-800">{pkg.name}</span>
-                  <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-bold text-indigo-700">
-                    {pkg.value} Pelanggan
-                  </span>
+          <h2 className="mb-4 font-bold text-slate-950">Paket Terlaris</h2>
+          {loading ? <ShimmerBlock className="h-64 rounded-xl" /> : (
+            <div className="space-y-3">
+              {summary.popularPackages.length ? summary.popularPackages.map((item) => (
+                <div key={item.name} className="rounded-xl bg-slate-50 p-3">
+                  <div className="flex items-center justify-between gap-4 text-sm">
+                    <span className="font-bold text-slate-800">{item.name}</span>
+                    <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-black text-indigo-700">{item.value}</span>
+                  </div>
                 </div>
-              ))}
+              )) : <div className="rounded-lg bg-slate-50 p-6 text-center text-sm text-slate-500">Belum ada data paket.</div>}
             </div>
           )}
         </Card>
@@ -266,8 +252,6 @@ function AdminDashboardPage() {
 
 export default function DashboardPage() {
   const user = useAuthStore((state) => state.user);
-  if (user?.role === "mitra") {
-    return <MitraDashboardPage />;
-  }
-  return <AdminDashboardPage />;
+  if (!user) return <div className="space-y-4"><ShimmerBlock className="h-24" /><ShimmerBlock className="h-80" /></div>;
+  return user.role === "mitra" ? <MitraDashboardPage /> : <AdminDashboardPage />;
 }

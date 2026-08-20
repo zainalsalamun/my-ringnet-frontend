@@ -5,104 +5,66 @@
 import { useAuthStore } from "@/hooks/useAuth";
 import { Badge, Card, DataTable, PageHeader, TableSkeleton } from "@/components/ui/AdminUI";
 import { currency, date, monthName } from "@/lib/format";
-import { formatErrorMessage } from "@/lib/error";
-import {
-  customerService,
-  companyService,
-  partnerService,
-  leadService,
-  internetServiceService,
-  adminService,
-} from "@/services";
 import Link from "next/link";
-import {
-  ArrowDownUp,
-  Building2,
-  CheckCircle2,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  FileText,
-  Filter,
-  Grid3X3,
-  List,
-  ListFilter,
-  Mail,
-  MinusCircle,
-  Phone,
-  PlusCircle,
-  Power,
-  RefreshCw,
-  Search,
-  Store,
-  Trash2,
-  Upload,
-  UserPlus,
-  Users,
-} from "lucide-react";
+import { ArrowDownUp, Building2, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, FileText, Filter, Grid3X3, List, ListFilter, Mail, MinusCircle, Phone, PlusCircle, Power, RefreshCw, Search, Store, Trash2, Upload, UserPlus, Users } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { businessCustomersApi } from "@/src/features/business-customers/api";
+import { customersApi } from "@/src/features/customers/api";
+import { resourcesApi } from "@/src/features/resources/api";
+
+function useRows<T>(endpoint: string) {
+  const [rows, setRows] = useState<T[]>([]);
+  const [toast, setToast] = useState("");
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    setLoading(true);
+    setToast("");
+    resourcesApi.list(endpoint)
+      .then((res) => setRows(res.data.data))
+      .catch(() => {
+        setRows([]);
+        setToast("Gagal memuat data. Pastikan backend aktif dan sesi login valid.");
+      })
+      .finally(() => setLoading(false));
+  }, [endpoint]);
+  return { rows, setRows, toast, setToast, loading };
+}
 
 function Toast({ message }: { message: string }) {
   if (!message) return null;
   return <div className="mb-4 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-700">{message}</div>;
 }
 
+async function deleteRow(endpoint: string, row: any, setRows: Dispatch<SetStateAction<any[]>>, setToast: (message: string) => void, successMessage: string) {
+  try {
+    await resourcesApi.remove(endpoint, row.id);
+    setRows((current) => current.filter((item) => item.id !== row.id));
+    setToast(successMessage);
+  } catch (err: any) {
+    setToast(err.response?.data?.message || "Gagal menghapus data.");
+  }
+}
+
 export function UsersPage({ role, title }: { role: string; title: string }) {
-  const [rows, setRows] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState("");
-
-  const load = useCallback(() => {
-    setLoading(true);
-    setToast("");
-    adminService
-      .getUsersByRole(role)
-      .then((data) => setRows(data))
-      .catch((err) => {
-        setRows([]);
-        setToast(formatErrorMessage(err, "Gagal memuat data pengguna."));
-      })
-      .finally(() => setLoading(false));
-  }, [role]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
+  const { rows, setRows, toast, setToast, loading } = useRows<any>("/users?role=" + role);
   const basePath = role === "admin" ? "/users" : "/users/" + (role === "pelanggan" ? "pelanggan" : role);
   const createPath = role === "admin" ? "/users/admin/create" : basePath + "/new";
-
-  async function handleDelete(row: any) {
-    try {
-      await adminService.deleteUser(row.id);
-      setRows((current) => current.filter((item) => item.id !== row.id));
-      setToast("User berhasil dihapus.");
-    } catch (err: any) {
-      setToast(formatErrorMessage(err, "Gagal menghapus user."));
-    }
-  }
-
   return (
     <div>
       <PageHeader title={title} subtitle={"Kelola akun " + title.toLowerCase() + " MyRingNet."} actionHref={createPath} actionLabel={"Tambah " + title} />
       <Toast message={toast} />
-      {loading ? (
-        <TableSkeleton columns={6} />
-      ) : (
-        <DataTable
-          data={rows}
-          editBasePath={basePath}
-          onDelete={handleDelete}
-          columns={[
-            { key: "name", header: "Nama", render: (row: any) => <span className="font-semibold text-slate-900">{row.name}</span> },
-            { key: "email", header: "Email" },
-            { key: "role", header: "Role", render: (row: any) => <Badge value={row.role} /> },
-            { key: "status", header: "Status", render: (row: any) => <Badge value={row.status || "active"} /> },
-            { key: "createdAt", header: "Dibuat", render: (row: any) => date(row.createdAt) },
-          ]}
-        />
-      )}
+      {loading ? <TableSkeleton columns={6} /> :
+      <DataTable data={rows as any[]} editBasePath={basePath} onDelete={(row) => deleteRow("/users", row, setRows as any, setToast, "User berhasil dihapus.")}
+        columns={[
+          { key: "name", header: "Nama", render: (row: any) => <span className="font-semibold text-slate-900">{row.name}</span> },
+          { key: "email", header: "Email" },
+          { key: "role", header: "Role", render: (row: any) => <Badge value={row.role} /> },
+          { key: "status", header: "Status", render: (row: any) => <Badge value={row.status || "active"} /> },
+          { key: "createdAt", header: "Dibuat", render: (row: any) => date(row.createdAt) },
+        ]}
+      />
+      }
     </div>
   );
 }
@@ -122,12 +84,54 @@ export function CustomersPage() {
   const load = () => {
     setLoading(true);
     setToast("");
-    customerService
-      .getList()
-      .then((data) => setRows(data))
-      .catch((err) => {
-        setRows([]);
-        setToast(formatErrorMessage(err, "Gagal memuat data pelanggan dari server."));
+
+    // Call DEKASIMAL API POST /api/v1/customer/list
+    customersApi.rawList({
+      pageSize: 500,
+      pageIndex: 0,
+      sorting: [],
+      columnFilters: [],
+      globalFilter: "",
+      columnVisibility: {
+        customer_id: true,
+        name: true,
+        area: true,
+        type: true,
+        address: true,
+        phone: true,
+        status: true,
+        package_name: true,
+        created_at: true,
+        updated_at: true,
+      },
+      withDeleted: false,
+    })
+      .then((res) => {
+        const raw = res.data?.data?.data || res.data?.data || res.data?.rows || [];
+        const normalized = raw.map((item: any) => ({
+          id: item.id || item.customer_id,
+          customerCode: item.customer_id || item.customerCode || String(item.id || "").slice(0, 8),
+          name: item.name || item.username || "-",
+          phone: item.phone || "-",
+          area: item.area || "-",
+          city: item.city || item.address || "-",
+          address: item.address || "-",
+          packageName: item.package_name || item.packageName || item.product || item.product_name || "-",
+          packagePrice: item.package_price || item.price || item.monthly_fee || null,
+          customerType: item.type || item.customerType || "home",
+          status: item.status === false ? "nonactive" : (item.status === true || item.status === "active" ? "active" : item.status || "active"),
+          lastActivity: item.updated_at || item.created_at || item.createdAt || null,
+        }));
+        setRows(normalized);
+      })
+      .catch(() => {
+        // Fallback to legacy GET /customers
+        customersApi.list({ limit: 5000 })
+          .then((res) => setRows(res.data?.data || []))
+          .catch(() => {
+            setRows([]);
+            setToast("Gagal memuat data pelanggan dari server.");
+          });
       })
       .finally(() => setLoading(false));
   };
@@ -139,18 +143,16 @@ export function CustomersPage() {
   const filteredRows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return rows.filter((row) => {
-      const matchQuery =
-        !q ||
-        [
-          row.customerCode,
-          row.name,
-          row.phone,
-          row.area,
-          row.city,
-          row.address,
-          row.packageName,
-          row.customerType,
-        ].some((value) => String(value || "").toLowerCase().includes(q));
+      const matchQuery = !q || [
+        row.customerCode,
+        row.name,
+        row.phone,
+        row.area,
+        row.city,
+        row.address,
+        row.packageName,
+        row.customerType,
+      ].some((value) => String(value || "").toLowerCase().includes(q));
       const matchStatus = statusFilter === "all" || String(row.status || "").toLowerCase() === statusFilter;
       const matchType = typeFilter === "all" || String(row.customerType || "").toLowerCase().includes(typeFilter);
       return matchQuery && matchStatus && matchType;
@@ -188,24 +190,28 @@ export function CustomersPage() {
 
   async function handleDelete(row: any) {
     try {
-      await customerService.delete(row.id);
+      try {
+        await customersApi.rawDelete(row.id);
+      } catch {
+        await customersApi.remove(row.id);
+      }
       setRows((current) => current.filter((item) => item.id !== row.id));
       setToast("Pelanggan berhasil dihapus.");
     } catch (err: any) {
-      setToast(formatErrorMessage(err, "Gagal menghapus pelanggan."));
+      setToast(err.response?.data?.message || "Gagal menghapus pelanggan.");
     }
   }
 
   async function handleToggleStatus(row: any) {
     const nextActive = String(row.status || "").toLowerCase() !== "active";
     const nextStatus = nextActive ? "active" : "nonactive";
-    setRows((current) => current.map((item) => (item.id === row.id ? { ...item, status: nextStatus } : item)));
+    setRows((current) => current.map((item) => item.id === row.id ? { ...item, status: nextStatus } : item));
     try {
-      await customerService.toggleStatus(row.id, nextActive);
+      await customersApi.rawUpdate({ selectedCustomerId: row.id, status: nextActive });
       setToast(`Status pelanggan ${row.name} berhasil diubah.`);
     } catch (err: any) {
-      setRows((current) => current.map((item) => (item.id === row.id ? { ...item, status: row.status } : item)));
-      setToast(formatErrorMessage(err, "Gagal mengubah status pelanggan."));
+      setRows((current) => current.map((item) => item.id === row.id ? { ...item, status: row.status } : item));
+      setToast(err.response?.data?.message || "Gagal mengubah status pelanggan.");
     }
   }
 
@@ -215,10 +221,7 @@ export function CustomersPage() {
         title="Pelanggan"
         subtitle="Data pelanggan individu beserta paket, status layanan, dan aktivitas."
         rightContent={
-          <Link
-            href="/users/pelanggan/new"
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-bold text-white shadow-sm shadow-indigo-200 transition hover:bg-indigo-500"
-          >
+          <Link href="/users/pelanggan/new" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-bold text-white shadow-sm shadow-indigo-200 transition hover:bg-indigo-500">
             <PlusCircle size={18} /> Pelanggan Baru
           </Link>
         }
@@ -240,27 +243,14 @@ export function CustomersPage() {
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative w-full sm:w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Cari..."
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
-              />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari..." className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100" />
             </div>
-            <select
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
-              className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700"
-            >
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700">
               <option value="all">Semua Status</option>
               <option value="active">Aktif</option>
               <option value="nonactive">Tidak Aktif</option>
             </select>
-            <select
-              value={typeFilter}
-              onChange={(event) => setTypeFilter(event.target.value)}
-              className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700"
-            >
+            <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700">
               <option value="all">Semua Jenis</option>
               <option value="home">Perumahan</option>
               <option value="business">Bisnis</option>
@@ -272,29 +262,13 @@ export function CustomersPage() {
               <Upload size={18} />
             </button>
             <div className="flex rounded-xl bg-slate-100 p-1">
-              <button
-                type="button"
-                onClick={() => setViewMode("list")}
-                className={"grid h-9 w-10 place-items-center rounded-lg " + (viewMode === "list" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500")}
-                title="Tampilan list"
-              >
-                <List size={18} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("grid")}
-                className={"grid h-9 w-10 place-items-center rounded-lg " + (viewMode === "grid" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500")}
-                title="Tampilan grid"
-              >
-                <Grid3X3 size={18} />
-              </button>
+              <button type="button" onClick={() => setViewMode("list")} className={"grid h-9 w-10 place-items-center rounded-lg " + (viewMode === "list" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500")} title="Tampilan list"><List size={18} /></button>
+              <button type="button" onClick={() => setViewMode("grid")} className={"grid h-9 w-10 place-items-center rounded-lg " + (viewMode === "grid" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500")} title="Tampilan grid"><Grid3X3 size={18} /></button>
             </div>
           </div>
         </div>
 
-        {loading ? (
-          <TableSkeleton columns={8} />
-        ) : viewMode === "list" ? (
+        {loading ? <TableSkeleton columns={8} /> : viewMode === "list" ? (
           <Card className="overflow-visible">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1180px] text-left text-sm">
@@ -314,27 +288,18 @@ export function CustomersPage() {
                   {paginatedRows.map((row) => (
                     <tr key={row.id} className="bg-white hover:bg-slate-50/80">
                       <td className="px-4 py-5">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleStatus(row)}
-                          className={"relative h-7 w-14 rounded-full transition " + (String(row.status).toLowerCase() === "active" ? "bg-blue-600" : "bg-slate-300")}
-                          title="Ubah status"
-                        >
+                        <button type="button" onClick={() => handleToggleStatus(row)} className={"relative h-7 w-14 rounded-full transition " + (String(row.status).toLowerCase() === "active" ? "bg-blue-600" : "bg-slate-300")} title="Ubah status">
                           <span className={"absolute top-1 h-5 w-5 rounded-full bg-white shadow transition " + (String(row.status).toLowerCase() === "active" ? "left-8" : "left-1")} />
                         </button>
                       </td>
                       <td className="px-4 py-5">
-                        <Link href={`/users/pelanggan/${row.id}`} className="font-bold text-indigo-600 hover:underline">
-                          {row.customerCode || row.id.slice(0, 8)}
-                        </Link>
+                        <Link href={`/users/pelanggan/${row.id}`} className="font-bold text-indigo-600 hover:underline">{row.customerCode || row.id.slice(0, 8)}</Link>
                       </td>
                       <td className="px-4 py-5">
                         <div className="flex items-center gap-3">
                           <CustomerAvatar name={row.name} code={row.customerCode} />
                           <div>
-                            <Link href={`/users/pelanggan/${row.id}`} className="font-bold text-indigo-600 hover:underline">
-                              {row.name}
-                            </Link>
+                            <Link href={`/users/pelanggan/${row.id}`} className="font-bold text-indigo-600 hover:underline">{row.name}</Link>
                             <p className="mt-1 text-xs font-semibold text-slate-500">{[row.area, row.city].filter(Boolean).join("  |  ") || "-"}</p>
                           </div>
                         </div>
@@ -352,11 +317,7 @@ export function CustomersPage() {
                         <div className="font-bold text-slate-800">{row.lastActivity ? date(row.lastActivity) : "-"}</div>
                       </td>
                       <td className="relative px-4 py-5 text-right">
-                        <button
-                          type="button"
-                          onClick={() => setOpenActionId(openActionId === row.id ? null : row.id)}
-                          className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
-                        >
+                        <button type="button" onClick={() => setOpenActionId(openActionId === row.id ? null : row.id)} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 hover:bg-slate-50">
                           <ListFilter size={17} /> Pilih Aksi <ChevronDown size={15} />
                         </button>
                         {openActionId === row.id ? (
@@ -367,9 +328,7 @@ export function CustomersPage() {
                   ))}
                   {!paginatedRows.length ? (
                     <tr>
-                      <td colSpan={8} className="px-4 py-16 text-center text-sm font-semibold text-slate-500">
-                        Data pelanggan tidak ditemukan.
-                      </td>
+                      <td colSpan={8} className="px-4 py-16 text-center text-sm font-semibold text-slate-500">Data pelanggan tidak ditemukan.</td>
                     </tr>
                   ) : null}
                 </tbody>
@@ -385,9 +344,7 @@ export function CustomersPage() {
                   <div className="flex items-center gap-3">
                     <CustomerAvatar name={row.name} code={row.customerCode} />
                     <div>
-                      <Link href={`/users/pelanggan/${row.id}`} className="font-black text-indigo-600 hover:underline">
-                        {row.name}
-                      </Link>
+                      <Link href={`/users/pelanggan/${row.id}`} className="font-black text-indigo-600 hover:underline">{row.name}</Link>
                       <p className="mt-1 text-xs font-semibold text-slate-500">{row.customerCode}</p>
                     </div>
                   </div>
@@ -399,12 +356,8 @@ export function CustomersPage() {
                   <TypePill type={row.customerType} />
                 </div>
                 <div className="mt-5 flex gap-2">
-                  <Link href={`/users/pelanggan/${row.id}`} className="flex-1 rounded-lg bg-indigo-600 px-3 py-2 text-center text-sm font-bold text-white">
-                    Detail
-                  </Link>
-                  <Link href={`/users/pelanggan/${row.id}/edit`} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700">
-                    Edit
-                  </Link>
+                  <Link href={`/users/pelanggan/${row.id}`} className="flex-1 rounded-lg bg-indigo-600 px-3 py-2 text-center text-sm font-bold text-white">Detail</Link>
+                  <Link href={`/users/pelanggan/${row.id}/edit`} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700">Edit</Link>
                 </div>
               </Card>
             ))}
@@ -523,6 +476,7 @@ function CustomerPagination({ page, maxPage, total, pageSize, onPageChange }: { 
   );
 }
 
+
 export function CompaniesPage() {
   const [rows, setRows] = useState<any[]>([]);
   const [toast, setToast] = useState("");
@@ -537,12 +491,30 @@ export function CompaniesPage() {
   const load = () => {
     setLoading(true);
     setToast("");
-    companyService
-      .getList()
-      .then((data) => setRows(data))
-      .catch((err) => {
+    businessCustomersApi.list({ limit: 5000 })
+      .then((res) => {
+        const raw = Array.isArray(res.data?.data) ? res.data.data : res.data?.data?.data || res.data?.rows || [];
+        const normalized = raw.map((item: any) => ({
+          id: item.id || item.partner_id || item.customer_id,
+          companyCode: item.companyCode || item.partnerCode || item.partner_id || item.customer_id || String(item.id || "").slice(0, 8),
+          name: item.name || item.company_name || item.username || "-",
+          email: item.email || "-",
+          phone: item.phone || item.pic_phone || "-",
+          picName: item.pic_name || item.picName || item.contact_person || "-",
+          area: item.area || "-",
+          city: item.city || item.regency || "-",
+          address: item.address || "-",
+          packageName: item.package_name || item.packageName || item.product || item.product_name || "-",
+          packagePrice: item.package_price || item.price || item.monthly_fee || null,
+          businessType: item.partner_type || item.partnerType || item.type || "Bisnis/Enterprise",
+          status: item.status === false ? "nonactive" : (item.status === true || item.status === "active" ? "active" : item.status || "active"),
+          lastActivity: item.updated_at || item.created_at || item.createdAt || null,
+        }));
+        setRows(normalized);
+      })
+      .catch(() => {
         setRows([]);
-        setToast(formatErrorMessage(err, "Gagal memuat data pelanggan bisnis dari server."));
+        setToast("Gagal memuat data pelanggan bisnis dari server.");
       })
       .finally(() => setLoading(false));
   };
@@ -554,20 +526,18 @@ export function CompaniesPage() {
   const filteredRows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return rows.filter((row) => {
-      const matchQuery =
-        !q ||
-        [
-          row.companyCode,
-          row.name,
-          row.email,
-          row.phone,
-          row.picName,
-          row.area,
-          row.city,
-          row.address,
-          row.packageName,
-          row.businessType,
-        ].some((value) => String(value || "").toLowerCase().includes(q));
+      const matchQuery = !q || [
+        row.companyCode,
+        row.name,
+        row.email,
+        row.phone,
+        row.picName,
+        row.area,
+        row.city,
+        row.address,
+        row.packageName,
+        row.businessType,
+      ].some((value) => String(value || "").toLowerCase().includes(q));
       const matchStatus = statusFilter === "all" || String(row.status || "").toLowerCase() === statusFilter;
       return matchQuery && matchStatus;
     });
@@ -598,24 +568,24 @@ export function CompaniesPage() {
 
   async function handleDelete(row: any) {
     try {
-      await companyService.delete(row.id);
+      await businessCustomersApi.remove(row.id);
       setRows((current) => current.filter((item) => item.id !== row.id));
       setToast("Pelanggan bisnis berhasil dihapus.");
     } catch (err: any) {
-      setToast(formatErrorMessage(err, "Gagal menghapus pelanggan bisnis."));
+      setToast(err.response?.data?.message || "Gagal menghapus pelanggan bisnis.");
     }
   }
 
   async function handleToggleStatus(row: any) {
     const nextActive = String(row.status || "").toLowerCase() !== "active";
     const nextStatus = nextActive ? "active" : "nonactive";
-    setRows((current) => current.map((item) => (item.id === row.id ? { ...item, status: nextStatus } : item)));
+    setRows((current) => current.map((item) => item.id === row.id ? { ...item, status: nextStatus } : item));
     try {
-      await companyService.toggleStatus(row.id, nextActive);
+      await businessCustomersApi.update(row.id, { status: nextActive });
       setToast(`Status ${row.name} berhasil diubah.`);
     } catch (err: any) {
-      setRows((current) => current.map((item) => (item.id === row.id ? { ...item, status: row.status } : item)));
-      setToast(formatErrorMessage(err, "Gagal mengubah status pelanggan bisnis."));
+      setRows((current) => current.map((item) => item.id === row.id ? { ...item, status: row.status } : item));
+      setToast(err.response?.data?.message || "Gagal mengubah status pelanggan bisnis.");
     }
   }
 
@@ -625,43 +595,31 @@ export function CompaniesPage() {
         title="Pelanggan Bisnis"
         subtitle="Kelola data PT, CV, instansi, kantor, dan pelanggan enterprise."
         rightContent={
-          <Link
-            href="/users/bisnis/new"
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-bold text-white shadow-sm shadow-indigo-200 transition hover:bg-indigo-500"
-          >
+          <Link href="/users/bisnis/new" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-bold text-white shadow-sm shadow-indigo-200 transition hover:bg-indigo-500">
             <PlusCircle size={18} /> Bisnis Baru
           </Link>
         }
       />
       <Toast message={toast} />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <CompanyMetricCard icon={<Building2 size={22} />} label="Total Bisnis" value={String(stats.total)} accent="text-indigo-600" />
-        <CompanyMetricCard icon={<CheckCircle2 size={22} />} label="Bisnis Aktif" value={String(stats.active)} accent="text-emerald-600" />
-        <CompanyMetricCard icon={<MinusCircle size={22} />} label="Tidak Aktif" value={String(stats.inactive)} accent="text-amber-600" />
-        <CompanyMetricCard icon={<Users size={22} />} label="Memiliki PIC" value={String(stats.withPic)} accent="text-cyan-600" />
+        <CustomerMetricCard icon={<Building2 size={22} />} label="Total Bisnis" value={String(stats.total)} accent="text-indigo-600" />
+        <CustomerMetricCard icon={<CheckCircle2 size={22} />} label="Aktif" value={String(stats.active)} accent="text-blue-600" />
+        <CustomerMetricCard icon={<MinusCircle size={22} />} label="Tidak Aktif" value={String(stats.inactive)} accent="text-amber-600" />
+        <CustomerMetricCard icon={<Users size={22} />} label="Data PIC" value={String(stats.withPic)} accent="text-emerald-600" />
       </div>
 
       <section>
         <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-xl font-bold tracking-tight text-slate-950">Daftar Pelanggan Bisnis</h2>
-            <p className="mt-1 text-sm text-slate-500">Menampilkan {paginatedRows.length} dari {filteredRows.length} entitas bisnis.</p>
+            <p className="mt-1 text-sm text-slate-500">Menampilkan {paginatedRows.length} dari {filteredRows.length} pelanggan bisnis.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative w-full sm:w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Cari PT, CV, PIC..."
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
-              />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari..." className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100" />
             </div>
-            <select
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
-              className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700"
-            >
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700">
               <option value="all">Semua Status</option>
               <option value="active">Aktif</option>
               <option value="nonactive">Tidak Aktif</option>
@@ -669,41 +627,29 @@ export function CompaniesPage() {
             <button type="button" onClick={load} className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50" title="Refresh">
               <RefreshCw size={18} />
             </button>
+            <button type="button" className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50" title="Export">
+              <Upload size={18} />
+            </button>
             <div className="flex rounded-xl bg-slate-100 p-1">
-              <button
-                type="button"
-                onClick={() => setViewMode("list")}
-                className={"grid h-9 w-10 place-items-center rounded-lg " + (viewMode === "list" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500")}
-                title="Tampilan list"
-              >
-                <List size={18} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("grid")}
-                className={"grid h-9 w-10 place-items-center rounded-lg " + (viewMode === "grid" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500")}
-                title="Tampilan grid"
-              >
-                <Grid3X3 size={18} />
-              </button>
+              <button type="button" onClick={() => setViewMode("list")} className={"grid h-9 w-10 place-items-center rounded-lg " + (viewMode === "list" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500")} title="Tampilan list"><List size={18} /></button>
+              <button type="button" onClick={() => setViewMode("grid")} className={"grid h-9 w-10 place-items-center rounded-lg " + (viewMode === "grid" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500")} title="Tampilan grid"><Grid3X3 size={18} /></button>
             </div>
           </div>
         </div>
 
-        {loading ? (
-          <TableSkeleton columns={8} />
-        ) : viewMode === "list" ? (
+        {loading ? <TableSkeleton columns={8} /> : viewMode === "list" ? (
           <Card className="overflow-visible">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1180px] text-left text-sm">
                 <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-700">
                   <tr>
                     <CustomerTh>Status</CustomerTh>
-                    <CustomerTh>Kode</CustomerTh>
-                    <CustomerTh>Perusahaan / Instansi</CustomerTh>
-                    <CustomerTh>PIC</CustomerTh>
+                    <CustomerTh>ID Bisnis</CustomerTh>
+                    <CustomerTh>Nama</CustomerTh>
                     <CustomerTh>Kontak</CustomerTh>
-                    <CustomerTh>Paket Layanan</CustomerTh>
+                    <CustomerTh>Produk</CustomerTh>
+                    <CustomerTh>Jenis</CustomerTh>
+                    <CustomerTh>Aktivitas</CustomerTh>
                     <CustomerTh className="text-right">Aksi</CustomerTh>
                   </tr>
                 </thead>
@@ -711,53 +657,40 @@ export function CompaniesPage() {
                   {paginatedRows.map((row) => (
                     <tr key={row.id} className="bg-white hover:bg-slate-50/80">
                       <td className="px-4 py-5">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleStatus(row)}
-                          className={"relative h-7 w-14 rounded-full transition " + (String(row.status).toLowerCase() === "active" ? "bg-blue-600" : "bg-slate-300")}
-                          title="Ubah status"
-                        >
+                        <button type="button" onClick={() => handleToggleStatus(row)} className={"relative h-7 w-14 rounded-full transition " + (String(row.status).toLowerCase() === "active" ? "bg-blue-600" : "bg-slate-300")} title="Ubah status">
                           <span className={"absolute top-1 h-5 w-5 rounded-full bg-white shadow transition " + (String(row.status).toLowerCase() === "active" ? "left-8" : "left-1")} />
                         </button>
                       </td>
                       <td className="px-4 py-5">
-                        <Link href={`/users/bisnis/${row.id}`} className="font-bold text-indigo-600 hover:underline">
-                          {row.companyCode}
-                        </Link>
+                        <Link href={`/users/bisnis/${row.id}`} className="font-bold text-indigo-600 hover:underline">{row.companyCode || row.id.slice(0, 8)}</Link>
                       </td>
                       <td className="px-4 py-5">
                         <div className="flex items-center gap-3">
                           <CustomerAvatar name={row.name} code={row.companyCode} />
                           <div>
-                            <Link href={`/users/bisnis/${row.id}`} className="font-bold text-indigo-600 hover:underline">
-                              {row.name}
-                            </Link>
-                            <p className="mt-1 text-xs font-semibold text-slate-500">{[row.area, row.city].filter(Boolean).join("  |  ") || "-"}</p>
+                            <Link href={`/users/bisnis/${row.id}`} className="font-bold text-indigo-600 hover:underline">{row.name}</Link>
+                            <p className="mt-1 text-xs font-semibold text-slate-500">{[row.area, row.city].filter(Boolean).join("  |  ") || row.address || "-"}</p>
+                            <p className="mt-1 text-xs text-slate-400">PIC: {row.picName || "-"}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-5">
-                        <span className="font-semibold text-slate-800">{row.picName || "-"}</span>
-                      </td>
-                      <td className="px-4 py-5">
-                        <div className="space-y-1">
+                        <div className="space-y-2">
                           <PhonePill phone={row.phone} />
-                          {row.email && row.email !== "-" ? (
-                            <p className="flex items-center gap-1.5 text-xs text-slate-500">
-                              <Mail size={13} className="text-slate-400" /> {row.email}
-                            </p>
-                          ) : null}
+                          {row.email && row.email !== "-" ? <a href={`mailto:${row.email}`} className="flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-indigo-600"><Mail size={13} /> {row.email}</a> : null}
                         </div>
                       </td>
                       <td className="px-4 py-5">
                         <ProductPill name={row.packageName} price={row.packagePrice} />
                       </td>
+                      <td className="px-4 py-5">
+                        <TypePill type={row.businessType || "Bisnis/Enterprise"} />
+                      </td>
+                      <td className="px-4 py-5">
+                        <div className="font-bold text-slate-800">{row.lastActivity ? date(row.lastActivity) : "-"}</div>
+                      </td>
                       <td className="relative px-4 py-5 text-right">
-                        <button
-                          type="button"
-                          onClick={() => setOpenActionId(openActionId === row.id ? null : row.id)}
-                          className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
-                        >
+                        <button type="button" onClick={() => setOpenActionId(openActionId === row.id ? null : row.id)} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 hover:bg-slate-50">
                           <ListFilter size={17} /> Pilih Aksi <ChevronDown size={15} />
                         </button>
                         {openActionId === row.id ? (
@@ -768,9 +701,7 @@ export function CompaniesPage() {
                   ))}
                   {!paginatedRows.length ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-16 text-center text-sm font-semibold text-slate-500">
-                        Data pelanggan bisnis tidak ditemukan.
-                      </td>
+                      <td colSpan={8} className="px-4 py-16 text-center text-sm font-semibold text-slate-500">Data pelanggan bisnis tidak ditemukan.</td>
                     </tr>
                   ) : null}
                 </tbody>
@@ -786,26 +717,20 @@ export function CompaniesPage() {
                   <div className="flex items-center gap-3">
                     <CustomerAvatar name={row.name} code={row.companyCode} />
                     <div>
-                      <Link href={`/users/bisnis/${row.id}`} className="font-black text-indigo-600 hover:underline">
-                        {row.name}
-                      </Link>
+                      <Link href={`/users/bisnis/${row.id}`} className="font-black text-indigo-600 hover:underline">{row.name}</Link>
                       <p className="mt-1 text-xs font-semibold text-slate-500">{row.companyCode}</p>
                     </div>
                   </div>
                   <Badge value={row.status} />
                 </div>
                 <div className="mt-4 space-y-3">
-                  <p className="text-xs font-semibold text-slate-500">PIC: <strong className="text-slate-800">{row.picName || "-"}</strong></p>
                   <PhonePill phone={row.phone} />
                   <ProductPill name={row.packageName} price={row.packagePrice} />
+                  <TypePill type={row.businessType || "Bisnis/Enterprise"} />
                 </div>
                 <div className="mt-5 flex gap-2">
-                  <Link href={`/users/bisnis/${row.id}`} className="flex-1 rounded-lg bg-indigo-600 px-3 py-2 text-center text-sm font-bold text-white">
-                    Detail
-                  </Link>
-                  <Link href={`/users/bisnis/${row.id}/edit`} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700">
-                    Edit
-                  </Link>
+                  <Link href={`/users/bisnis/${row.id}`} className="flex-1 rounded-lg bg-indigo-600 px-3 py-2 text-center text-sm font-bold text-white">Detail</Link>
+                  <Link href={`/users/bisnis/${row.id}/edit`} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700">Edit</Link>
                 </div>
               </Card>
             ))}
@@ -819,165 +744,47 @@ export function CompaniesPage() {
   );
 }
 
-function CompanyMetricCard({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: string; accent: string }) {
-  return (
-    <Card className="bg-slate-100/80 p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-3xl font-black tracking-tight text-slate-900">{value}</p>
-          <p className="mt-3 text-sm font-semibold text-slate-600">{label}</p>
-        </div>
-        <div className={accent}>{icon}</div>
-      </div>
-    </Card>
-  );
-}
-
 export function PartnersPage() {
-  const [rows, setRows] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState("");
-
-  const load = () => {
-    setLoading(true);
-    setToast("");
-    partnerService
-      .getList()
-      .then((data) => setRows(data))
-      .catch((err) => {
-        setRows([]);
-        setToast(formatErrorMessage(err, "Gagal memuat data mitra/reseller."));
-      })
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  async function handleDelete(row: any) {
-    try {
-      await partnerService.delete(row.id);
-      setRows((current) => current.filter((item) => item.id !== row.id));
-      setToast("Mitra berhasil dihapus.");
-    } catch (err: any) {
-      setToast(formatErrorMessage(err, "Gagal menghapus mitra."));
-    }
-  }
-
+  const { rows, setRows, toast, setToast, loading } = useRows<any>("/partners?limit=5000");
   return (
     <div>
-      <PageHeader
-        title="Reseller & Mitra"
-        subtitle="Kelola akun reseller atau mitra sebagai channel penjualan MyRingNet."
-        actionHref="/users/mitra/new"
-        actionLabel="Tambah Reseller / Mitra"
-      />
+      <PageHeader title="Reseller & Mitra" subtitle="Kelola akun reseller atau mitra sebagai channel penjualan MyRingNet." actionHref="/users/mitra/new" actionLabel="Tambah Reseller / Mitra" />
       <Toast message={toast} />
-      {loading ? (
-        <TableSkeleton columns={6} />
-      ) : (
-        <DataTable
-          data={rows}
-          editBasePath="/users/mitra"
-          onDelete={handleDelete}
-          columns={[
-            {
-              key: "partnerCode",
-              header: "ID Mitra",
-              render: (row: any) => (
-                <Link href={`/users/mitra/${row.id}`} className="font-semibold text-indigo-600 hover:underline">
-                  {row.partnerCode || "-"}
-                </Link>
-              ),
-            },
-            {
-              key: "partnerType",
-              header: "Jenis",
-              render: (row: any) => <Badge value={row.partnerType === "reseller" ? "Reseller" : "Mitra"} />,
-            },
-            {
-              key: "name",
-              header: "Nama Mitra",
-              render: (row: any) => <span className="font-semibold text-slate-900">{row.name}</span>,
-            },
-            { key: "phone", header: "Kontak" },
-            { key: "email", header: "Email", render: (row: any) => row.email || "-" },
-            { key: "area", header: "Area" },
-            { key: "city", header: "Kota" },
-            { key: "status", header: "Status", render: (row: any) => <Badge value={row.status} /> },
-          ]}
-        />
-      )}
+      {loading ? <TableSkeleton columns={6} /> :
+      <DataTable data={rows as any[]} editBasePath="/users/mitra" onDelete={(row) => deleteRow("/partners", row, setRows as any, setToast, "Mitra berhasil dihapus.")}
+        columns={[
+          { key: "partnerCode", header: "ID Mitra", render: (row: any) => <Link href={`/users/mitra/${row.id}`} className="font-semibold text-indigo-600 hover:underline">{row.partnerCode || "-"}</Link> },
+          { key: "partnerType", header: "Jenis", render: (row: any) => <Badge value={row.partnerType === "reseller" ? "Reseller" : "Mitra"} /> },
+          { key: "name", header: "Nama Mitra", render: (row: any) => <span className="font-semibold text-slate-900">{row.name}</span> },
+          { key: "phone", header: "Kontak" },
+          { key: "email", header: "Email", render: (row: any) => row.email || "-" },
+          { key: "area", header: "Area" },
+          { key: "city", header: "Kota" },
+          { key: "status", header: "Status", render: (row: any) => <Badge value={row.status} /> },
+        ]}
+      />
+      }
     </div>
   );
 }
 
 export function LeadsPage() {
-  const [rows, setRows] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState("");
-
-  const load = () => {
-    setLoading(true);
-    setToast("");
-    leadService
-      .getList()
-      .then((data) => setRows(data))
-      .catch((err) => {
-        setRows([]);
-        setToast(formatErrorMessage(err, "Gagal memuat data leads marketing."));
-      })
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  async function handleDelete(row: any) {
-    try {
-      await leadService.delete(row.id);
-      setRows((current) => current.filter((item) => item.id !== row.id));
-      setToast("Lead berhasil dihapus.");
-    } catch (err: any) {
-      setToast(formatErrorMessage(err, "Gagal menghapus lead."));
-    }
-  }
-
+  const { rows, setRows, toast, setToast, loading } = useRows<any>("/marketing?limit=5000");
   return (
     <div>
-      <PageHeader
-        title="Leads"
-        subtitle="Pipeline marketing dari prospect sampai deal/lost."
-        actionHref="/marketing/leads/new"
-        actionLabel="Tambah Lead"
-      />
+      <PageHeader title="Leads" subtitle="Pipeline marketing dari prospect sampai deal/lost." actionHref="/marketing/leads/new" actionLabel="Tambah Lead" />
       <Toast message={toast} />
-      {loading ? (
-        <TableSkeleton columns={6} />
-      ) : (
-        <DataTable
-          data={rows}
-          editBasePath="/marketing/leads"
-          onDelete={handleDelete}
-          columns={[
-            {
-              key: "customerName",
-              header: "Nama Lead",
-              render: (row: any) => <span className="font-semibold text-slate-900">{row.customerName || row.name}</span>,
-            },
-            {
-              key: "partner",
-              header: "Mitra",
-              render: (row: any) => row.partner?.name || row.partnerName || "-",
-            },
-            { key: "phone", header: "Kontak" },
-            { key: "status", header: "Status", render: (row: any) => <Badge value={row.status} /> },
-            { key: "createdAt", header: "Dibuat", render: (row: any) => date(row.createdAt) },
-          ]}
-        />
-      )}
+      {loading ? <TableSkeleton columns={6} /> :
+      <DataTable data={rows as any[]} editBasePath="/marketing/leads" onDelete={(row) => deleteRow("/marketing", row, setRows as any, setToast, "Lead berhasil dihapus.")}
+        columns={[
+          { key: "customerName", header: "Nama Lead", render: (row: any) => <span className="font-semibold text-slate-900">{row.customerName || row.name}</span> },
+          { key: "partner", header: "Mitra", render: (row: any) => row.partner?.name || row.partnerName || "-" },
+          { key: "phone", header: "Kontak" },
+          { key: "status", header: "Status", render: (row: any) => <Badge value={row.status} /> },
+          { key: "createdAt", header: "Dibuat", render: (row: any) => date(row.createdAt) },
+        ]}
+      />
+      }
     </div>
   );
 }
@@ -1044,7 +851,7 @@ function AddInvoiceMenu() {
                 className="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-indigo-50 hover:text-indigo-600"
                 onClick={() => setOpen(false)}
               >
-                <Icon size={18} className="text-indigo-500" />
+                <Icon size={18} />
                 {item.label}
               </Link>
             );
@@ -1055,43 +862,70 @@ function AddInvoiceMenu() {
   );
 }
 
-function filterInvoices(rows: any[], query: string) {
-  const q = query.trim().toLowerCase();
-  if (!q) return rows;
-  return rows.filter((row) =>
-    [
-      row.noFaktur,
-      row.noInvoice,
-      row.customerName,
-      row.customer?.name,
-      row.customer?.customerCode,
-      row.serviceType,
-      row.invoiceType,
-      row.invoiceName,
-      row.periodMonth ? monthName(row.periodMonth) : "",
-    ].some((item) => String(item || "").toLowerCase().includes(q))
-  );
+function filterInvoices(rows: any[], search: string) {
+  const keyword = search.trim().toLowerCase();
+  if (!keyword) return rows;
+  return rows.filter((row) => [
+    row.noFaktur,
+    row.noInvoice,
+    row.customerName,
+    row.serviceType,
+    row.customer?.customerCode,
+    row.customer?.name,
+  ].some((value) => String(value || "").toLowerCase().includes(keyword)));
+}
+
+const invoiceMonthMap: Record<string, number> = {
+  januari: 1,
+  februari: 2,
+  maret: 3,
+  april: 4,
+  mei: 5,
+  juni: 6,
+  juli: 7,
+  agustus: 8,
+  september: 9,
+  oktober: 10,
+  november: 11,
+  desember: 12,
+};
+
+function invoicePeriodValue(row: any) {
+  const text = String([row.invoiceName, row.noFaktur, row.noInvoice].filter(Boolean).join(" "));
+  const textLower = text.toLowerCase();
+  const textYear = Number(text.match(/20\d{2}/)?.[0] || 0);
+  const textMonth = Object.entries(invoiceMonthMap).find(([name]) => textLower.includes(name))?.[1] || 0;
+  if (textYear && textMonth) return textYear * 100 + textMonth;
+
+  const invoiceNumberPeriod = String(row.noFaktur || row.noInvoice || "").match(/\/(0?[1-9]|1[0-2])\/(20\d{2})/);
+  if (invoiceNumberPeriod) return Number(invoiceNumberPeriod[2]) * 100 + Number(invoiceNumberPeriod[1]);
+
+  const fieldYear = Number(row.periodYear || row.period_year || 0);
+  const fieldMonth = Number(row.periodMonth || row.period_month || 0);
+  if (fieldYear && fieldMonth) return fieldYear * 100 + fieldMonth;
+
+  return 0;
 }
 
 function sortInvoicesByLatest(rows: any[]) {
   return [...rows].sort((a, b) => {
-    const timeA = new Date(a.createdAt || a.dueDate || 0).getTime();
-    const timeB = new Date(b.createdAt || b.dueDate || 0).getTime();
-    return timeB - timeA;
+    const periodDiff = invoicePeriodValue(b) - invoicePeriodValue(a);
+    if (periodDiff !== 0) return periodDiff;
+    const createdDiff = new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    if (createdDiff !== 0) return createdDiff;
+    return String(b.noFaktur || b.noInvoice || "").localeCompare(String(a.noFaktur || a.noInvoice || ""));
   });
 }
 
 function pageNumbers(page: number, totalPages: number) {
-  const start = Math.max(1, page - 2);
+  const start = Math.max(1, Math.min(page - 2, totalPages - 4));
   const end = Math.min(totalPages, start + 4);
   return Array.from({ length: end - start + 1 }, (_, index) => start + index);
 }
 
 export function InternetServicesPage() {
   const pageSize = 10;
-  const [rows, setRows] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState("");
+  const { rows, setRows, toast, setToast, loading } = useRows<any>("/internet-services?limit=5000&sort=latest");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [now, setNow] = useState<Date | null>(null);
   const [search, setSearch] = useState("");
@@ -1100,33 +934,17 @@ export function InternetServicesPage() {
   const user = useAuthStore((state) => state.user);
   const canDeleteInvoice = user?.role === "super_admin";
 
-  const load = () => {
-    setLoading(true);
-    setToast("");
-    internetServiceService
-      .getList()
-      .then((data) => setRows(data))
-      .catch((err) => {
-        setRows([]);
-        setToast(formatErrorMessage(err, "Gagal memuat faktur & tagihan dari server."));
-      })
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    load();
-    setNow(new Date());
-  }, []);
-
   const filteredRows = useMemo(() => sortInvoicesByLatest(filterInvoices(rows, search)), [rows, search]);
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
   const visibleRows = filteredRows.slice((page - 1) * pageSize, page * pageSize);
   const showingStart = filteredRows.length === 0 ? 0 : (page - 1) * pageSize + 1;
   const showingEnd = Math.min(page * pageSize, filteredRows.length);
-  const tableHeaders = canDeleteInvoice
-    ? ["Status", "Nomor Faktur", "Jenis", "Tujuan", "Total Tagihan", "Nama Faktur", "Dukungan Pembayaran", "Aksi"]
-    : ["Status", "Nomor Faktur", "Jenis", "Tujuan", "Total Tagihan", "Nama Faktur", "Dukungan Pembayaran"];
+  const tableHeaders = canDeleteInvoice ? ["Status", "Nomor Faktur", "Jenis", "Tujuan", "Total Tagihan", "Nama Faktur", "Dukungan Pembayaran", "Aksi"] : ["Status", "Nomor Faktur", "Jenis", "Tujuan", "Total Tagihan", "Nama Faktur", "Dukungan Pembayaran"];
   const detailColSpan = tableHeaders.length;
+
+  useEffect(() => {
+    setNow(new Date());
+  }, []);
 
   useEffect(() => {
     setPage(1);
@@ -1136,16 +954,6 @@ export function InternetServicesPage() {
   useEffect(() => {
     setPage((current) => Math.min(current, totalPages));
   }, [totalPages]);
-
-  async function executeDelete(target: any) {
-    try {
-      await internetServiceService.delete(target.id);
-      setRows((current) => current.filter((item) => item.id !== target.id));
-      setToast("Faktur berhasil dihapus.");
-    } catch (err: any) {
-      setToast(formatErrorMessage(err, "Gagal menghapus faktur."));
-    }
-  }
 
   return (
     <div>
@@ -1166,19 +974,13 @@ export function InternetServicesPage() {
               Faktur <span className="font-bold text-slate-800">{deleteConfirm.noFaktur || deleteConfirm.noInvoice}</span> akan dihapus permanen. Aksi ini hanya tersedia untuk superadmin.
             </p>
             <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setDeleteConfirm(null)}
-                className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-bold text-slate-600 hover:bg-slate-50"
-              >
-                Batal
-              </button>
+              <button type="button" onClick={() => setDeleteConfirm(null)} className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-bold text-slate-600 hover:bg-slate-50">Batal</button>
               <button
                 type="button"
                 onClick={async () => {
                   const target = deleteConfirm;
                   setDeleteConfirm(null);
-                  await executeDelete(target);
+                  await deleteRow("/internet-services", target, setRows as any, setToast, "Faktur berhasil dihapus.");
                 }}
                 className="h-10 rounded-lg bg-rose-500 px-4 text-sm font-bold text-white shadow-sm shadow-rose-100 hover:bg-rose-600"
               >
@@ -1212,7 +1014,7 @@ export function InternetServicesPage() {
               <button className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600" type="button" title="Filter">
                 <Filter size={16} /> Filter
               </button>
-              <button onClick={load} className="grid h-10 w-10 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-indigo-200 hover:text-indigo-600" type="button" title="Refresh">
+              <button className="grid h-10 w-10 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-indigo-200 hover:text-indigo-600" type="button" title="Refresh">
                 <RefreshCw size={16} />
               </button>
             </div>
@@ -1242,14 +1044,10 @@ export function InternetServicesPage() {
                           </button>
                         </td>
                         <td className="border-b border-slate-100 px-4 py-4 font-bold">
-                          <Link className="text-indigo-600 hover:underline" href={"/internet-services/" + row.id}>
-                            {row.noFaktur || row.noInvoice}
-                          </Link>
+                          <Link className="text-indigo-600 hover:underline" href={"/internet-services/" + row.id}>{row.noFaktur || row.noInvoice}</Link>
                         </td>
                         <td className="border-b border-slate-100 px-4 py-4">
-                          <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700 ring-1 ring-indigo-200">
-                            {row.invoiceType || "Pelanggan"}
-                          </span>
+                          <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700 ring-1 ring-indigo-200">{row.invoiceType || "Pelanggan"}</span>
                         </td>
                         <td className="border-b border-slate-100 px-4 py-4 font-semibold">{invoicePurpose(row)}</td>
                         <td className="border-b border-slate-100 px-4 py-4 font-semibold">{currency(row.amount)}</td>

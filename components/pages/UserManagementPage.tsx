@@ -2,14 +2,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/set-state-in-effect */
 
-import { Badge, Card, DataTable, PageHeader, SelectInput, TableSkeleton, TextArea, TextInput } from "@/components/ui/AdminUI";
+import { Badge, Card, DataTable, PageHeader, SelectInput, StatSkeleton, TableSkeleton, TextArea, TextInput } from "@/components/ui/AdminUI";
 import { date } from "@/lib/format";
-import { formatErrorMessage } from "@/lib/error";
-import { adminService } from "@/services";
 import { useAuthStore } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, BriefcaseBusiness, KeyRound, Power, Save, ShieldAlert, ShieldCheck, UserCog, UserPlus, Users } from "lucide-react";
+import { ArrowLeft, BriefcaseBusiness, KeyRound, Mail, Phone, Power, Save, ShieldAlert, ShieldCheck, UserCog, UserPlus, Users } from "lucide-react";
+import { usersApi } from "@/src/features/users/api";
 
 const panelRoleOptions = [
   { label: "Super Admin", value: "super_admin" },
@@ -89,20 +88,64 @@ export function UserManagementPage() {
     setLoading(true);
     setToast("");
 
-    adminService
-      .getList()
-      .then((data) => {
-        const visibleRows = isAdmin
-          ? data.filter((row: any) => row.id === currentUser?.id || row.email === currentUser?.email)
-          : data;
-        setRows(visibleRows);
+    // Try DEKASIMAL API POST /admin/list first, fallback to GET /users
+    usersApi.listAdmins({
+      pageSize: 100,
+      pageIndex: 0,
+      sorting: [],
+      columnFilters: [],
+      globalFilter: "",
+      columnVisibility: {
+        select: true,
+        admin_id: true,
+        name: true,
+        status: true,
+        division: true,
+        position: true,
+        last_login: true,
+      },
+    })
+      .then((res) => {
+        const rawData = res.data?.data?.data || res.data?.data || res.data?.rows || res.data?.list || [];
+        const normalized = rawData.map((item: any) => ({
+          id: item.admin_id || item.id,
+          adminId: item.admin_id || item.adminId,
+          name: item.name || item.username,
+          email: item.email || item.username,
+          username: item.username,
+          role: item.division || item.position || (item.super ? "super_admin" : "admin"),
+          position: item.position || "-",
+          division: item.division || "-",
+          status: item.status === true || item.status === "active" ? "active" : "nonactive",
+          createdAt: item.created_at || item.createdAt || new Date().toISOString(),
+          lastLogin: item.last_login || "-",
+        }));
+        setRows(normalized);
       })
-      .catch((err) => {
-        setRows([]);
-        setToast(formatErrorMessage(err, "Gagal memuat data administrator dari backend."));
+      .catch(() => {
+        // Fallback to legacy GET /users
+        const params = new URLSearchParams({ limit: "100" });
+        if (!isAdmin) {
+          if (roleFilter === "panel") params.set("excludeRole", "pelanggan");
+          else if (roleFilter !== "all") params.set("role", roleFilter);
+          if (statusFilter !== "all") params.set("status", statusFilter);
+        }
+
+        usersApi.list(params)
+          .then((res) => {
+            const data = Array.isArray(res.data.data) ? res.data.data : [];
+            const visibleRows = isAdmin
+              ? data.filter((row: any) => row.id === currentUser?.id || row.email === currentUser?.email)
+              : data;
+            setRows(visibleRows);
+          })
+          .catch(() => {
+            setRows([]);
+            setToast("Gagal memuat data administrator dari backend.");
+          });
       })
       .finally(() => setLoading(false));
-  }, [currentUser?.email, currentUser?.id, isAdmin]);
+  }, [currentUser?.email, currentUser?.id, isAdmin, roleFilter, statusFilter]);
 
   useEffect(() => {
     load();
@@ -125,17 +168,21 @@ export function UserManagementPage() {
     }
 
     try {
-      await adminService.deleteUser(row.id);
+      try {
+        await usersApi.rawDelete(row.id);
+      } catch {
+        await usersApi.remove(row.id);
+      }
       setRows((current) => current.filter((item) => item.id !== row.id));
       setToast("Administrator berhasil dihapus.");
     } catch (error: any) {
-      setToast(formatErrorMessage(error, "Gagal menghapus administrator."));
+      setToast(error.response?.data?.message || "Gagal menghapus administrator.");
     }
   }
 
   async function handleToggleStatus(row: any) {
     try {
-      await adminService.toggleStatus(row.id);
+      await usersApi.changeStatus(row.id);
       setRows((current) =>
         current.map((item) =>
           item.id === row.id
@@ -144,155 +191,98 @@ export function UserManagementPage() {
         )
       );
       setToast("Status administrator berhasil diperbarui.");
-    } catch (err: any) {
-      setToast(formatErrorMessage(err, "Gagal memperbarui status administrator."));
+    } catch {
+      setToast("Gagal memperbarui status administrator.");
     }
   }
+
 
   return (
     <div>
       <PageHeader
-        title="Pengguna Panel"
-        subtitle={isAdmin ? "Kelola dan tinjau akun administrator Anda." : "Kelola akun pengguna internal, role super admin, admin operasional, dan status akses panel."}
-        actionHref={isAdmin ? undefined : "/users/admin/create"}
+        title="User Management"
+        subtitle={isAdmin ? "Profil akun admin yang sedang login." : "Kelola pendaftaran akun, role, status, dan akses panel admin."}
+        actionHref={isAdmin ? undefined : "/users/new"}
         actionLabel={isAdmin ? undefined : "Tambah User"}
       />
 
       {toast ? (
-        <div className="mb-5 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-700">
+        <div className="mb-4 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-700">
           {toast}
         </div>
       ) : null}
 
-      <div className="mb-6 grid gap-4 md:grid-cols-3">
-        <Card className="p-5">
-          <div className="flex items-center gap-3">
-            <div className="grid h-11 w-11 place-items-center rounded-xl bg-indigo-50 text-indigo-600">
-              <Users size={22} />
-            </div>
-            <div>
-              <p className="text-xs font-black uppercase tracking-wider text-slate-400">Total Akun</p>
-              <p className="text-2xl font-black text-slate-950">{rows.length}</p>
-            </div>
+      {!isAdmin ? <Card className="mb-6 p-4">
+        <div className="grid gap-4 xl:grid-cols-[1fr_260px_220px] xl:items-end">
+          <div>
+            <p className="text-sm font-bold text-slate-900">Filter akun</p>
+            <p className="mt-1 max-w-2xl text-sm text-slate-500">
+              Default halaman ini menampilkan akun yang relevan untuk akses panel. Data pelanggan massal tetap lebih rapi dikelola di menu Pelanggan.
+            </p>
           </div>
-        </Card>
-        <Card className="p-5">
-          <div className="flex items-center gap-3">
-            <div className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-50 text-emerald-600">
-              <ShieldCheck size={22} />
-            </div>
-            <div>
-              <p className="text-xs font-black uppercase tracking-wider text-slate-400">Akun Aktif</p>
-              <p className="text-2xl font-black text-slate-950">{stats.active}</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-5">
-          <div className="flex items-center gap-3">
-            <div className="grid h-11 w-11 place-items-center rounded-xl bg-violet-50 text-violet-600">
-              <ShieldAlert size={22} />
-            </div>
-            <div>
-              <p className="text-xs font-black uppercase tracking-wider text-slate-400">Super Admin</p>
-              <p className="text-2xl font-black text-slate-950">{stats.superAdmins}</p>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      <Card className="p-5">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="w-48">
-              <SelectInput
-                label="Role"
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                options={managementRoleOptions}
-              />
-            </div>
-            <div className="w-40">
-              <SelectInput
-                label="Status"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                options={managementStatusOptions}
-              />
-            </div>
-          </div>
+          <SelectInput label="Role" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} options={managementRoleOptions} />
+          <SelectInput label="Status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} options={managementStatusOptions} />
         </div>
+      </Card> : null}
 
-        {loading ? (
-          <TableSkeleton columns={7} />
-        ) : (
-          <DataTable
-            data={rows}
-            editBasePath="/users"
-            onDelete={isAdmin ? undefined : handleDelete}
-            columns={[
-              {
-                key: "name",
-                header: "Nama Pengguna",
-                render: (row) => (
-                  <div>
-                    <span className="font-bold text-slate-900">{row.name}</span>
-                    <p className="text-xs text-slate-400">{row.email || row.username || "-"}</p>
-                  </div>
-                ),
-              },
-              { key: "username", header: "Username", render: (row) => row.username || "-" },
-              {
-                key: "role",
-                header: "Role / Divisi",
-                render: (row) => (
-                  <span className="rounded-md bg-indigo-50 px-2 py-1 text-xs font-bold text-indigo-700">
-                    {roleLabel(row.role || row.position)}
-                  </span>
-                ),
-              },
-              { key: "division", header: "Divisi", render: (row) => row.division || "-" },
-              { key: "lastLogin", header: "Terakhir Login", render: (row) => (row.lastLogin ? date(row.lastLogin) : "-") },
-              { key: "status", header: "Status", render: (row) => <Badge value={row.status || "active"} /> },
-            ]}
-            extraActions={
-              isAdmin
-                ? undefined
-                : (row) => (
-                    <button
-                      type="button"
-                      onClick={() => handleToggleStatus(row)}
-                      className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 text-slate-600 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
-                      title="Ubah status akun"
-                    >
-                      <Power size={14} />
-                    </button>
-                  )
-            }
-          />
-        )}
-      </Card>
+      {loading ? <StatSkeleton count={isAdmin ? 2 : 3} /> : <div className={"mb-6 grid gap-4 " + (isAdmin ? "md:grid-cols-2" : "md:grid-cols-3")}>
+        <Card className="p-5">
+          <div className="flex items-center gap-3">
+            <div className="grid h-11 w-11 place-items-center rounded-xl bg-indigo-500 text-white"><Users size={20} /></div>
+            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">{isAdmin ? "Profil Ditampilkan" : "Akun Ditampilkan"}</p><p className="text-2xl font-black">{rows.length}</p></div>
+          </div>
+        </Card>
+        <Card className="p-5">
+          <div className="flex items-center gap-3">
+            <div className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-500 text-white"><ShieldCheck size={20} /></div>
+            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">User Aktif</p><p className="text-2xl font-black">{stats.active}</p></div>
+          </div>
+        </Card>
+        {!isAdmin ? <Card className="p-5">
+          <div className="flex items-center gap-3">
+            <div className="grid h-11 w-11 place-items-center rounded-xl bg-rose-500 text-white"><ShieldAlert size={20} /></div>
+            <div><p className="text-xs font-bold uppercase tracking-wide text-slate-400">Super Admin</p><p className="text-2xl font-black">{stats.superAdmins}</p></div>
+          </div>
+        </Card> : null}
+      </div>}
+
+      {loading ? <TableSkeleton columns={7} /> :
+      <DataTable
+        data={rows}
+        editBasePath="/users"
+        onDelete={handleDelete}
+        canDelete={(row: any) => !isAdmin && row.role !== "super_admin"}
+        extraActions={(row: any) => !isAdmin && row.role !== "super_admin" ? (
+          <button
+            type="button"
+            onClick={() => handleToggleStatus(row)}
+            className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 text-slate-600 hover:border-amber-200 hover:bg-amber-50 hover:text-amber-600"
+            title={row.status === "active" ? "Nonaktifkan user" : "Aktifkan user"}
+          >
+            <Power size={15} />
+          </button>
+        ) : null}
+        searchPlaceholder="Cari nama, email, role..."
+        columns={[
+          { key: "name", header: "Nama", render: (row: any) => <span className="font-semibold text-slate-900">{row.name}</span> },
+          { key: "email", header: "Email" },
+          { key: "role", header: "Role", render: (row: any) => <Badge value={roleLabel(row.role)} /> },
+          { key: "status", header: "Status", render: (row: any) => <Badge value={row.status || "active"} /> },
+          { key: "createdAt", header: "Dibuat", render: (row: any) => date(row.createdAt) },
+          { key: "guard", header: "Proteksi", render: (row: any) => row.role === "super_admin" ? <span className="text-xs font-bold text-rose-600">Tidak bisa dihapus</span> : <span className="text-xs text-slate-400">Standar</span> },
+        ]}
+      />
+      }
     </div>
   );
 }
 
-export function UserFormPage({
-  edit = false,
-  id,
-  backHref: customBackHref,
-  defaultRole,
-}: {
-  edit?: boolean;
-  id?: string;
-  backHref?: string;
-  defaultRole?: string;
-}) {
+export function UserFormPage({ edit = false, id, backHref = "/users", defaultRole = "admin" }: { edit?: boolean; id?: string; backHref?: string; defaultRole?: string }) {
   const router = useRouter();
   const currentUser = useAuthStore((state) => state.user);
   const isAdmin = currentUser?.role === "admin";
-  const backHref = customBackHref || (isAdmin ? "/users" : "/users/admin");
-
+  const [loading, setLoading] = useState(edit);
   const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(Boolean(edit && id));
   const [error, setError] = useState("");
   const [form, setForm] = useState({
     name: "",
@@ -301,21 +291,20 @@ export function UserFormPage({
     phone: "",
     address: "",
     division: defaultRole === "super_admin" ? "Management" : "Operational",
-    position: defaultRole || "admin",
+    position: "",
     password: "",
     passwordConfirmation: "",
-    role: defaultRole || "admin",
+    role: defaultRole,
     status: "active",
   });
 
   useEffect(() => {
     if (!edit || !id) return;
-
-    adminService
-      .getDetail(id)
-      .then((raw) => {
-        if (!raw) return;
-        const user = raw.data || raw;
+    
+    // Try GET /admin/read/{id} first, fallback to /users/{id}
+    usersApi.rawDetail(id)
+      .then((res) => {
+        const user = res.data.data;
         setForm({
           name: user.name || user.username || "",
           username: user.username || "",
@@ -330,8 +319,27 @@ export function UserFormPage({
           status: user.status === true || user.status === "active" ? "active" : "nonactive",
         });
       })
-      .catch((err) => {
-        setError(formatErrorMessage(err, "Gagal memuat data administrator dari backend."));
+      .catch(() => {
+        usersApi.detail(id)
+          .then((res) => {
+            const user = res.data.data;
+            setForm({
+              name: user.name || "",
+              username: user.username || user.email?.split("@")[0] || "",
+              email: user.email || "",
+              phone: user.phone || "",
+              address: user.address || "",
+              division: user.division || "Operational",
+              position: user.position || user.role || "admin",
+              password: "",
+              passwordConfirmation: "",
+              role: user.role || "admin",
+              status: user.status || "active",
+            });
+          })
+          .catch(() => {
+            setError("Gagal memuat data administrator dari backend.");
+          });
       })
       .finally(() => setLoading(false));
   }, [edit, id]);
@@ -370,18 +378,40 @@ export function UserFormPage({
 
     try {
       setSaving(true);
-      if (edit && id) {
-        await adminService.update(id, payload);
+      if (edit) {
+        if (!id) throw new Error("ID user tidak ditemukan.");
+        try {
+          await usersApi.rawUpdate({ selectedAdminId: id, ...payload });
+        } catch {
+          await usersApi.update(id, { ...form });
+        }
       } else {
-        await adminService.create(payload);
+        try {
+          await usersApi.rawCreate(payload);
+        } catch {
+          const legacyPayload = {
+            name: form.name,
+            username: form.username,
+            email: form.email,
+            phone: form.phone,
+            address: form.address,
+            division: form.division,
+            position: form.position,
+            password: form.password,
+            role: form.role,
+            status: form.status,
+          };
+          await usersApi.createAdmin(legacyPayload);
+        }
       }
       router.push(backHref);
-    } catch (err: any) {
-      setError(formatErrorMessage(err, "Gagal menyimpan data administrator."));
+    } catch (error: any) {
+      setError(error.response?.data?.message || "Gagal menyimpan data administrator.");
     } finally {
       setSaving(false);
     }
   }
+
 
   if (loading) {
     return <Card className="p-8 text-sm text-slate-500">Memuat data user...</Card>;
@@ -394,12 +424,8 @@ export function UserFormPage({
     <div>
       <PageHeader
         title={edit ? "Edit User" : "Tambah User"}
-        subtitle={
-          isAdminProfileForm
-            ? "Admin hanya dapat memperbarui nama, email, dan password akun sendiri."
-            : "Lengkapi identitas, akses login, divisi, dan status akun panel."
-        }
-        rightContent={
+        subtitle={isAdminProfileForm ? "Admin hanya dapat memperbarui nama, email, dan password akun sendiri." : "Lengkapi identitas, akses login, divisi, dan status akun panel."}
+        rightContent={(
           <button
             type="button"
             onClick={() => router.push(backHref)}
@@ -407,7 +433,7 @@ export function UserFormPage({
           >
             <ArrowLeft size={16} /> Kembali
           </button>
-        }
+        )}
       />
 
       <div className="mb-6 grid gap-4 lg:grid-cols-3">
@@ -425,75 +451,81 @@ export function UserFormPage({
           </div>
         </Card>
         <Card className="p-5">
-          <p className="text-xs font-black uppercase tracking-wider text-slate-400">Hak Akses Role</p>
-          <p className="mt-1 text-sm font-bold text-slate-900">
-            {form.role === "super_admin" ? "Super Admin (Akses Penuh)" : "Admin Operasional"}
-          </p>
-          <p className="mt-2 text-xs leading-5 text-slate-500">
-            {form.role === "super_admin"
-              ? "Dapat mengelola user panel, dokumen legalitas super, dan seluruh konfigurasi sistem."
-              : "Dapat mengelola data operasional harian, pelanggan, faktur, dan tiket support."}
-          </p>
+          <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Status Form</p>
+          <div className="mt-3 flex items-center gap-3">
+            <Badge value={edit ? "Edit Data" : "User Baru"} />
+            <Badge value={form.status === "active" ? "Aktif" : "Nonaktif"} />
+          </div>
+          <p className="mt-4 text-xs leading-5 text-slate-500">Password hanya dikirim saat diisi. Untuk edit user, kosongkan password jika tidak ingin mengganti.</p>
         </Card>
       </div>
 
-      <Card className="p-6">
-        {error ? (
-          <div className="mb-6 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
-            {error}
+      <div>
+        {error ? <div className="mb-5 rounded-lg bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div> : null}
+        {isProtectedSuperAdmin ? (
+          <div className="mb-5 flex gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <ShieldAlert className="mt-0.5 shrink-0" size={18} />
+            <p><strong>Super admin dilindungi.</strong> Role tidak bisa diturunkan dan akun ini tidak bisa dihapus.</p>
           </div>
         ) : null}
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            submit();
-          }}
-          className="space-y-6"
-        >
-          <UserFormSection icon={<UserCog size={20} />} title="Identitas Administrator" description="Nama lengkap dan kontak penanggung jawab akun.">
-            <TextInput label="Nama Lengkap" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nama admin" required />
-            <TextInput label="Username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} placeholder="username" required disabled={Boolean(isAdminProfileForm)} />
-            <TextInput label="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="admin@domain.com" required />
-            <TextInput label="Nomor Telepon" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="08xxxxxxxxxx" />
+        <form onSubmit={(event) => { event.preventDefault(); submit(); }} className="space-y-5">
+          <UserFormSection
+            icon={<UserCog size={20} />}
+            title="Informasi Pengguna"
+            description="Data utama yang tampil di tabel user management."
+          >
+            <TextInput label="Nama Lengkap" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Contoh: Admin Operasional" />
+            <TextInput label="Email" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value, username: form.username || event.target.value.split("@")[0] })} placeholder="admin@ringnet.com" />
+            <TextInput label="No. Telepon" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} placeholder="08xxxxxxxxxx" />
+            <TextInput label="Username" value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} placeholder="Contoh: admin.operasional" />
             <div className="lg:col-span-2">
-              <TextArea label="Alamat" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Alamat lengkap (opsional)" />
+              <TextArea label="Alamat" value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} placeholder="Alamat domisili atau kantor user" />
             </div>
           </UserFormSection>
 
-          <UserFormSection icon={<KeyRound size={20} />} title="Kredensial Login" description={edit ? "Kosongkan jika tidak ingin mengubah kata sandi." : "Password awal untuk login ke panel."}>
-            <TextInput label={edit ? "Password Baru (Opsional)" : "Password"} type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="••••••••" required={!edit} />
-            <TextInput label="Konfirmasi Password" type="password" value={form.passwordConfirmation} onChange={(e) => setForm({ ...form, passwordConfirmation: e.target.value })} placeholder="••••••••" required={Boolean(form.password)} />
+          <UserFormSection
+            icon={<BriefcaseBusiness size={20} />}
+            title="Divisi & Hak Akses"
+            description="Atur divisi kerja, jabatan, role akses, dan status akun."
+          >
+            <SelectInput label="Divisi" value={form.division} disabled={isAdminProfileForm} onChange={(event) => setForm({ ...form, division: event.target.value })} options={divisionOptions} />
+            <TextInput label="Posisi / Jabatan" value={form.position} disabled={isAdminProfileForm} onChange={(event) => setForm({ ...form, position: event.target.value })} placeholder="Contoh: Staff NOC" />
+            <SelectInput label="Role Akses Panel" value={form.role} disabled={isProtectedSuperAdmin || isAdminProfileForm} onChange={(event) => setForm({ ...form, role: event.target.value, division: event.target.value === "super_admin" ? "Management" : form.division })} options={panelRoleOptions} />
+            <SelectInput label="Status Akun" value={form.status} disabled={isAdminProfileForm} onChange={(event) => setForm({ ...form, status: event.target.value })} options={statusOptions} />
           </UserFormSection>
 
-          {!isAdminProfileForm ? (
-            <UserFormSection icon={<BriefcaseBusiness size={20} />} title="Hak Akses & Penugasan" description="Tentukan role, divisi kerja, dan status aktif akun panel.">
-              <SelectInput label="Role Akses" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} options={panelRoleOptions} disabled={isProtectedSuperAdmin} />
-              <SelectInput label="Divisi" value={form.division} onChange={(e) => setForm({ ...form, division: e.target.value })} options={divisionOptions} />
-              <SelectInput label="Status Akun" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} options={statusOptions} disabled={isProtectedSuperAdmin} />
-            </UserFormSection>
-          ) : null}
+          <UserFormSection
+            icon={<KeyRound size={20} />}
+            title="Keamanan Login"
+            description="Gunakan password kuat untuk akun baru atau saat mengganti password."
+          >
+            <TextInput label={edit ? "Password Baru (opsional)" : "Password"} type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} placeholder={edit ? "Kosongkan jika tidak diubah" : "Masukkan password"} />
+            <TextInput label="Konfirmasi Password" type="password" value={form.passwordConfirmation} onChange={(event) => setForm({ ...form, passwordConfirmation: event.target.value })} placeholder={edit ? "Isi jika mengubah password" : "Ulangi password"} />
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 lg:col-span-2">
+              <p className="font-bold text-slate-900">Ringkasan akun</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <span className="inline-flex items-center gap-2"><Mail size={16} className="text-slate-400" /> {form.email || "Email belum diisi"}</span>
+                <span className="inline-flex items-center gap-2"><Phone size={16} className="text-slate-400" /> {form.phone || "Telepon belum diisi"}</span>
+              </div>
+            </div>
+          </UserFormSection>
 
-          <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-5">
-            <button
-              type="button"
-              onClick={() => router.push(backHref)}
-              className="rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm shadow-indigo-200 transition hover:bg-indigo-700 disabled:opacity-50"
-            >
-              <Save size={16} /> {saving ? "Menyimpan..." : "Simpan Pengguna"}
-            </button>
+          <div className="sticky bottom-0 z-10 -mx-1 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-xl shadow-slate-900/8 backdrop-blur">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-slate-500">
+                Pastikan email dan username unik agar tidak ditolak oleh API saat disimpan.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button type="button" onClick={() => router.push(backHref)} className="h-11 rounded-xl border border-slate-200 px-5 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">Batal</button>
+                <button disabled={saving} className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#2563EB] px-6 text-sm font-bold text-white shadow-sm shadow-blue-200 transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none">
+                  <Save size={16} /> {saving ? "Menyimpan..." : isAdminProfileForm ? "Simpan Profil" : "Simpan User"}
+                </button>
+              </div>
+            </div>
           </div>
         </form>
-      </Card>
+      </div>
     </div>
   );
 }
-
-export default UserManagementPage;

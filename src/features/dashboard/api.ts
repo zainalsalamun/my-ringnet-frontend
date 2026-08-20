@@ -60,8 +60,18 @@ export const dashboardApi = {
     return api.get(`${API_ENDPOINTS.finance.payments}?limit=5000&sort=latest`);
   },
 
+  getBootstrapData() {
+    return Promise.allSettled([
+      this.getCustomerSummaryData(),
+      this.getPartnerSummaryData(),
+      this.getAdminSummaryData(),
+      this.getLocationSummaryData(),
+      this.getInvoices(),
+      this.getPayments(),
+    ]);
+  },
+
   getSummaryFallback() {
     return api.get(API_ENDPOINTS.dashboard.summary);
   },
 };
-

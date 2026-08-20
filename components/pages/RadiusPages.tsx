@@ -122,14 +122,7 @@ export function RadiusProfileGroupPage() {
 }
 
 export function RadiusUserSessionPage() {
-  const [rows, setRows] = useState<any[]>([
-    { id: "81401493", status: "Online", name: "91138agusbayen@ring.net.id", profile: "Broadband BRONZE UpTo 25 Mbps", ip: "192.168.78.51", download: "1.08 GB", upload: "2.69 GB", nas: "RO.RINGNET-GPA", nasAddress: "103.162.62.30", nasPort: "vlan210-INET OLT", startedAt: "11 Mei 2026, 12:11" },
-    { id: "8140148c", status: "Online", name: "100090782budi@ring.net.id", profile: "Broadband LITE UpTo 10Mbps", ip: "192.168.78.38", download: "629.7 MB", upload: "4.07 GB", nas: "RO.RINGNET-GPA", nasAddress: "103.162.62.30", nasPort: "vlan210-INET OLT", startedAt: "11 Mei 2026, 12:11" },
-    { id: "814014c3", status: "Online", name: "mbaklia@ring.net.id", profile: "Broadband UpTo 100Mbps", ip: "192.168.78.251", download: "1.12 GB", upload: "1.46 GB", nas: "RO.RINGNET-GPA", nasAddress: "103.162.62.30", nasPort: "vlan210-INET OLT", startedAt: "22 Agustus 2025, 06:00" },
-    { id: "8140149e", status: "Online", name: "10009049kostaka@ring.net.id", profile: "BROADBAND BUSINESS 100", ip: "192.168.78.47", download: "2.96 GB", upload: "347.13 MB", nas: "RO.RINGNET-GPA", nasAddress: "103.162.62.30", nasPort: "vlan210-INET OLT", startedAt: "11 Mei 2026, 12:11" },
-    { id: "814013e9", status: "Online", name: "100090883budigts@ring.net.id", profile: "Broadband BRONZE UpTo 25 Mbps", ip: "192.168.78.44", download: "860.64 MB", upload: "92.68 MB", nas: "RO.RINGNET-GPA", nasAddress: "103.162.62.30", nasPort: "vlan210-INET OLT", startedAt: "11 Mei 2026, 12:11" },
-    { id: "814014b8", status: "Online", name: "balairwgts@ring.net.id", profile: "Broadband LITE UpTo 10Mbps", ip: "192.168.78.31", download: "1.79 GB", upload: "1.92 GB", nas: "RO.RINGNET-GPA", nasAddress: "103.162.62.30", nasPort: "vlan210-INET OLT", startedAt: "11 Mei 2026, 12:11" },
-  ]);
+  const [rows, setRows] = useState<any[]>([]);
 
   useEffect(() => {
     radiusApi.getBroadbandStatus().then((res) => {
@@ -166,14 +159,15 @@ export function RadiusUserSessionPage() {
 }
 
 export function RadiusHistoryPage() {
-  const [rows] = useState<any[]>([
-    { id: "history-1", topic: "AUTHENTICATION DISABLED", time: "11 Mei 2026, 12:11:36", message: "Authentication Status Is Not Active", customer: "100091085 - Pak Boim Banteng", authentication: "100091085boim@ring.net.id" },
-    { id: "history-2", topic: "AUTHENTICATION DISABLED", time: "11 Mei 2026, 12:11:20", message: "Authentication Status Is Not Active", customer: "100091085 - Pak Boim Banteng", authentication: "100091085boim@ring.net.id" },
-    { id: "history-3", topic: "CONNECTED", time: "11 Mei 2026, 12:10:45", message: "100090964pujiwidodo@Ring-Net.Id Connected", customer: "100090964 - Sih Puji Widodo", authentication: "100090964pujiwidodo@ring.net.id" },
-    { id: "history-4", topic: "ALREADY ONLINE", time: "11 Mei 2026, 12:10:42", message: "Only 1 Active Session Is Allowed, Replace Active Session", customer: "100090964 - Sih Puji Widodo", authentication: "100090964pujiwidodo@ring.net.id" },
-    { id: "history-5", topic: "AUTHENTICATION DISABLED", time: "11 Mei 2026, 12:10:33", message: "Authentication Status Is Not Active", customer: "100091085 - Pak Boim Banteng", authentication: "100091085boim@ring.net.id" },
-    { id: "history-6", topic: "CONNECTED", time: "11 Mei 2026, 12:10:03", message: "91397kopigodean@Ring-Net.Id Connected", customer: "100091397 - Toleransi Kopi Godean", authentication: "91397kopigodean@ring.net.id" },
-  ]);
+  const [rows, setRows] = useState<any[]>([]);
+
+  useEffect(() => {
+    radiusApi.getBroadbandStatus().then((res) => {
+      if (res?.logs && Array.isArray(res.logs)) {
+        setRows(res.logs);
+      }
+    });
+  }, []);
 
   return (
     <>

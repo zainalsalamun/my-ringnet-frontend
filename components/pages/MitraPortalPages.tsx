@@ -275,14 +275,21 @@ function SlaMonitoringPage() {
 
   if (customers === null && !error) return <ShimmerBlock className="h-80" />;
 
-  const rows = (customers || []).map((c, i) => ({
-    ...c,
-    uptimePercent: (99.5 + ((i * 7) % 5) / 10).toFixed(2),
-    latencyMs: 12 + ((i * 3) % 15),
-    slaStatus: "Memenuhi Target",
-  }));
+  const rows = (customers || []).map((c) => {
+    const isOnline = String(c.status || "").toLowerCase().includes("aktif") || String(c.status || "").toLowerCase() === "active";
+    const uptime = c.uptimePercent ? Number(c.uptimePercent) : (isOnline ? 99.9 : 0);
+    const latency = c.latencyMs ? Number(c.latencyMs) : (isOnline ? 15 : 0);
+    return {
+      ...c,
+      uptimePercent: uptime.toFixed(2),
+      latencyMs: latency,
+      slaStatus: uptime >= 99.5 ? "Memenuhi Target" : "Di Bawah Target",
+    };
+  });
 
-  const avgUptime = rows.length ? (rows.reduce((acc, r) => acc + Number(r.uptimePercent), 0) / rows.length).toFixed(2) : "99.85";
+  const avgUptime = rows.length ? (rows.reduce((acc, r) => acc + Number(r.uptimePercent), 0) / rows.length).toFixed(2) : "0.00";
+  const compliantCount = rows.filter((r) => Number(r.uptimePercent) >= 99.5).length;
+  const complianceRate = rows.length ? Math.round((compliantCount / rows.length) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -290,7 +297,7 @@ function SlaMonitoringPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard icon={<UserRoundCheck size={22} />} label="Total Pelanggan Ter-SLA" value={String(rows.length)} trend="monitoring aktif" />
         <StatCard icon={<Activity size={22} />} label="Rata-rata Uptime" value={`${avgUptime}%`} trend="target min 99.5%" accent="emerald" />
-        <StatCard icon={<ShieldCheck size={22} />} label="Kepatuhan SLA" value="100%" trend="semua tercapai" accent="indigo" />
+        <StatCard icon={<ShieldCheck size={22} />} label="Kepatuhan SLA" value={`${complianceRate}%`} trend="persentase tercapai" accent="indigo" />
         <StatCard icon={<Timer size={22} />} label="Rata-rata Latensi" value="18 ms" trend="koneksi stabil" accent="amber" />
       </div>
       <Card className="p-5">

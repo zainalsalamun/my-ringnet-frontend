@@ -53,14 +53,14 @@ export const mitraPortalApi = {
         globalFilter: "",
       });
       const raw = res.data?.data?.data || res.data?.data || res.data?.rows || [];
-      if (Array.isArray(raw) && raw.length > 0) {
+      if (Array.isArray(raw)) {
         return {
           data: {
             data: raw.map((item: any) => ({
               id: item.id || item.product_id,
               name: item.name || item.product_name,
-              speedMbps: item.speed_mbps || item.speed || item.bandwidth || 25,
-              monthlyPrice: item.monthly_price || item.price || item.cost || 250000,
+              speedMbps: item.speed_mbps || item.speed || item.bandwidth || 0,
+              monthlyPrice: item.monthly_price || item.price || item.cost || 0,
               description: item.description || "Paket internet broadband FTTH",
               status: item.status ?? true,
             })),
@@ -73,14 +73,14 @@ export const mitraPortalApi = {
 
     try {
       const res = await api.get("/service-packages?limit=100");
-      if (Array.isArray(res.data?.data) && res.data.data.length > 0) {
+      if (Array.isArray(res.data?.data)) {
         return {
           data: {
             data: res.data.data.map((item: any) => ({
               id: item.id,
               name: item.name,
-              speedMbps: item.speedMbps || 25,
-              monthlyPrice: item.price || 250000,
+              speedMbps: item.speedMbps || 0,
+              monthlyPrice: item.price || 0,
               description: item.description || "Paket internet broadband FTTH",
               status: item.status ?? true,
             })),
@@ -88,22 +88,10 @@ export const mitraPortalApi = {
         };
       }
     } catch {
-      // fallback
+      // ignore
     }
 
-    try {
-      return await api.get(API_ENDPOINTS.mitraPortal.products);
-    } catch {
-      return {
-        data: {
-          data: [
-            { id: "pkg-1", name: "BROADBAND FIBER BRONZE 25", speedMbps: 25, monthlyPrice: 250000, description: "Paket internet cepat unlimited untuk rumah & keluarga." },
-            { id: "pkg-2", name: "BROADBAND FIBER SILVER 35", speedMbps: 35, monthlyPrice: 350000, description: "Paket ideal untuk streaming 4K & multi-device." },
-            { id: "pkg-3", name: "BROADBAND FIBER GOLD 50", speedMbps: 50, monthlyPrice: 500000, description: "Koneksi ultra cepat untuk gaming dan bisnis rumahan." },
-          ],
-        },
-      };
-    }
+    return { data: { data: [] } };
   },
 
   async customers() {
@@ -116,7 +104,7 @@ export const mitraPortalApi = {
         globalFilter: "",
       });
       const raw = res.data?.data?.data || res.data?.data || res.data?.rows || [];
-      if (Array.isArray(raw) && raw.length > 0) {
+      if (Array.isArray(raw)) {
         return {
           data: {
             data: raw.map((item: any) => ({
@@ -144,7 +132,7 @@ export const mitraPortalApi = {
           globalFilter: "",
         });
         const raw = res.data?.data?.data || res.data?.data || res.data?.rows || [];
-        if (Array.isArray(raw) && raw.length > 0) {
+        if (Array.isArray(raw)) {
           return {
             data: {
               data: raw.map((item: any) => ({
@@ -166,11 +154,7 @@ export const mitraPortalApi = {
       }
     }
 
-    try {
-      return await api.get(API_ENDPOINTS.mitraPortal.customers);
-    } catch {
-      return { data: { data: [] } };
-    }
+    return { data: { data: [] } };
   },
 
   async finance() {
@@ -184,24 +168,18 @@ export const mitraPortalApi = {
       data: {
         data: {
           summary: {
-            grossRevenue: 24500000,
-            dpp: 22072072,
-            vat: 2427928,
-            bhpUso: 110360,
+            grossRevenue: 0,
+            dpp: 0,
+            vat: 0,
+            bhpUso: 0,
             bhpUsoPercent: 0.5,
-            kso: 1103603,
+            kso: 0,
             ksoPercent: 5,
-            bandwidthFee: 5000000,
-            withholdingTax: 551801,
-            sharingProfit: 15198308,
+            bandwidthFee: 0,
+            withholdingTax: 0,
+            sharingProfit: 0,
           },
-          revenue: [
-            { month: "Jan", value: 18000000 },
-            { month: "Feb", value: 19500000 },
-            { month: "Mar", value: 21000000 },
-            { month: "Apr", value: 23000000 },
-            { month: "Mei", value: 24500000 },
-          ],
+          revenue: [],
           invoices: [],
         },
       },
@@ -232,11 +210,7 @@ export const mitraPortalApi = {
       // ignore
     }
 
-    try {
-      return await api.get(API_ENDPOINTS.mitraPortal.invoices);
-    } catch {
-      return { data: { data: [] } };
-    }
+    return { data: { data: [] } };
   },
 
   tickets() {

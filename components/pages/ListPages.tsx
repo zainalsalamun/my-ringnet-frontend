@@ -11,6 +11,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { businessCustomersApi } from "@/src/features/business-customers/api";
 import { customersApi } from "@/src/features/customers/api";
 import { resourcesApi } from "@/src/features/resources/api";
+import { useAuthStore } from "@/hooks/useAuth";
 
 function useRows<T>(endpoint: string) {
   const [rows, setRows] = useState<T[]>([]);

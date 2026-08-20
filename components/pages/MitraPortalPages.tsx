@@ -11,6 +11,7 @@ import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from 
 import { CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { technicalDataApi } from "@/src/features/technical-data/api";
 import { mitraPortalApi } from "@/src/features/mitra-portal/api";
+import { currency, date } from "@/lib/format";
 
 const API_ORIGIN = (process.env.NEXT_PUBLIC_API || "").replace(/\/api\/?$/, "");
 const fileUrl = (path?: string) => path ? `${API_ORIGIN}${path}` : "#";
@@ -751,7 +752,7 @@ function TechnicalPage({ section }: { section: string }) {
                 <p className="text-sm text-slate-500">{counts.mapped} data memiliki koordinat.</p>
               </div>
             </div>
-            <DataGrid rows={filtered} pageSize={pageSize} columns={[
+            <DataGrid rows={filtered} columns={[
               { label: "Jenis", value: (r) => <span className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-xs font-black uppercase text-indigo-700">{r.category === "passive" ? <Cable size={14} /> : r.category === "active" ? <Router size={14} /> : <RadioTower size={14} />}{r.assetType}</span> },
               { label: "Nama", value: (r) => <strong>{r.name}</strong> },
               { label: "Kode / Serial", value: (r) => r.serialNo || "-" },

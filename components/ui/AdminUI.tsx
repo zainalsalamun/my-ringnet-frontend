@@ -145,7 +145,7 @@ export function TextInput(props: React.InputHTMLAttributes<HTMLInputElement> & {
   );
 }
 
-type SelectInputProps = Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "onChange"> & {
+type SelectInputProps = Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "onChange" | "size"> & {
   label?: string;
   options: { label: string; value: string }[];
   onChange?: (event: { target: { value: string } }) => void;

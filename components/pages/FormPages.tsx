@@ -442,8 +442,8 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 border-t border-slate-100 pt-4">
               {/* Foto Profil */}
               <div>
-                <label className="mb-1.5 block text-xs font-bold text-slate-700">Foto Profil Pelanggan</label>
                 <FileInput
+                  label="Foto Profil Pelanggan"
                   accept="image/png,image/jpeg,image/jpg,image/webp"
                   fileName={profileFile?.name || form.profileImage}
                   onChange={setProfileFile}
@@ -452,8 +452,8 @@ export function CustomerForm({ edit = false, id }: { edit?: boolean; id?: string
 
               {/* Upload Berkas KTP / NPWP */}
               <div>
-                <label className="mb-1.5 block text-xs font-bold text-slate-700">Dokumen KTP / Identitas</label>
                 <FileInput
+                  label="Dokumen KTP / Identitas"
                   accept=".pdf,.jpg,.jpeg,.png"
                   fileName={documentFiles.ktp?.name}
                   onChange={(file) => setDocumentFiles((curr) => ({ ...curr, ktp: file }))}

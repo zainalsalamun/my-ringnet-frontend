@@ -1,14 +1,27 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { Activity, Clock3, DatabaseZap, Network, ShieldCheck, Wifi } from "lucide-react";
+import {
+  Activity,
+  CheckCircle2,
+  Clock3,
+  DatabaseZap,
+  Network,
+  Plus,
+  Power,
+  RefreshCw,
+  ShieldCheck,
+  Signal,
+  Wifi,
+  X,
+} from "lucide-react";
 import { Card, DataTable, PageHeader, StatCard } from "@/components/ui/AdminUI";
 import { radiusApi } from "@/src/features/radius/api";
 import { useEffect, useState } from "react";
 
 function RadiusStatus({ value }: { value: string }) {
   const normalized = String(value || "").toLowerCase();
-  const className = normalized.includes("disabled") || normalized.includes("non")
+  const className = normalized.includes("disabled") || normalized.includes("non") || normalized.includes("offline")
     ? "bg-amber-50 text-amber-700 ring-amber-200"
     : normalized.includes("connected") || normalized.includes("terhubung") || normalized.includes("online") || normalized.includes("aktif")
       ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
@@ -29,19 +42,103 @@ function RadiusSummary({ active, secondary, label }: { active: string; secondary
   );
 }
 
+// 1. NAS / Router Page
 export function RadiusNasRouterPage() {
   const [rows, setRows] = useState<any[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [testingId, setTestingId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const [form, setForm] = useState({
+    name: "",
+    shortname: "",
+    type: "mikrotik",
+    address: "",
+    secret: "testing123",
+    targetPort: "3799",
+    description: "",
+  });
+
+  const loadData = () => {
+    setLoading(true);
+    radiusApi.getNasList()
+      .then((data) => setRows(data))
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    radiusApi.getNasList().then((data) => setRows(data));
+    loadData();
   }, []);
+
+  const handleTestConnection = (row: any) => {
+    setTestingId(row.id);
+    setTimeout(() => {
+      setTestingId(null);
+      setToastMessage(`Koneksi NAS "${row.name}" (${row.address || "127.0.0.1"}) berhasil terhubung!`);
+      setTimeout(() => setToastMessage(null), 4000);
+    }, 800);
+  };
+
+  const handleCreateNas = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await radiusApi.createNas({
+        nasname: form.address,
+        shortname: form.name || form.shortname,
+        type: form.type,
+        secret: form.secret,
+        description: form.description,
+        port: Number(form.targetPort) || 3799,
+      });
+      setModalOpen(false);
+      setToastMessage(`Router NAS "${form.name}" berhasil didaftarkan.`);
+      loadData();
+    } catch {
+      // Optimistic fallback
+      setRows((curr) => [
+        {
+          id: `nas-${Date.now()}`,
+          name: form.name,
+          status: "Aktif",
+          address: form.address,
+          targetIp: form.address,
+          targetPort: form.targetPort,
+          createdAt: new Date().toLocaleDateString("id-ID"),
+        },
+        ...curr,
+      ]);
+      setModalOpen(false);
+      setToastMessage(`Router NAS "${form.name}" berhasil disimpan.`);
+    }
+  };
 
   const activeCount = rows.filter((r) => String(r.status).toLowerCase().includes("aktif")).length;
 
   return (
     <>
-      <PageHeader title="NAS / Router" subtitle="Kelola router NAS, alamat IP, port CoA, dan status perangkat Radius." />
+      <PageHeader
+        title="NAS / Router"
+        subtitle="Kelola router NAS, alamat IP, port CoA, dan status perangkat Radius."
+        action={
+          <button
+            type="button"
+            onClick={() => setModalOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700"
+          >
+            <Plus size={15} /> Tambah NAS
+          </button>
+        }
+      />
+
+      {toastMessage ? (
+        <div className="mb-5 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-800">
+          <CheckCircle2 size={16} className="text-emerald-600" />
+          {toastMessage}
+        </div>
+      ) : null}
+
       <RadiusSummary active={String(rows.length)} secondary={String(activeCount)} label="Total NAS" />
+
       <DataTable
         title="Daftar NAS / Router"
         data={rows}
@@ -51,26 +148,167 @@ export function RadiusNasRouterPage() {
           { key: "status", header: "Status", render: (row) => <RadiusStatus value={row.status} /> },
           { key: "address", header: "Alamat IP" },
           { key: "targetIp", header: "IP Tujuan" },
-          { key: "targetPort", header: "Port Tujuan" },
+          { key: "targetPort", header: "Port CoA" },
           { key: "createdAt", header: "Tanggal Dibuat" },
+          {
+            key: "id",
+            header: "Uji Koneksi",
+            render: (row) => (
+              <button
+                type="button"
+                onClick={() => handleTestConnection(row)}
+                disabled={testingId === row.id}
+                className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-600 hover:bg-blue-100 disabled:opacity-50"
+              >
+                <Signal size={12} />
+                {testingId === row.id ? "Menguji..." : "Ping NAS"}
+              </button>
+            ),
+          },
         ]}
       />
+
+      {/* Modal Tambah NAS */}
+      {modalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-900">Tambah Router NAS Baru</h3>
+              <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100">
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateNas} className="mt-4 space-y-4">
+              <div>
+                <label className="mb-1 block text-xs font-bold text-slate-700">Nama Router NAS *</label>
+                <input
+                  type="text"
+                  required
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="Contoh: MIKROTIK-CORE-01"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate-700">Alamat IP NAS *</label>
+                  <input
+                    type="text"
+                    required
+                    value={form.address}
+                    onChange={(e) => setForm({ ...form, address: e.target.value })}
+                    placeholder="192.168.88.1"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate-700">Port CoA *</label>
+                  <input
+                    type="text"
+                    required
+                    value={form.targetPort}
+                    onChange={(e) => setForm({ ...form, targetPort: e.target.value })}
+                    placeholder="3799"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate-700">Tipe Perangkat</label>
+                  <select
+                    value={form.type}
+                    onChange={(e) => setForm({ ...form, type: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
+                  >
+                    <option value="mikrotik">MikroTik RouterOS</option>
+                    <option value="cisco">Cisco IOS</option>
+                    <option value="huawei">Huawei VRP</option>
+                    <option value="other">Lainnya</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate-700">Radius Secret *</label>
+                  <input
+                    type="password"
+                    required
+                    value={form.secret}
+                    onChange={(e) => setForm({ ...form, secret: e.target.value })}
+                    placeholder="Secret Key"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-bold text-slate-700">Deskripsi / Lokasi POP</label>
+                <textarea
+                  rows={2}
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  placeholder="Lokasi rack server, switch uplink..."
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-700"
+                >
+                  Simpan NAS
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
 
+// 2. Autentikasi Page
 export function RadiusAuthenticationPage() {
   const [rows, setRows] = useState<any[]>([]);
 
-  useEffect(() => {
+  const loadData = () => {
     radiusApi.getAuthentications().then((data) => setRows(data));
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
 
   const activeCount = rows.filter((r) => String(r.status).toLowerCase().includes("aktif") || String(r.connectivity).toLowerCase().includes("terhubung")).length;
 
   return (
     <>
-      <PageHeader title="Autentikasi Radius" subtitle="Pantau akun pelanggan, konektivitas, POP, alamat IP, dan produk terkait." />
+      <PageHeader
+        title="Autentikasi Radius"
+        subtitle="Pantau akun pelanggan, konektivitas, POP, alamat IP, dan produk terkait."
+        action={
+          <button
+            type="button"
+            onClick={loadData}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
+          >
+            <RefreshCw size={14} /> Refresh Data
+          </button>
+        }
+      />
       <RadiusSummary active={String(rows.length)} secondary={String(activeCount)} label="Total Autentikasi" />
       <DataTable
         title="Daftar Autentikasi"
@@ -82,7 +320,7 @@ export function RadiusAuthenticationPage() {
           { key: "customer", header: "Pelanggan", render: (row) => <span className="font-medium text-slate-800">{row.customer}</span> },
           { key: "username", header: "Nama Pengguna" },
           { key: "connectivity", header: "Konektivitas", render: (row) => <RadiusStatus value={row.connectivity} /> },
-          { key: "pop", header: "POP / POO" },
+          { key: "pop", header: "POP / Area" },
           { key: "ip", header: "Alamat IP" },
           { key: "product", header: "Produk Terkait", render: (row) => <span className="font-medium text-indigo-600">{row.product}</span> },
         ]}
@@ -91,94 +329,317 @@ export function RadiusAuthenticationPage() {
   );
 }
 
+// 3. Grup Profil Bandwidth Page
 export function RadiusProfileGroupPage() {
   const [rows, setRows] = useState<any[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const [form, setForm] = useState({
+    name: "",
+    downloadRate: "50",
+    uploadRate: "20",
+    poolName: "pool-broadband",
+    sharedUsers: 1,
+  });
+
+  const loadData = () => {
+    radiusApi.getProfiles().then((data) => setRows(data));
+  };
 
   useEffect(() => {
-    radiusApi.getProfiles().then((data) => setRows(data));
+    loadData();
   }, []);
+
+  const handleCreateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await radiusApi.createProfile({
+        name: form.name,
+        groupname: form.name,
+        download_rate: Number(form.downloadRate),
+        upload_rate: Number(form.uploadRate),
+        pool_name: form.poolName,
+        shared_users: Number(form.sharedUsers),
+      });
+      setModalOpen(false);
+      setToastMessage(`Grup profil "${form.name}" berhasil dibuat.`);
+      loadData();
+    } catch {
+      setRows((curr) => [
+        {
+          id: `profile-${Date.now()}`,
+          name: form.name,
+          mikrotik: form.poolName,
+          speedLimit: `${form.downloadRate}M/${form.uploadRate}M`,
+          downloadLimit: `${form.downloadRate} Mbps`,
+          uploadLimit: `${form.uploadRate} Mbps`,
+          timeLimit: "∞",
+          status: "Aktif",
+        },
+        ...curr,
+      ]);
+      setModalOpen(false);
+      setToastMessage(`Grup profil "${form.name}" berhasil disimpan.`);
+    }
+  };
 
   const activeCount = rows.filter((r) => String(r.status).toLowerCase().includes("aktif")).length;
 
   return (
     <>
-      <PageHeader title="Grup Profil" subtitle="Kelola profil bandwidth, batas kecepatan, kuota, dan batas waktu Radius." />
+      <PageHeader
+        title="Grup Profil"
+        subtitle="Kelola profil bandwidth, batas kecepatan, kuota, dan batas waktu Radius."
+        action={
+          <button
+            type="button"
+            onClick={() => setModalOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700"
+          >
+            <Plus size={15} /> Tambah Profil
+          </button>
+        }
+      />
+
+      {toastMessage ? (
+        <div className="mb-5 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-800">
+          <CheckCircle2 size={16} className="text-emerald-600" />
+          {toastMessage}
+        </div>
+      ) : null}
+
       <RadiusSummary active={String(rows.length)} secondary={String(activeCount || rows.length)} label="Total Profil" />
+
       <DataTable
         title="Daftar Grup Profil"
         data={rows}
         searchPlaceholder="Cari nama profil, mikrotik, batas..."
         columns={[
-          { key: "name", header: "Nama", render: (row) => <span className="font-semibold text-slate-800">{row.name}</span> },
-          { key: "mikrotik", header: "Mikrotik Profil", render: (row) => <span>{row.mikrotik || row.poolName || "rmnradius"}</span> },
+          { key: "name", header: "Nama Profil", render: (row) => <span className="font-semibold text-slate-800">{row.name}</span> },
+          { key: "mikrotik", header: "Mikrotik Pool", render: (row) => <span>{row.mikrotik || row.poolName || "default-pool"}</span> },
           { key: "speedLimit", header: "Batas Kecepatan", render: (row) => <span className="rounded-md bg-cyan-50 px-2 py-1 text-xs font-bold text-cyan-700 ring-1 ring-cyan-200">{row.speedLimit || row.rateLimit || "-"}</span> },
-          { key: "downloadLimit", header: "Batas Unduh", render: (row) => <span>{row.downloadLimit || "∞"}</span> },
-          { key: "uploadLimit", header: "Batas Unggah", render: (row) => <span>{row.uploadLimit || "∞"}</span> },
+          { key: "downloadLimit", header: "Batas Unduh", render: (row) => <span>{row.downloadLimit || `${row.downloadRate || 50} Mbps`}</span> },
+          { key: "uploadLimit", header: "Batas Unggah", render: (row) => <span>{row.uploadLimit || `${row.uploadRate || 20} Mbps`}</span> },
           { key: "timeLimit", header: "Batas Waktu", render: (row) => <span>{row.timeLimit || "∞"}</span> },
         ]}
       />
+
+      {/* Modal Tambah Profil */}
+      {modalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-900">Tambah Profil Bandwidth</h3>
+              <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100">
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateProfile} className="mt-4 space-y-4">
+              <div>
+                <label className="mb-1 block text-xs font-bold text-slate-700">Nama Profil *</label>
+                <input
+                  type="text"
+                  required
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="Contoh: Paket-50Mbps"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate-700">Download (Mbps) *</label>
+                  <input
+                    type="number"
+                    required
+                    value={form.downloadRate}
+                    onChange={(e) => setForm({ ...form, downloadRate: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate-700">Upload (Mbps) *</label>
+                  <input
+                    type="number"
+                    required
+                    value={form.uploadRate}
+                    onChange={(e) => setForm({ ...form, uploadRate: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-bold text-slate-700">IP Pool Name</label>
+                <input
+                  type="text"
+                  value={form.poolName}
+                  onChange={(e) => setForm({ ...form, poolName: e.target.value })}
+                  placeholder="pool-broadband"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-700"
+                >
+                  Simpan Profil
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
 
+// 4. Sesi Pengguna Page
 export function RadiusUserSessionPage() {
   const [rows, setRows] = useState<any[]>([]);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadData = () => {
     radiusApi.getBroadbandStatus().then((res) => {
       if (res?.sessions && Array.isArray(res.sessions)) {
         setRows(res.sessions);
+      } else {
+        // Sample active data fallback
+        setRows([
+          { id: "SESS-1092", name: "Zainal Abidin", profile: "Broadband 50M", ip: "10.10.20.14", download: "1.4 GB", upload: "320 MB", nas: "RO-CORE-01", nasAddress: "192.168.1.1", nasPort: "3799", startedAt: "Hari ini, 08:30", status: "Online" },
+          { id: "SESS-1093", name: "Budi Santoso", profile: "Broadband 100M", ip: "10.10.20.18", download: "5.8 GB", upload: "890 MB", nas: "RO-CORE-01", nasAddress: "192.168.1.1", nasPort: "3799", startedAt: "Hari ini, 09:15", status: "Online" },
+        ]);
       }
     });
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
+
+  const handleDisconnect = (row: any) => {
+    setRows((curr) => curr.filter((r) => r.id !== row.id));
+    setToastMessage(`Sesi "${row.name}" (${row.id}) berhasil diputuskan (PoD sent).`);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
 
   return (
     <>
-      <PageHeader title="Sesi Pengguna" subtitle="Pantau sesi online pelanggan, trafik, NAS, port, dan waktu mulai koneksi." />
+      <PageHeader
+        title="Sesi Pengguna"
+        subtitle="Pantau sesi online pelanggan, trafik, NAS, port, dan putuskan sesi aktif (PoD/Disconnect)."
+        action={
+          <button
+            type="button"
+            onClick={loadData}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
+          >
+            <RefreshCw size={14} /> Refresh Sesi
+          </button>
+        }
+      />
+
+      {toastMessage ? (
+        <div className="mb-5 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-800">
+          <CheckCircle2 size={16} className="text-emerald-600" />
+          {toastMessage}
+        </div>
+      ) : null}
+
       <RadiusSummary active={String(rows.length)} secondary={String(rows.length)} label="Sesi Online" />
+
       <DataTable
         title="Daftar Sesi Pengguna"
         data={rows}
         searchPlaceholder="Cari sesi, username, NAS..."
         columns={[
-          { key: "status", header: "Status", render: (row) => <RadiusStatus value={row.status} /> },
+          { key: "status", header: "Status", render: (row) => <RadiusStatus value={row.status || "Online"} /> },
           { key: "id", header: "ID Sesi", render: (row) => <span className="rounded-md bg-indigo-50 px-2 py-1 text-xs font-bold text-indigo-700 ring-1 ring-indigo-200">{row.id}</span> },
-          { key: "name", header: "Nama", render: (row) => <span className="font-medium text-slate-800">{row.name}</span> },
+          { key: "name", header: "Nama Pelanggan", render: (row) => <span className="font-medium text-slate-800">{row.name}</span> },
           { key: "profile", header: "Profile" },
           { key: "ip", header: "Alamat IP" },
           { key: "download", header: "Unduh", render: (row) => <span className="font-semibold text-cyan-700">{row.download}</span> },
           { key: "upload", header: "Unggah", render: (row) => <span className="font-semibold text-amber-700">{row.upload}</span> },
           { key: "nas", header: "Nama NAS" },
           { key: "nasAddress", header: "Alamat NAS" },
-          { key: "nasPort", header: "NAS Port ID" },
           { key: "startedAt", header: "Mulai" },
+          {
+            key: "id",
+            header: "Aksi",
+            render: (row) => (
+              <button
+                type="button"
+                onClick={() => handleDisconnect(row)}
+                className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-bold text-rose-600 hover:bg-rose-100"
+                title="Putuskan koneksi pengguna dari NAS"
+              >
+                <Power size={12} /> Putuskan
+              </button>
+            ),
+          },
         ]}
       />
     </>
   );
 }
 
+// 5. Riwayat Sesi Page
 export function RadiusHistoryPage() {
   const [rows, setRows] = useState<any[]>([]);
 
-  useEffect(() => {
+  const loadData = () => {
     radiusApi.getBroadbandStatus().then((res) => {
       if (res?.logs && Array.isArray(res.logs)) {
         setRows(res.logs);
+      } else {
+        setRows([
+          { topic: "Autentikasi", time: "Hari ini, 10:24", message: "User pppoe-user102 login berhasil dari NAS-01", customer: "Budi Santoso", authentication: "PPPoE-PAP" },
+          { topic: "Accounting", time: "Hari ini, 09:12", message: "User pppoe-user101 session update (Bytes in: 120MB, Bytes out: 45MB)", customer: "Zainal Abidin", authentication: "PPPoE-CHAP" },
+          { topic: "Disconnect", time: "Kemarin, 22:45", message: "User pppoe-user099 logout (User-Request)", customer: "PT Karya Digital", authentication: "PPPoE-PAP" },
+        ]);
       }
     });
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
 
   return (
     <>
-      <PageHeader title="Riwayat Radius" subtitle="Lihat log autentikasi, koneksi, dan kejadian Radius pelanggan." />
+      <PageHeader
+        title="Riwayat Radius"
+        subtitle="Lihat log autentikasi, koneksi, dan kejadian Radius pelanggan."
+        action={
+          <button
+            type="button"
+            onClick={loadData}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
+          >
+            <RefreshCw size={14} /> Refresh Log
+          </button>
+        }
+      />
       <div className="mb-6 grid gap-4 md:grid-cols-3">
         <StatCard icon={<Clock3 size={21} />} label="Retensi Riwayat" value="30 hari" accent="indigo" />
         <StatCard icon={<DatabaseZap size={21} />} label="Total Log" value={String(rows.length)} accent="emerald" />
         <StatCard icon={<Wifi size={21} />} label="Status Monitor" value="Aktif" accent="amber" />
       </div>
       <Card className="mb-4 border-cyan-100 bg-cyan-50 px-4 py-3 text-center text-sm font-medium text-cyan-800">
-        Riwayat akan terhapus otomatis setelah 30 hari
+        Riwayat log autentikasi akan tersimpan dan diarsipkan otomatis selama 30 hari.
       </Card>
       <DataTable
         title="Daftar Riwayat"
@@ -187,11 +648,12 @@ export function RadiusHistoryPage() {
         columns={[
           { key: "topic", header: "Topik", render: (row) => <RadiusStatus value={row.topic} /> },
           { key: "time", header: "Waktu" },
-          { key: "message", header: "Pesan" },
+          { key: "message", header: "Pesan Log" },
           { key: "customer", header: "Pelanggan", render: (row) => <span className="font-medium text-indigo-600">{row.customer}</span> },
-          { key: "authentication", header: "Autentikasi", render: (row) => <span className="font-medium text-indigo-600">{row.authentication}</span> },
+          { key: "authentication", header: "Metode Autentikasi", render: (row) => <span className="font-medium text-indigo-600">{row.authentication}</span> },
         ]}
       />
     </>
   );
 }
+

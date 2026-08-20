@@ -1,20 +1,12 @@
 "use client";
 
-import { PageHeader, ShimmerBlock } from "@/components/ui/AdminUI";
+import { ShimmerBlock } from "@/components/ui/AdminUI";
 import { useAuthStore } from "@/hooks/useAuth";
 import { MitraDashboardPage } from "@/components/pages/MitraPortalPages";
 import { RadiusDashboard } from "@/components/pages/RadiusDashboard";
 
 function AdminDashboardPage() {
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Dashboard Radius"
-        subtitle="Monitoring real-time server Radius, router NAS, sesi pengguna online, dan profil bandwidth."
-      />
-      <RadiusDashboard />
-    </div>
-  );
+  return <RadiusDashboard />;
 }
 
 export default function DashboardPage() {

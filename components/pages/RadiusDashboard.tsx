@@ -2,8 +2,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/set-state-in-effect */
 
-import { Activity, ArrowUpRight, CheckCircle2, Database, Network, Plus, Radio, RefreshCw, Router, Server, ShieldCheck, Users, Wifi } from "lucide-react";
-import { Badge, Card, DataTable, ShimmerBlock, StatCard } from "@/components/ui/AdminUI";
+import { Activity, ArrowUpRight, CheckCircle2, Database, Network, Plus, Radio, RefreshCw, Router, Server, ShieldCheck, Users, Wifi, X } from "lucide-react";
+import { Badge, Card, DataTable, ShimmerBlock, StatCard, TextInput, SelectInput, TextArea } from "@/components/ui/AdminUI";
 import { radiusApi } from "@/src/features/radius/api";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -16,6 +16,36 @@ export function RadiusDashboard() {
   const [profiles, setProfiles] = useState<any[]>([]);
   const [authentications, setAuthentications] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
+
+  // Modal states
+  const [showNasModal, setShowNasModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalToast, setModalToast] = useState("");
+
+  // Form states for NAS
+  const [nasForm, setNasForm] = useState({
+    name: "",
+    shortname: "",
+    type: "mikrotik",
+    address: "",
+    targetIp: "",
+    targetPort: "3799",
+    secret: "testing123",
+    server: "radius.ring.net.id",
+    community: "public",
+    description: "",
+  });
+
+  // Form states for Profile
+  const [profileForm, setProfileForm] = useState({
+    name: "",
+    downloadRate: "25",
+    uploadRate: "25",
+    rateLimit: "25M/25M",
+    poolName: "pool-default",
+    sharedUsers: 1,
+  });
 
   const loadData = useCallback(async () => {
     try {
@@ -53,6 +83,68 @@ export function RadiusDashboard() {
     loadData();
   }
 
+  // Handle create NAS
+  async function handleCreateNas(e: React.FormEvent) {
+    e.preventDefault();
+    setModalLoading(true);
+    setModalToast("");
+    try {
+      await radiusApi.createNas({
+        ...nasForm,
+        nasname: nasForm.targetIp || nasForm.address,
+        shortname: nasForm.name,
+      });
+      setShowNasModal(false);
+      setNasForm({
+        name: "",
+        shortname: "",
+        type: "mikrotik",
+        address: "",
+        targetIp: "",
+        targetPort: "3799",
+        secret: "testing123",
+        server: "radius.ring.net.id",
+        community: "public",
+        description: "",
+      });
+      loadData();
+    } catch (err: any) {
+      setModalToast(err.response?.data?.message || "Gagal menambahkan NAS Router.");
+    } finally {
+      setModalLoading(false);
+    }
+  }
+
+  // Handle create Profile
+  async function handleCreateProfile(e: React.FormEvent) {
+    e.preventDefault();
+    setModalLoading(true);
+    setModalToast("");
+    try {
+      const rate = `${profileForm.downloadRate}M/${profileForm.uploadRate}M`;
+      await radiusApi.createProfile({
+        ...profileForm,
+        groupname: profileForm.name,
+        rate_limit: rate,
+        rateLimit: rate,
+      });
+      setShowProfileModal(false);
+      setProfileForm({
+        name: "",
+        downloadRate: "25",
+        uploadRate: "25",
+        rateLimit: "25M/25M",
+        poolName: "pool-default",
+        sharedUsers: 1,
+      });
+      loadData();
+    } catch (err: any) {
+      setModalToast(err.response?.data?.message || "Gagal menambahkan Grup Profil.");
+    } finally {
+      setModalLoading(false);
+    }
+  }
+
   const activeNasCount = useMemo(() => {
     return nasList.filter((n) => String(n.status).toLowerCase().includes("aktif")).length;
   }, [nasList]);
@@ -61,7 +153,6 @@ export function RadiusDashboard() {
     return sessions.length || authentications.filter((a) => a.connectivity === "Terhubung" || a.status === "Aktif").length;
   }, [authentications, sessions]);
 
-  // Combined live session rows for the real-time table
   const displaySessions = useMemo(() => {
     if (sessions.length > 0) return sessions;
     return authentications.map((a, idx) => ({
@@ -103,20 +194,22 @@ export function RadiusDashboard() {
             <RefreshCw size={13} className={refreshing ? "animate-spin text-indigo-600" : "text-slate-500"} />
             {refreshing ? "Memperbarui..." : "Perbarui Data"}
           </button>
-          <Link
-            href="/radius/nas-router/new"
+          <button
+            type="button"
+            onClick={() => { setModalToast(""); setShowNasModal(true); }}
             className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-indigo-700"
           >
             <Plus size={14} />
             Tambah NAS
-          </Link>
-          <Link
-            href="/radius/grup-profil/new"
+          </button>
+          <button
+            type="button"
+            onClick={() => { setModalToast(""); setShowProfileModal(true); }}
             className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-700 transition hover:bg-indigo-100"
           >
             <Plus size={14} />
             Tambah Profil
-          </Link>
+          </button>
         </div>
       </div>
 
@@ -220,9 +313,9 @@ export function RadiusDashboard() {
           ) : nasList.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
               Belum ada router NAS terdaftar.{" "}
-              <Link href="/radius/nas-router/new" className="font-bold text-indigo-600 hover:underline">
+              <button onClick={() => setShowNasModal(true)} className="font-bold text-indigo-600 hover:underline">
                 Tambah sekarang
-              </Link>
+              </button>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -274,9 +367,9 @@ export function RadiusDashboard() {
           ) : profiles.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
               Belum ada profil bandwidth.{" "}
-              <Link href="/radius/grup-profil/new" className="font-bold text-indigo-600 hover:underline">
+              <button onClick={() => setShowProfileModal(true)} className="font-bold text-indigo-600 hover:underline">
                 Tambah profil baru
-              </Link>
+              </button>
             </div>
           ) : (
             <div className="space-y-3">
@@ -329,6 +422,188 @@ export function RadiusDashboard() {
           ]}
         />
       </Card>
+
+      {/* Modal Tambah NAS Router */}
+      {showNasModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                <Router size={18} className="text-indigo-600" />
+                Tambah NAS / Router Gateway
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowNasModal(false)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateNas} className="p-6 space-y-4">
+              {modalToast ? (
+                <div className="rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                  {modalToast}
+                </div>
+              ) : null}
+              <TextInput
+                label="Nama Router (Shortname)"
+                placeholder="RO-RINGNET-PAPRINGAN"
+                required
+                value={nasForm.name}
+                onChange={(e) => setNasForm({ ...nasForm, name: e.target.value })}
+              />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <TextInput
+                  label="Alamat IP Router (NAS IP)"
+                  placeholder="103.162.62.10"
+                  required
+                  value={nasForm.targetIp}
+                  onChange={(e) => setNasForm({ ...nasForm, targetIp: e.target.value, address: e.target.value })}
+                />
+                <TextInput
+                  label="Port CoA / Disconnect"
+                  placeholder="3799"
+                  required
+                  value={nasForm.targetPort}
+                  onChange={(e) => setNasForm({ ...nasForm, targetPort: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <TextInput
+                  label="Secret RADIUS"
+                  type="password"
+                  placeholder="Secret key"
+                  required
+                  value={nasForm.secret}
+                  onChange={(e) => setNasForm({ ...nasForm, secret: e.target.value })}
+                />
+                <SelectInput
+                  label="Tipe Router"
+                  value={nasForm.type}
+                  onChange={(e) => setNasForm({ ...nasForm, type: e.target.value })}
+                  options={[
+                    { label: "MikroTik RouterOS", value: "mikrotik" },
+                    { label: "Cisco IOS", value: "cisco" },
+                    { label: "Huawei / ZTE", value: "other" },
+                  ]}
+                />
+              </div>
+              <TextArea
+                label="Deskripsi / Lokasi"
+                placeholder="Router Gateway Distribusi FTTH POP Utama"
+                value={nasForm.description}
+                onChange={(e) => setNasForm({ ...nasForm, description: e.target.value })}
+              />
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowNasModal(false)}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={modalLoading}
+                  className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {modalLoading ? "Menyimpan..." : "Simpan Router NAS"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Tambah Grup Profil Bandwidth */}
+      {showProfileModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+              <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                <Network size={18} className="text-amber-500" />
+                Tambah Grup Profil Bandwidth
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowProfileModal(false)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateProfile} className="p-6 space-y-4">
+              {modalToast ? (
+                <div className="rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                  {modalToast}
+                </div>
+              ) : null}
+              <TextInput
+                label="Nama Paket / Profil"
+                placeholder="BROADBAND GOLD (50 Mbps)"
+                required
+                value={profileForm.name}
+                onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+              />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <TextInput
+                  label="Download Rate (Mbps)"
+                  type="number"
+                  placeholder="50"
+                  required
+                  value={profileForm.downloadRate}
+                  onChange={(e) => setProfileForm({ ...profileForm, downloadRate: e.target.value })}
+                />
+                <TextInput
+                  label="Upload Rate (Mbps)"
+                  type="number"
+                  placeholder="50"
+                  required
+                  value={profileForm.uploadRate}
+                  onChange={(e) => setProfileForm({ ...profileForm, uploadRate: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <TextInput
+                  label="Nama IP Pool"
+                  placeholder="pool-ftth-papringan"
+                  required
+                  value={profileForm.poolName}
+                  onChange={(e) => setProfileForm({ ...profileForm, poolName: e.target.value })}
+                />
+                <TextInput
+                  label="Shared Users (Limit Sesi)"
+                  type="number"
+                  placeholder="1"
+                  required
+                  value={String(profileForm.sharedUsers)}
+                  onChange={(e) => setProfileForm({ ...profileForm, sharedUsers: Number(e.target.value) || 1 })}
+                />
+              </div>
+              <div className="rounded-lg bg-slate-50 p-3 text-xs text-slate-500">
+                Rate Limit yang akan diteruskan ke MikroTik: <strong className="text-slate-800">{profileForm.downloadRate}M/{profileForm.uploadRate}M</strong>
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowProfileModal(false)}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={modalLoading}
+                  className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {modalLoading ? "Menyimpan..." : "Simpan Profil Bandwidth"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

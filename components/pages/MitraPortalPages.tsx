@@ -22,9 +22,84 @@ function Notice({ message }: { message: string }) { return message ? <div classN
 function Empty({ children = "Belum ada data." }: { children?: ReactNode }) { return <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center text-sm text-slate-500">{children}</div>; }
 function Button({ children, type = "button", onClick, tone = "primary" }: { children: ReactNode; type?: "button" | "submit"; onClick?: () => void; tone?: "primary" | "danger" }) { return <button type={type} onClick={onClick} className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-bold text-white ${tone === "danger" ? "bg-rose-600 hover:bg-rose-500" : "bg-indigo-600 hover:bg-indigo-500"}`}>{children}</button>; }
 
-function DataGrid({ columns, rows }: { columns: { label: string; value: (row: any, index: number) => ReactNode }[]; rows: any[] }) {
+function DataGrid({
+  columns,
+  rows,
+  pageSize = 10,
+  enablePagination = true,
+}: {
+  columns: { label: string; value: (row: any, index: number) => ReactNode }[];
+  rows: any[];
+  pageSize?: number;
+  enablePagination?: boolean;
+}) {
+  const [pageIndex, setPageIndex] = useState(0);
+
   if (!rows.length) return <Empty />;
-  return <div className="overflow-x-auto rounded-xl border border-slate-200"><table className="w-full min-w-[900px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>{columns.map((column) => <th key={column.label} className="px-4 py-3 font-bold">{column.label}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{rows.map((row, index) => <tr key={row.id || index} className="hover:bg-slate-50/70">{columns.map((column) => <td key={column.label} className="px-4 py-3 text-slate-700">{column.value(row, index)}</td>)}</tr>)}</tbody></table></div>;
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const currentPage = Math.max(0, Math.min(pageIndex, totalPages - 1));
+  const displayedRows = enablePagination && rows.length > pageSize
+    ? rows.slice(currentPage * pageSize, (currentPage + 1) * pageSize)
+    : rows;
+
+  return (
+    <div className="space-y-4">
+      <div className="overflow-x-auto rounded-xl border border-slate-200">
+        <table className="w-full min-w-[900px] text-left text-sm">
+          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <tr>
+              {columns.map((column) => (
+                <th key={column.label} className="px-4 py-3 font-bold">
+                  {column.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {displayedRows.map((row, index) => (
+              <tr key={row.id || index} className="hover:bg-slate-50/70">
+                {columns.map((column) => (
+                  <td key={column.label} className="px-4 py-3 text-slate-700">
+                    {column.value(row, currentPage * pageSize + index)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {enablePagination && rows.length > pageSize ? (
+        <div className="flex flex-col gap-3 pt-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <p className="font-semibold text-slate-500">
+            Menampilkan {currentPage * pageSize + 1} - {Math.min((currentPage + 1) * pageSize, rows.length)} dari {rows.length} data
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={currentPage === 0}
+              onClick={() => setPageIndex((prev) => Math.max(0, prev - 1))}
+              className="rounded-lg border border-slate-200 px-3 py-1.5 font-bold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Sebelumnya
+            </button>
+            <span className="rounded-lg bg-slate-100 px-3 py-1.5 font-black text-slate-700">
+              {currentPage + 1} / {totalPages}
+            </span>
+            <button
+              type="button"
+              disabled={currentPage >= totalPages - 1}
+              onClick={() => setPageIndex((prev) => Math.min(totalPages - 1, prev + 1))}
+              className="rounded-lg border border-slate-200 px-3 py-1.5 font-bold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Berikutnya
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 const tileThemes: Record<string, string> = {
@@ -475,8 +550,6 @@ function uniqueTechnicalRows(rows: any[]) {
 function TechnicalPage({ section }: { section: string }) {
   const [rows, setRows] = useState<any[] | null>(null);
   const [error, setError] = useState("");
-  const [pageIndex, setPageIndex] = useState(0);
-  const pageSize = 10;
 
   useEffect(() => {
     Promise.allSettled([
@@ -531,9 +604,6 @@ function TechnicalPage({ section }: { section: string }) {
   }, [filtered, rows, section]);
 
   const mapPoints = filtered.filter((row) => row.coordinate && row.coordinate !== "-");
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const currentPage = Math.min(pageIndex, totalPages - 1);
-  const paginatedRows = filtered.slice(currentPage * pageSize, currentPage * pageSize + pageSize);
 
   return (
     <div className="space-y-6">
@@ -571,7 +641,7 @@ function TechnicalPage({ section }: { section: string }) {
                 <p className="text-sm text-slate-500">{counts.mapped} data memiliki koordinat.</p>
               </div>
             </div>
-            <DataGrid rows={paginatedRows} columns={[
+            <DataGrid rows={filtered} pageSize={pageSize} columns={[
               { label: "Jenis", value: (r) => <span className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-xs font-black uppercase text-indigo-700">{r.category === "passive" ? <Cable size={14} /> : r.category === "active" ? <Router size={14} /> : <RadioTower size={14} />}{r.assetType}</span> },
               { label: "Nama", value: (r) => <strong>{r.name}</strong> },
               { label: "Kode / Serial", value: (r) => r.serialNo || "-" },
@@ -580,34 +650,6 @@ function TechnicalPage({ section }: { section: string }) {
               { label: "Koordinat", value: (r) => r.coordinate || "-" },
               { label: "Status", value: (r) => <Badge value={r.status} /> },
             ]} />
-            {filtered.length > pageSize ? (
-              <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 text-sm sm:flex-row sm:items-center sm:justify-between">
-                <p className="font-semibold text-slate-500">
-                  Menampilkan {currentPage * pageSize + 1}-{Math.min((currentPage + 1) * pageSize, filtered.length)} dari {filtered.length} data
-                </p>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={currentPage === 0}
-                    onClick={() => setPageIndex((value) => Math.max(0, value - 1))}
-                    className="rounded-lg border border-slate-200 px-3 py-2 font-bold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Sebelumnya
-                  </button>
-                  <span className="rounded-lg bg-slate-50 px-3 py-2 font-black text-slate-700">
-                    {currentPage + 1} / {totalPages}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={currentPage >= totalPages - 1}
-                    onClick={() => setPageIndex((value) => Math.min(totalPages - 1, value + 1))}
-                    className="rounded-lg border border-slate-200 px-3 py-2 font-bold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    Berikutnya
-                  </button>
-                </div>
-              </div>
-            ) : null}
           </Card>
         </>
       )}

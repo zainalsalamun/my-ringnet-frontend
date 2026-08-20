@@ -15,3 +15,6 @@ export { reportsApi } from "./reports/api";
 export { settingsApi } from "./settings/api";
 export { technicalDataApi } from "./technical-data/api";
 export { usersApi } from "./users/api";
+export { radiusApi } from "./radius/api";
+export { fiberCableApi } from "./fiber-cables/api";
+export { privilegeApi } from "./privilege/api";

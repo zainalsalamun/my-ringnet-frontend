@@ -26,5 +26,5 @@ export const SETTINGS_MENU_ITEMS: SidebarItemConfig[] = [
   { label: "Kategori Dokumen", href: ROUTES.settings.documentCategories },
 ];
 
-export const SUPER_ADMIN_MITRA_GROUP_KEYS = ["documents", "technical", "finance"] as const;
+export const SUPER_ADMIN_MITRA_GROUP_KEYS = ["documents", "technical"] as const;
 

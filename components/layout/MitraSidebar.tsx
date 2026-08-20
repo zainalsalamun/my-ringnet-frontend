@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { useAuthStore } from "@/hooks/useAuth";
-import { BarChart3, ChevronDown, CircleUserRound, FileCheck2, Headphones, Network, ReceiptText, Settings2 } from "lucide-react";
+import { BarChart3, ChevronDown, CircleUserRound, FileCheck2, Headphones, Network, Settings2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 type MenuItem = {
@@ -83,20 +83,6 @@ export const getMitraMenuGroups = (isAdmin: boolean = false): MenuGroup[] => [
       },
     ],
   },
-
-  {
-    key: "finance",
-    label: "Pencatatan & Pembukuan",
-    icon: ReceiptText,
-    items: [
-      { label: "Produk", href: "/mitra/produk" },
-      { label: "Data Customer", href: "/mitra/pelanggan" },
-      { label: "SLA Pelanggan", href: "/mitra/sla" },
-      { label: "Pencatatan Pendapatan Billing", href: "/mitra/pendapatan-billing" },
-      { label: "Kelola Tagihan Pelanggan", href: "/mitra/kelola-tagihan" },
-      { label: "BA Pelaporan Pendapatan", href: "/mitra/berita-acara" },
-    ],
-  },
   {
     key: "account",
     label: "Akun",
@@ -106,7 +92,6 @@ export const getMitraMenuGroups = (isAdmin: boolean = false): MenuGroup[] => [
       { label: "Profile", href: "/mitra/profil" },
     ],
   },
-
 ];
 
 

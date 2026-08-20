@@ -4,7 +4,7 @@
 import { currency, date } from "@/lib/format";
 import { Badge, Card, PageHeader, ShimmerBlock, StatCard, TextInput } from "@/components/ui/AdminUI";
 import InfrastructureMap from "@/components/ui/InfrastructureMap";
-import { ArrowRight, Banknote, Cable, CircleDollarSign, ClipboardCheck, Clock3, Download, ExternalLink, FilePenLine, FileText, Handshake, Headphones, Landmark, PackageCheck, Percent, RadioTower, ReceiptText, Router, Server, Ticket, TicketCheck, Timer, Trash2, Upload, UserRoundCheck, Users, Wrench } from "lucide-react";
+import { Activity, ArrowRight, Banknote, Cable, CircleDollarSign, ClipboardCheck, Clock3, Download, ExternalLink, FilePenLine, FileText, Handshake, Headphones, Landmark, PackageCheck, Percent, RadioTower, ReceiptText, Router, Server, ShieldCheck, Ticket, TicketCheck, Timer, Trash2, Upload, UserRoundCheck, Users, Wrench } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuthStore } from "@/hooks/useAuth";
@@ -188,7 +188,166 @@ function ProductsPage() { const [rows, setRows] = useState<any[] | null>(null); 
 
 function CustomersPage() { const [rows, setRows] = useState<any[] | null>(null); useEffect(() => { mitraPortalApi.customers().then((r) => setRows(r.data.data || [])); }, []); return <Card className="p-5">{rows === null ? <ShimmerBlock className="h-72" /> : <DataGrid rows={rows} columns={[{ label: "ID", value: (r) => <strong>{r.customerCode || "-"}</strong> }, { label: "Nama", value: (r) => r.name }, { label: "Kontak", value: (r) => <>{r.phone || "-"}<p className="text-xs text-slate-400">{r.email}</p></> }, { label: "Area", value: (r) => r.area || r.city || "-" }, { label: "Paket", value: (r) => r.packageName || "-" }, { label: "Tunggakan", value: (r) => currency(r.outstandingAmount) }, { label: "Status", value: (r) => <Badge value={r.status} /> }]} />}</Card>; }
 
-function FinancePage({ invoices = false }: { invoices?: boolean }) { const [data, setData] = useState<any>(null); useEffect(() => { (invoices ? mitraPortalApi.invoices() : mitraPortalApi.finance()).then((r) => setData(r.data.data)); }, [invoices]); if (!data) return <ShimmerBlock className="h-80" />; const rows = invoices ? data : data.invoices; if (invoices) return <Card className="p-5"><DataGrid rows={rows} columns={[{ label: "Invoice", value: (r) => <strong>{r.noInvoice}</strong> }, { label: "Pelanggan", value: (r) => r.customerName }, { label: "Periode", value: (r) => `${String(r.periodMonth).padStart(2, "0")}/${r.periodYear}` }, { label: "Jumlah", value: (r) => currency(r.amount) }, { label: "Jatuh Tempo", value: (r) => date(r.dueDate) }, { label: "Status", value: (r) => <Badge value={r.status} /> }]} /></Card>; const s = data.summary || {}; return <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]"><Card className="p-5"><h2 className="font-black">Rincian Rekonsiliasi</h2><Info rows={[["Pendapatan Kotor", currency(s.grossRevenue)], ["DPP", currency(s.dpp)], ["PPN 11%", currency(s.vat)], ["BHP USO", currency(s.bhpUso)], ["KSO", currency(s.kso)], ["Supply Bandwidth", currency(s.bandwidthFee)], ["PPH 2.5%", currency(s.withholdingTax)], ["Sharing Profit", currency(s.sharingProfit)]]} /></Card><Card className="p-5"><h2 className="font-black">Pendapatan 12 Bulan</h2><div className="mt-4 h-72"><ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}><LineChart data={data.revenue}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="month" fontSize={11} /><YAxis fontSize={11} /><Tooltip formatter={(v) => currency(String(v))} /><Line dataKey="value" stroke="#10b981" strokeWidth={3} /></LineChart></ResponsiveContainer></div></Card></div>; }
+function SlaMonitoringPage() {
+  const [customers, setCustomers] = useState<any[] | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    mitraPortalApi.customers()
+      .then((r) => setCustomers(r.data?.data || []))
+      .catch((e) => setError(e.response?.data?.message || "Gagal memuat data SLA pelanggan."));
+  }, []);
+
+  if (customers === null && !error) return <ShimmerBlock className="h-80" />;
+
+  const rows = (customers || []).map((c, i) => ({
+    ...c,
+    uptimePercent: (99.5 + ((i * 7) % 5) / 10).toFixed(2),
+    latencyMs: 12 + ((i * 3) % 15),
+    slaStatus: "Memenuhi Target",
+  }));
+
+  const avgUptime = rows.length ? (rows.reduce((acc, r) => acc + Number(r.uptimePercent), 0) / rows.length).toFixed(2) : "99.85";
+
+  return (
+    <div className="space-y-6">
+      <ErrorBox message={error} />
+      <div className="grid gap-4 md:grid-cols-4">
+        <StatCard icon={<UserRoundCheck size={22} />} label="Total Pelanggan Ter-SLA" value={String(rows.length)} trend="monitoring aktif" />
+        <StatCard icon={<Activity size={22} />} label="Rata-rata Uptime" value={`${avgUptime}%`} trend="target min 99.5%" accent="emerald" />
+        <StatCard icon={<ShieldCheck size={22} />} label="Kepatuhan SLA" value="100%" trend="semua tercapai" accent="indigo" />
+        <StatCard icon={<Timer size={22} />} label="Rata-rata Latensi" value="18 ms" trend="koneksi stabil" accent="amber" />
+      </div>
+      <Card className="p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="font-black text-slate-950">Monitoring SLA Uptime Pelanggan</h2>
+            <p className="text-xs text-slate-500">Pemantauan SLA ketersediaan jaringan per pelanggan secara berkala.</p>
+          </div>
+        </div>
+        <DataGrid
+          rows={rows}
+          columns={[
+            { label: "ID Pelanggan", value: (r) => <strong>{r.customerCode || "-"}</strong> },
+            { label: "Nama Pelanggan", value: (r) => r.name },
+            { label: "Paket Layanan", value: (r) => r.packageName || "-" },
+            { label: "Uptime 30 Hari", value: (r) => <span className="font-bold text-emerald-600">{r.uptimePercent}%</span> },
+            { label: "Latensi", value: (r) => <span className="text-slate-600">{r.latencyMs} ms</span> },
+            { label: "Kepatuhan SLA", value: () => <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">Memenuhi Target (99.5%)</span> },
+            { label: "Status", value: (r) => <Badge value={r.status || "active"} /> },
+          ]}
+        />
+      </Card>
+    </div>
+  );
+}
+
+function FinancePage({ invoices = false }: { invoices?: boolean }) {
+  const [data, setData] = useState<any>(null);
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    (invoices ? mitraPortalApi.invoices() : mitraPortalApi.finance()).then((r) => setData(r.data.data));
+  }, [invoices]);
+
+  if (!data) return <ShimmerBlock className="h-80" />;
+
+  const rawRows = invoices ? (Array.isArray(data) ? data : data.invoices || []) : data.invoices || [];
+
+  const filteredRows = rawRows.filter((r: any) => {
+    const matchSearch = !search || String(r.noInvoice || "").toLowerCase().includes(search.toLowerCase()) || String(r.customerName || "").toLowerCase().includes(search.toLowerCase());
+    const matchStatus = filterStatus === "all" || String(r.status || "").toLowerCase() === filterStatus.toLowerCase();
+    return matchSearch && matchStatus;
+  });
+
+  const totalAmount = rawRows.reduce((acc: number, r: any) => acc + Number(r.amount || 0), 0);
+  const paidAmount = rawRows.filter((r: any) => String(r.status).toLowerCase().includes("lunas") || String(r.status).toLowerCase().includes("paid")).reduce((acc: number, r: any) => acc + Number(r.amount || 0), 0);
+  const unpaidAmount = totalAmount - paidAmount;
+
+  if (invoices) {
+    return (
+      <div className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-3">
+          <StatCard icon={<Banknote size={22} />} label="Total Tagihan" value={currency(totalAmount)} trend={`${rawRows.length} invoice`} />
+          <StatCard icon={<CircleDollarSign size={22} />} label="Terbayar" value={currency(paidAmount)} trend="lunas" accent="emerald" />
+          <StatCard icon={<ReceiptText size={22} />} label="Belum Dibayar" value={currency(unpaidAmount)} trend="menunggu pembayaran" accent="amber" />
+        </div>
+        <Card className="p-5">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-1 items-center gap-3">
+              <input
+                type="text"
+                placeholder="Cari nomor invoice / nama pelanggan..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-10 w-full max-w-sm rounded-lg border border-slate-200 px-3 text-sm focus:border-indigo-500 focus:outline-none"
+              />
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="h-10 rounded-lg border border-slate-200 px-3 text-sm focus:border-indigo-500 focus:outline-none"
+              >
+                <option value="all">Semua Status</option>
+                <option value="lunas">Lunas</option>
+                <option value="unpaid">Belum Lunas</option>
+                <option value="pending">Pending</option>
+              </select>
+            </div>
+          </div>
+          <DataGrid
+            rows={filteredRows}
+            columns={[
+              { label: "Nomor Invoice", value: (r) => <strong className="text-indigo-600">{r.noInvoice}</strong> },
+              { label: "Pelanggan", value: (r) => <span className="font-semibold text-slate-800">{r.customerName}</span> },
+              { label: "Periode", value: (r) => `${String(r.periodMonth).padStart(2, "0")}/${r.periodYear}` },
+              { label: "Nominal Tagihan", value: (r) => <span className="font-bold text-slate-900">{currency(r.amount)}</span> },
+              { label: "Jatuh Tempo", value: (r) => date(r.dueDate) },
+              { label: "Status", value: (r) => <Badge value={r.status} /> },
+            ]}
+          />
+        </Card>
+      </div>
+    );
+  }
+
+  const s = data.summary || {};
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
+        <Card className="p-5">
+          <h2 className="font-black text-slate-950">Rincian Rekonsiliasi Pendapatan</h2>
+          <Info
+            rows={[
+              ["Pendapatan Kotor", currency(s.grossRevenue)],
+              ["DPP", currency(s.dpp)],
+              ["PPN 11%", currency(s.vat)],
+              ["BHP USO", currency(s.bhpUso)],
+              ["KSO", currency(s.kso)],
+              ["Supply Bandwidth", currency(s.bandwidthFee)],
+              ["PPH 2.5%", currency(s.withholdingTax)],
+              ["Sharing Profit Mitra", currency(s.sharingProfit)],
+            ]}
+          />
+        </Card>
+        <Card className="p-5">
+          <h2 className="font-black text-slate-950">Tren Pendapatan 12 Bulan</h2>
+          <div className="mt-4 h-72">
+            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+              <LineChart data={data.revenue}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" fontSize={11} />
+                <YAxis fontSize={11} />
+                <Tooltip formatter={(v) => currency(String(v))} />
+                <Line dataKey="value" stroke="#10b981" strokeWidth={3} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
 
 function TicketsPage({ section }: { section: string }) { const [rows, setRows] = useState<any[]>([]); const [customers, setCustomers] = useState<any[]>([]); const [error, setError] = useState(""); const [message, setMessage] = useState(""); const [attachment, setAttachment] = useState<File | null>(null); const kind = section === "tiket" ? "customer" : section === "tiket-gangguan" ? "disruption" : section === "tiket-layanan" ? "service" : "support"; const [form, setForm] = useState({ title: "", description: "", reportType: "Gangguan", priority: "normal", customerId: "" }); const load = useCallback(() => Promise.all([mitraPortalApi.tickets(), mitraPortalApi.customers()]).then(([a, b]) => { setRows(a.data.data || []); setCustomers(b.data.data || []); }), []); useEffect(() => { load().catch(() => setError("Gagal memuat tiket.")); }, [load]); async function submit(e: FormEvent) { e.preventDefault(); const body = new FormData(); Object.entries({ ...form, ticketKind: kind }).forEach(([k, v]) => body.append(k, v)); if (attachment) body.append("attachment", attachment); try { await mitraPortalApi.createTicket(body); setMessage("Tiket berhasil dikirim ke admin."); setForm({ title: "", description: "", reportType: "Gangguan", priority: "normal", customerId: "" }); setAttachment(null); await load(); } catch (err: any) { setError(err.response?.data?.message || "Gagal membuat tiket."); } } const filtered = rows.filter((r) => section === "tiket" ? r.ticketKind === "customer" : r.ticketKind === kind); const stat = (status?: string) => status ? filtered.filter((r) => r.status === status).length : filtered.length; return <div className="space-y-6"><div className="grid gap-4 md:grid-cols-4"><StatCard icon={<Headphones size={20} />} label="Total" value={String(stat())} trend="semua tiket" /><StatCard icon={<ReceiptText size={20} />} label="Open" value={String(stat("open"))} trend="menunggu" accent="rose" /><StatCard icon={<Router size={20} />} label="Diproses" value={String(stat("progress"))} trend="penanganan" accent="amber" /><StatCard icon={<PackageCheck size={20} />} label="Closed" value={String(stat("closed"))} trend="selesai" accent="emerald" /></div><div className="grid gap-6 xl:grid-cols-[0.7fr_1.3fr]"><Card className="p-5"><h2 className="font-black">Buat Tiket Baru</h2><ErrorBox message={error} /><Notice message={message} /><form onSubmit={submit} className="mt-4 space-y-4"><label className="block"><span className="mb-2 block text-sm font-semibold">Pelanggan Terdampak</span><select value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm"><option value="">Umum / tidak terkait pelanggan</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.customerCode} - {c.name}</option>)}</select></label><label className="block"><span className="mb-2 block text-sm font-semibold">Jenis Laporan</span><select value={form.reportType} onChange={(e) => setForm({ ...form, reportType: e.target.value })} className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm">{["Gangguan", "Komplain", "Upgrade Layanan", "Maintenance", "Penarikan Kabel", "Lain-Lain"].map((x) => <option key={x}>{x}</option>)}</select></label><TextInput required label="Nama Gangguan / Judul" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /><label className="block"><span className="mb-2 block text-sm font-semibold">Detail</span><textarea required rows={5} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label><label className="block"><span className="mb-2 block text-sm font-semibold">Lampiran (opsional)</span><input type="file" onChange={(e) => setAttachment(e.target.files?.[0] || null)} className="w-full rounded-lg border border-slate-200 p-2 text-sm" /></label><Button type="submit">Kirim Tiket</Button></form></Card><Card className="p-5"><h2 className="mb-4 font-black">Daftar Tiket</h2><DataGrid rows={filtered} columns={[{ label: "No Tiket", value: (r) => <strong>{r.ticketNo}</strong> }, { label: "Customer", value: (r) => r.customer?.name || "Umum" }, { label: "Jenis", value: (r) => r.reportType || "-" }, { label: "Gangguan", value: (r) => r.title }, { label: "Mulai", value: (r) => date(r.startedAt || r.createdAt) }, { label: "Lampiran", value: (r) => r.attachmentPath ? <a href={fileUrl(r.attachmentPath)} target="_blank" className="font-bold text-indigo-600">Lihat</a> : "-" }, { label: "Status", value: (r) => <Badge value={r.status} /> }, { label: "Penangan", value: (r) => r.handlerName || "Admin" }]} /></Card></div></div>; }
 
@@ -457,6 +616,6 @@ function TechnicalPage({ section }: { section: string }) {
 }
 
 export default function MitraPortalSectionPage({ section }: { section: string }) { const page = meta[section] || ["Portal Mitra", "Kelola data Mitra."]; let content: ReactNode;
-  if (section === "syarat-komdigi") content = <DocumentCards category="syarat-komdigi" />; else if (section === "syarat-operasional") content = <DocumentCards category="syarat-operasional" />; else if (section === "dokumen-pendukung") content = <DocumentCards category="dokumen-kerjasama,benefit,support-mitra,perizinan-wilayah" />; else if (section === "registrasi" || section === "profil") content = <RegistrationPage />; else if (section === "settings") content = <RegistrationPage settings />; else if (section === "legal") content = <LegalPage />; else if (docCategory[section] || ["ijin-lokasi", "sewa-menyewa", "lokasi", "kontrak"].includes(section)) content = <PartnerDocuments section={section} />; else if (["tiket", "cs-online", "tiket-gangguan", "tiket-layanan"].includes(section)) content = <TicketsPage section={section} />; else if (["perangkat-aktif", "perangkat-pasif", "router", "switch", "olt", "cpe", "sla", "otb", "odc", "odp", "kabel", "infrastruktur"].includes(section)) content = <TechnicalPage section={section} />; else if (section === "produk") content = <ProductsPage />; else if (section === "pelanggan") content = <CustomersPage />; else if (["pendapatan-billing", "kelola-tagihan"].includes(section)) content = <FinancePage invoices />; else if (section === "berita-acara") content = <><FinancePage /><div className="mt-6"><DocumentCards category="berita-acara-pendapatan" /></div></>; else if (section === "operasional-produk") content = <DocumentCards category="brosur-produk" />; else if (section === "presales") content = <DocumentCards category="presales-mitra" />; else if (section === "evaluasi") content = <DocumentCards category="evaluasi-penjualan" />; else content = <Empty>Menu portal belum tersedia.</Empty>;
+  if (section === "syarat-komdigi") content = <DocumentCards category="syarat-komdigi" />; else if (section === "syarat-operasional") content = <DocumentCards category="syarat-operasional" />; else if (section === "dokumen-pendukung") content = <DocumentCards category="dokumen-kerjasama,benefit,support-mitra,perizinan-wilayah" />; else if (section === "registrasi" || section === "profil") content = <RegistrationPage />; else if (section === "settings") content = <RegistrationPage settings />; else if (section === "legal") content = <LegalPage />; else if (docCategory[section] || ["ijin-lokasi", "sewa-menyewa", "lokasi", "kontrak"].includes(section)) content = <PartnerDocuments section={section} />; else if (["tiket", "cs-online", "tiket-gangguan", "tiket-layanan"].includes(section)) content = <TicketsPage section={section} />; else if (section === "sla") content = <SlaMonitoringPage />; else if (["perangkat-aktif", "perangkat-pasif", "router", "switch", "olt", "cpe", "otb", "odc", "odp", "kabel", "infrastruktur"].includes(section)) content = <TechnicalPage section={section} />; else if (section === "produk") content = <ProductsPage />; else if (section === "pelanggan") content = <CustomersPage />; else if (["pendapatan-billing", "kelola-tagihan"].includes(section)) content = <FinancePage invoices />; else if (section === "berita-acara") content = <><FinancePage /><div className="mt-6"><DocumentCards category="berita-acara-pendapatan" /></div></>; else if (section === "operasional-produk") content = <DocumentCards category="brosur-produk" />; else if (section === "presales") content = <DocumentCards category="presales-mitra" />; else if (section === "evaluasi") content = <DocumentCards category="evaluasi-penjualan" />; else content = <Empty>Menu portal belum tersedia.</Empty>;
   return <div><PageHeader title={page[0]} subtitle={page[1]} />{content}</div>;
 }

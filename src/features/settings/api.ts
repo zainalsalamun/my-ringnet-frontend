@@ -2,12 +2,18 @@ import api from "@/src/lib/api/client";
 import { API_ENDPOINTS } from "@/src/lib/api/endpoints";
 
 export const settingsApi = {
-  list(params?: URLSearchParams | Record<string, string | number | boolean>) {
-    return api.get(API_ENDPOINTS.settings.list, { params });
+  async list(params?: URLSearchParams | Record<string, string | number | boolean>) {
+    try {
+      const res = await api.get(API_ENDPOINTS.settings.list, { params });
+      if (Array.isArray(res.data?.data)) return res;
+      return { data: { data: [] } };
+    } catch {
+      return { data: { data: [] } };
+    }
   },
 
-  detail(id: string) {
-    return api.get(API_ENDPOINTS.settings.detail(id));
+  async detail(id: string) {
+    return api.get(API_ENDPOINTS.settings.detail(id)).catch(() => ({ data: { data: null } }));
   },
 
   create(payload: Record<string, unknown>) {

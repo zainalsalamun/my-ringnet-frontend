@@ -9,13 +9,6 @@ export const productsApi = {
 
   async servicePackages(params?: URLSearchParams | Record<string, string | number | boolean>) {
     try {
-      const res = await api.get(API_ENDPOINTS.products.servicePackages, { params });
-      if (Array.isArray(res.data?.data) && res.data.data.length > 0) return res;
-    } catch {
-      // fallback
-    }
-
-    try {
       const res = await api.post("/product/broadband/list", {
         pageSize: 100,
         pageIndex: 0,
@@ -24,14 +17,14 @@ export const productsApi = {
         globalFilter: "",
       });
       const raw = res.data?.data?.data || res.data?.data || res.data?.rows || [];
-      if (Array.isArray(raw) && raw.length > 0) {
+      if (Array.isArray(raw)) {
         return {
           data: {
             data: raw.map((item: any) => ({
               id: item.id || item.product_id,
               name: item.name || item.product_name,
-              speedMbps: item.speed_mbps || item.speed || item.bandwidth || 25,
-              monthlyPrice: item.monthly_price || item.price || item.cost || 250000,
+              speedMbps: item.speed_mbps || item.speed || item.bandwidth || 0,
+              monthlyPrice: item.monthly_price || item.price || item.cost || 0,
               description: item.description || "Paket internet broadband FTTH",
               status: item.status === false ? "nonactive" : "active",
             })),
@@ -39,14 +32,21 @@ export const productsApi = {
         };
       }
     } catch {
+      // fallback to service-packages
+    }
+
+    try {
+      const res = await api.get(API_ENDPOINTS.products.servicePackages, { params });
+      if (Array.isArray(res.data?.data)) return res;
+    } catch {
       // ignore
     }
 
-    return api.get(API_ENDPOINTS.products.servicePackages, { params });
+    return { data: { data: [] } };
   },
 
   servicePackageDetail(id: string) {
-    return api.get(API_ENDPOINTS.products.servicePackageDetail(id));
+    return api.get(API_ENDPOINTS.products.servicePackageDetail(id)).catch(() => ({ data: { data: null } }));
   },
 
   createServicePackage(payload: Record<string, unknown>) {

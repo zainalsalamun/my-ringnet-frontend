@@ -1,5 +1,6 @@
 "use client";
 
+import { SelectInput } from "@/components/ui/AdminUI";
 import { useAuthStore } from "@/hooks/useAuth";
 import { mitraPortalApi } from "@/src/features/mitra-portal/api";
 import axios from "axios";
@@ -82,8 +83,13 @@ export default function MitraAiChat() {
           </header>
 
           <div className="grid gap-3 border-b border-slate-100 bg-slate-50 px-5 py-4 sm:grid-cols-2">
-            <label className="text-xs font-bold text-slate-600">Divisi Tujuan<select value={division} onChange={(event) => setDivision(event.target.value)} className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 outline-none focus:border-indigo-500"><option>NOC / Teknis</option><option>Billing / Keuangan</option><option>Legal / Kemitraan</option><option>Customer Service</option><option>Produk / Presales</option></select></label>
-            <label className="text-xs font-bold text-slate-600">Subjek<input value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="Contoh: Kendala IP" maxLength={120} className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400 focus:border-indigo-500" /></label>
+            <SelectInput
+              label="Divisi Tujuan"
+              value={division}
+              onChange={(event) => setDivision(event.target.value)}
+              options={["NOC / Teknis", "Billing / Keuangan", "Legal / Kemitraan", "Customer Service", "Produk / Presales"].map((d) => ({ label: d, value: d }))}
+            />
+            <label className="text-xs font-bold text-slate-600">Subjek<input value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="Contoh: Kendala IP" maxLength={120} className="mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400 focus:border-indigo-500" /></label>
           </div>
 
           <div ref={conversationRef} className="min-h-48 flex-1 space-y-3 overflow-y-auto px-5 py-4">

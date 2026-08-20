@@ -1,8 +1,7 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { currency, date } from "@/lib/format";
-import { Badge, Card, PageHeader, ShimmerBlock, StatCard, TextInput } from "@/components/ui/AdminUI";
+import { Badge, Card, PageHeader, SelectInput, ShimmerBlock, StatCard, TextInput } from "@/components/ui/AdminUI";
 import InfrastructureMap from "@/components/ui/InfrastructureMap";
 import { Activity, ArrowRight, Banknote, Cable, CircleDollarSign, ClipboardCheck, Clock3, Download, ExternalLink, FilePenLine, FileText, Handshake, Headphones, Landmark, PackageCheck, Percent, RadioTower, ReceiptText, Router, Server, ShieldCheck, Ticket, TicketCheck, Timer, Trash2, Upload, UserRoundCheck, Users, Wrench } from "lucide-react";
 import Link from "next/link";
@@ -363,18 +362,20 @@ function FinancePage({ invoices = false }: { invoices?: boolean }) {
                 placeholder="Cari nomor invoice / nama pelanggan..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-10 w-full max-w-sm rounded-lg border border-slate-200 px-3 text-sm focus:border-indigo-500 focus:outline-none"
+                className="h-11 w-full max-w-sm rounded-xl border border-slate-200 px-3 text-sm focus:border-indigo-500 focus:outline-none"
               />
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="h-10 rounded-lg border border-slate-200 px-3 text-sm focus:border-indigo-500 focus:outline-none"
-              >
-                <option value="all">Semua Status</option>
-                <option value="lunas">Lunas</option>
-                <option value="unpaid">Belum Lunas</option>
-                <option value="pending">Pending</option>
-              </select>
+              <div className="w-44">
+                <SelectInput
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  options={[
+                    { label: "Semua Status", value: "all" },
+                    { label: "Lunas", value: "lunas" },
+                    { label: "Belum Lunas", value: "unpaid" },
+                    { label: "Pending", value: "pending" },
+                  ]}
+                />
+              </div>
             </div>
           </div>
           <DataGrid
@@ -431,7 +432,109 @@ function FinancePage({ invoices = false }: { invoices?: boolean }) {
   );
 }
 
-function TicketsPage({ section }: { section: string }) { const [rows, setRows] = useState<any[]>([]); const [customers, setCustomers] = useState<any[]>([]); const [error, setError] = useState(""); const [message, setMessage] = useState(""); const [attachment, setAttachment] = useState<File | null>(null); const kind = section === "tiket" ? "customer" : section === "tiket-gangguan" ? "disruption" : section === "tiket-layanan" ? "service" : "support"; const [form, setForm] = useState({ title: "", description: "", reportType: "Gangguan", priority: "normal", customerId: "" }); const load = useCallback(() => Promise.all([mitraPortalApi.tickets(), mitraPortalApi.customers()]).then(([a, b]) => { setRows(a.data.data || []); setCustomers(b.data.data || []); }), []); useEffect(() => { load().catch(() => setError("Gagal memuat tiket.")); }, [load]); async function submit(e: FormEvent) { e.preventDefault(); const body = new FormData(); Object.entries({ ...form, ticketKind: kind }).forEach(([k, v]) => body.append(k, v)); if (attachment) body.append("attachment", attachment); try { await mitraPortalApi.createTicket(body); setMessage("Tiket berhasil dikirim ke admin."); setForm({ title: "", description: "", reportType: "Gangguan", priority: "normal", customerId: "" }); setAttachment(null); await load(); } catch (err: any) { setError(err.response?.data?.message || "Gagal membuat tiket."); } } const filtered = rows.filter((r) => section === "tiket" ? r.ticketKind === "customer" : r.ticketKind === kind); const stat = (status?: string) => status ? filtered.filter((r) => r.status === status).length : filtered.length; return <div className="space-y-6"><div className="grid gap-4 md:grid-cols-4"><StatCard icon={<Headphones size={20} />} label="Total" value={String(stat())} trend="semua tiket" /><StatCard icon={<ReceiptText size={20} />} label="Open" value={String(stat("open"))} trend="menunggu" accent="rose" /><StatCard icon={<Router size={20} />} label="Diproses" value={String(stat("progress"))} trend="penanganan" accent="amber" /><StatCard icon={<PackageCheck size={20} />} label="Closed" value={String(stat("closed"))} trend="selesai" accent="emerald" /></div><div className="grid gap-6 xl:grid-cols-[0.7fr_1.3fr]"><Card className="p-5"><h2 className="font-black">Buat Tiket Baru</h2><ErrorBox message={error} /><Notice message={message} /><form onSubmit={submit} className="mt-4 space-y-4"><label className="block"><span className="mb-2 block text-sm font-semibold">Pelanggan Terdampak</span><select value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm"><option value="">Umum / tidak terkait pelanggan</option>{customers.map((c) => <option key={c.id} value={c.id}>{c.customerCode} - {c.name}</option>)}</select></label><label className="block"><span className="mb-2 block text-sm font-semibold">Jenis Laporan</span><select value={form.reportType} onChange={(e) => setForm({ ...form, reportType: e.target.value })} className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm">{["Gangguan", "Komplain", "Upgrade Layanan", "Maintenance", "Penarikan Kabel", "Lain-Lain"].map((x) => <option key={x}>{x}</option>)}</select></label><TextInput required label="Nama Gangguan / Judul" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /><label className="block"><span className="mb-2 block text-sm font-semibold">Detail</span><textarea required rows={5} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" /></label><label className="block"><span className="mb-2 block text-sm font-semibold">Lampiran (opsional)</span><input type="file" onChange={(e) => setAttachment(e.target.files?.[0] || null)} className="w-full rounded-lg border border-slate-200 p-2 text-sm" /></label><Button type="submit">Kirim Tiket</Button></form></Card><Card className="p-5"><h2 className="mb-4 font-black">Daftar Tiket</h2><DataGrid rows={filtered} columns={[{ label: "No Tiket", value: (r) => <strong>{r.ticketNo}</strong> }, { label: "Customer", value: (r) => r.customer?.name || "Umum" }, { label: "Jenis", value: (r) => r.reportType || "-" }, { label: "Gangguan", value: (r) => r.title }, { label: "Mulai", value: (r) => date(r.startedAt || r.createdAt) }, { label: "Lampiran", value: (r) => r.attachmentPath ? <a href={fileUrl(r.attachmentPath)} target="_blank" className="font-bold text-indigo-600">Lihat</a> : "-" }, { label: "Status", value: (r) => <Badge value={r.status} /> }, { label: "Penangan", value: (r) => r.handlerName || "Admin" }]} /></Card></div></div>; }
+function TicketsPage({ section }: { section: string }) {
+  const [rows, setRows] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const kind = section === "tiket" ? "customer" : section === "tiket-gangguan" ? "disruption" : section === "tiket-layanan" ? "service" : "support";
+  const [form, setForm] = useState({ title: "", description: "", reportType: "Gangguan", priority: "normal", customerId: "" });
+
+  const load = useCallback(() => Promise.all([mitraPortalApi.tickets(), mitraPortalApi.customers()]).then(([a, b]) => {
+    setRows(a.data.data || []);
+    setCustomers(b.data.data || []);
+  }), []);
+
+  useEffect(() => {
+    load().catch(() => setError("Gagal memuat tiket."));
+  }, [load]);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    const body = new FormData();
+    Object.entries({ ...form, ticketKind: kind }).forEach(([k, v]) => body.append(k, v));
+    if (attachment) body.append("attachment", attachment);
+    try {
+      await mitraPortalApi.createTicket(body);
+      setMessage("Tiket berhasil dikirim ke admin.");
+      setForm({ title: "", description: "", reportType: "Gangguan", priority: "normal", customerId: "" });
+      setAttachment(null);
+      await load();
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Gagal membuat tiket.");
+    }
+  }
+
+  const filtered = rows.filter((r) => section === "tiket" ? r.ticketKind === "customer" : r.ticketKind === kind);
+  const stat = (status?: string) => status ? filtered.filter((r) => r.status === status).length : filtered.length;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-4">
+        <StatCard icon={<Headphones size={20} />} label="Total" value={String(stat())} trend="semua tiket" />
+        <StatCard icon={<ReceiptText size={20} />} label="Open" value={String(stat("open"))} trend="menunggu" accent="rose" />
+        <StatCard icon={<Router size={20} />} label="Diproses" value={String(stat("progress"))} trend="penanganan" accent="amber" />
+        <StatCard icon={<PackageCheck size={20} />} label="Closed" value={String(stat("closed"))} trend="selesai" accent="emerald" />
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[0.7fr_1.3fr]">
+        <Card className="p-5">
+          <h2 className="font-black">Buat Tiket Baru</h2>
+          <ErrorBox message={error} />
+          <Notice message={message} />
+          <form onSubmit={submit} className="mt-4 space-y-4">
+            <SelectInput
+              label="Pelanggan Terdampak"
+              value={form.customerId}
+              onChange={(e) => setForm({ ...form, customerId: e.target.value })}
+              options={[
+                { label: "Umum / tidak terkait pelanggan", value: "" },
+                ...customers.map((c) => ({ label: `${c.customerCode || c.id} - ${c.name}`, value: c.id })),
+              ]}
+              searchable
+            />
+
+            <SelectInput
+              label="Jenis Laporan"
+              value={form.reportType}
+              onChange={(e) => setForm({ ...form, reportType: e.target.value })}
+              options={["Gangguan", "Komplain", "Upgrade Layanan", "Maintenance", "Penarikan Kabel", "Lain-Lain"].map((x) => ({ label: x, value: x }))}
+            />
+
+            <TextInput required label="Nama Gangguan / Judul" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            <label className="block">
+              <span className="mb-2 block text-sm font-semibold">Detail</span>
+              <textarea required rows={5} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-sm font-semibold">Lampiran (opsional)</span>
+              <input type="file" onChange={(e) => setAttachment(e.target.files?.[0] || null)} className="w-full rounded-lg border border-slate-200 p-2 text-sm" />
+            </label>
+            <Button type="submit">Kirim Tiket</Button>
+          </form>
+        </Card>
+
+        <Card className="p-5">
+          <h2 className="mb-4 font-black">Daftar Tiket</h2>
+          <DataGrid
+            rows={filtered}
+            columns={[
+              { label: "No Tiket", value: (r) => <strong>{r.ticketNo}</strong> },
+              { label: "Customer", value: (r) => r.customer?.name || "Umum" },
+              { label: "Jenis", value: (r) => r.reportType || "-" },
+              { label: "Gangguan", value: (r) => r.title },
+              { label: "Mulai", value: (r) => date(r.startedAt || r.createdAt) },
+              { label: "Lampiran", value: (r) => r.attachmentPath ? <a href={fileUrl(r.attachmentPath)} target="_blank" className="font-bold text-indigo-600">Lihat</a> : "-" },
+              { label: "Status", value: (r) => <Badge value={r.status} /> },
+              { label: "Penangan", value: (r) => r.handlerName || "Admin" },
+            ]}
+          />
+        </Card>
+      </div>
+    </div>
+  );
+}
 
 function technicalListBody() {
   return {

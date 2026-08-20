@@ -2,8 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/set-state-in-effect */
 
-import { useAuthStore } from "@/hooks/useAuth";
-import { Badge, Card, DataTable, PageHeader, TableSkeleton } from "@/components/ui/AdminUI";
+import { Badge, Card, DataTable, PageHeader, SelectInput, TableSkeleton } from "@/components/ui/AdminUI";
 import { currency, date, monthName } from "@/lib/format";
 import Link from "next/link";
 import { ArrowDownUp, Building2, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, FileText, Filter, Grid3X3, List, ListFilter, Mail, MinusCircle, Phone, PlusCircle, Power, RefreshCw, Search, Store, Trash2, Upload, UserPlus, Users } from "lucide-react";
@@ -243,18 +242,35 @@ export function CustomersPage() {
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative w-full sm:w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari..." className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Cari..."
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+              />
             </div>
-            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700">
-              <option value="all">Semua Status</option>
-              <option value="active">Aktif</option>
-              <option value="nonactive">Tidak Aktif</option>
-            </select>
-            <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700">
-              <option value="all">Semua Jenis</option>
-              <option value="home">Perumahan</option>
-              <option value="business">Bisnis</option>
-            </select>
+            <div className="w-40">
+              <SelectInput
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                options={[
+                  { label: "Semua Status", value: "all" },
+                  { label: "Aktif", value: "active" },
+                  { label: "Tidak Aktif", value: "nonactive" },
+                ]}
+              />
+            </div>
+            <div className="w-40">
+              <SelectInput
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                options={[
+                  { label: "Semua Jenis", value: "all" },
+                  { label: "Perumahan", value: "home" },
+                  { label: "Bisnis", value: "business" },
+                ]}
+              />
+            </div>
             <button type="button" onClick={load} className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50" title="Refresh">
               <RefreshCw size={18} />
             </button>
@@ -619,11 +635,17 @@ export function CompaniesPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
               <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari..." className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100" />
             </div>
-            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700">
-              <option value="all">Semua Status</option>
-              <option value="active">Aktif</option>
-              <option value="nonactive">Tidak Aktif</option>
-            </select>
+            <div className="w-40">
+              <SelectInput
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                options={[
+                  { label: "Semua Status", value: "all" },
+                  { label: "Aktif", value: "active" },
+                  { label: "Tidak Aktif", value: "nonactive" },
+                ]}
+              />
+            </div>
             <button type="button" onClick={load} className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50" title="Refresh">
               <RefreshCw size={18} />
             </button>

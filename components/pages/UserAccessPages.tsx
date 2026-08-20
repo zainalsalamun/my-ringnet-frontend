@@ -22,7 +22,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { Badge, Card, DataTable, PageHeader, TableSkeleton } from "@/components/ui/AdminUI";
+import { Badge, Card, DataTable, PageHeader, SelectInput, TableSkeleton } from "@/components/ui/AdminUI";
 import { usersApi } from "@/src/features/users/api";
 import { privilegeApi } from "@/src/features/privilege/api";
 import Link from "next/link";
@@ -303,18 +303,19 @@ export function EmployeePage() {
             <thead className="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-600">
               <tr>
                 {/* Column 1: STATUS */}
-                <th className="px-4 py-3">
+                <th className="px-4 py-3 min-w-[120px]">
                   <div className="space-y-1">
                     <span>STATUS</span>
-                    <select
+                    <SelectInput
+                      size="sm"
                       value={statusFilter}
                       onChange={(e) => setStatusFilter(e.target.value)}
-                      className="block w-full rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-normal text-slate-500 outline-none"
-                    >
-                      <option value="">Pilih Nilai</option>
-                      <option value="active">Aktif</option>
-                      <option value="nonactive">Tidak Aktif</option>
-                    </select>
+                      options={[
+                        { label: "Pilih Nilai", value: "" },
+                        { label: "Aktif", value: "active" },
+                        { label: "Tidak Aktif", value: "nonactive" },
+                      ]}
+                    />
                   </div>
                 </th>
 
@@ -327,7 +328,7 @@ export function EmployeePage() {
                       placeholder="Cari..."
                       value={searchName}
                       onChange={(e) => setSearchName(e.target.value)}
-                      className="block w-full rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-normal text-slate-700 outline-none"
+                      className="block w-full rounded border border-slate-200 bg-white px-2 py-1 text-[11px] font-normal text-slate-700 outline-none"
                     />
                   </div>
                 </th>
@@ -341,7 +342,7 @@ export function EmployeePage() {
                       placeholder="Cari..."
                       value={searchId}
                       onChange={(e) => setSearchId(e.target.value)}
-                      className="block w-full rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-normal text-slate-700 outline-none"
+                      className="block w-full rounded border border-slate-200 bg-white px-2 py-1 text-[11px] font-normal text-slate-700 outline-none"
                     />
                   </div>
                 </th>
@@ -355,40 +356,42 @@ export function EmployeePage() {
                       placeholder="Cari..."
                       value={searchDivision}
                       onChange={(e) => setSearchDivision(e.target.value)}
-                      className="block w-full rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-normal text-slate-700 outline-none"
+                      className="block w-full rounded border border-slate-200 bg-white px-2 py-1 text-[11px] font-normal text-slate-700 outline-none"
                     />
                   </div>
                 </th>
 
                 {/* Column 5: AKTIVITAS */}
-                <th className="px-4 py-3">
+                <th className="px-4 py-3 min-w-[120px]">
                   <div className="space-y-1">
                     <span>AKTIVITAS</span>
-                    <select
+                    <SelectInput
+                      size="sm"
                       value={activityFilter}
                       onChange={(e) => setActivityFilter(e.target.value)}
-                      className="block w-full rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-normal text-slate-500 outline-none"
-                    >
-                      <option value="">Pilih Nilai</option>
-                      <option value="online">Online</option>
-                      <option value="offline">Offline</option>
-                    </select>
+                      options={[
+                        { label: "Pilih Nilai", value: "" },
+                        { label: "Online", value: "online" },
+                        { label: "Offline", value: "offline" },
+                      ]}
+                    />
                   </div>
                 </th>
 
                 {/* Column 6: KEHADIRAN */}
-                <th className="px-4 py-3">
+                <th className="px-4 py-3 min-w-[130px]">
                   <div className="space-y-1">
                     <span>KEHADIRAN</span>
-                    <select
+                    <SelectInput
+                      size="sm"
                       value={attendanceFilter}
                       onChange={(e) => setAttendanceFilter(e.target.value)}
-                      className="block w-full rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-normal text-slate-500 outline-none"
-                    >
-                      <option value="">Pilih Nilai</option>
-                      <option value="hadir">Hadir</option>
-                      <option value="tidak_hadir">Tidak Hadir</option>
-                    </select>
+                      options={[
+                        { label: "Pilih Nilai", value: "" },
+                        { label: "Hadir", value: "hadir" },
+                        { label: "Tidak Hadir", value: "tidak_hadir" },
+                      ]}
+                    />
                   </div>
                 </th>
 

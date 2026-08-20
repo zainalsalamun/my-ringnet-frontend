@@ -153,10 +153,11 @@ type SelectInputProps = Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "onC
   searchPlaceholder?: string;
   onSearchChange?: (query: string) => void;
   searching?: boolean;
+  size?: "default" | "sm";
 };
 
 export function SelectInput(props: SelectInputProps) {
-  const { label, options, className = "", value, defaultValue, onChange, disabled, searchable = false, searchPlaceholder = "Cari data...", onSearchChange, searching = false, ...rest } = props;
+  const { label, options, className = "", value, defaultValue, onChange, disabled, searchable = false, searchPlaceholder = "Cari data...", onSearchChange, searching = false, size = "default", ...rest } = props;
   const rootRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -185,6 +186,8 @@ export function SelectInput(props: SelectInputProps) {
     return () => document.removeEventListener("mousedown", closeOnOutside);
   }, [open]);
 
+  const isSm = size === "sm";
+
   return (
     <div ref={rootRef} className={"relative " + className}>
       {label ? <span className="mb-2 block text-sm font-semibold text-slate-700">{label}</span> : null}
@@ -203,13 +206,13 @@ export function SelectInput(props: SelectInputProps) {
         type="button"
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
-        className={"flex h-11 w-full items-center justify-between rounded-lg border bg-white px-3 text-left text-sm text-slate-900 shadow-sm transition " + (open ? "border-indigo-500 ring-4 ring-indigo-100" : "border-slate-200 hover:border-slate-300") + (disabled ? " cursor-not-allowed bg-slate-50 text-slate-400" : "")}
+        className={"flex w-full items-center justify-between border bg-white text-left font-semibold text-slate-900 shadow-sm transition " + (isSm ? "h-7 rounded px-2 text-[11px]" : "h-11 rounded-lg px-3 text-sm") + " " + (open ? "border-indigo-500 ring-2 ring-indigo-100" : "border-slate-200 hover:border-slate-300") + (disabled ? " cursor-not-allowed bg-slate-50 text-slate-400" : "")}
       >
         <span className="truncate">{selected?.label || "Pilih opsi"}</span>
-        <ChevronDown size={17} className={"ml-3 shrink-0 text-slate-400 transition-transform " + (open ? "rotate-180" : "")} />
+        <ChevronDown size={isSm ? 13 : 17} className={"shrink-0 text-slate-400 transition-transform " + (isSm ? "ml-1.5" : "ml-3") + " " + (open ? "rotate-180" : "")} />
       </button>
       {open && !disabled ? (
-        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/12">
+        <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/12">
           {searchable ? (
             <div className="relative mb-1.5">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />

@@ -3,7 +3,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import { CheckCircle2, Pause, Play, RefreshCw, Server, Trash2, Users, XCircle } from "lucide-react";
-import { Card } from "@/components/ui/AdminUI";
+import { Card, SelectInput } from "@/components/ui/AdminUI";
 import { radiusApi } from "@/src/features/radius/api";
 import api from "@/lib/api";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -421,21 +421,22 @@ export function RadiusDashboard() {
                 <th className="w-10 px-4 py-3">
                   <input type="checkbox" className="rounded border-slate-300" />
                 </th>
-                <th className="px-4 py-3">
+                <th className="px-4 py-3 min-w-[120px]">
                   <div className="flex flex-col gap-1">
                     <span>STATUS</span>
-                    <select
+                    <SelectInput
+                      size="sm"
                       value={statusFilter}
                       onChange={(e) => {
                         setStatusFilter(e.target.value);
                         setPageIndex(0);
                       }}
-                      className="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-normal lowercase text-slate-600 outline-none"
-                    >
-                      <option value="">Pilih Nilai</option>
-                      <option value="Online">Online</option>
-                      <option value="Offline">Offline</option>
-                    </select>
+                      options={[
+                        { label: "Pilih Nilai", value: "" },
+                        { label: "Online", value: "Online" },
+                        { label: "Offline", value: "Offline" },
+                      ]}
+                    />
                   </div>
                 </th>
                 <th className="px-4 py-3">ID SESI</th>

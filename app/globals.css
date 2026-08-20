@@ -1,11 +1,30 @@
 @import "tailwindcss";
 @source "../app";
 @source "../components";
+@source "../src";
 
 @theme inline {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --color-ringnet: #6366f1;
+}
+
+:root {
+  --ringnet-primary: #4f46e5;
+  --ringnet-primary-soft: #eef2ff;
+  --ringnet-secondary: #7c3aed;
+  --ringnet-success: #22c55e;
+  --ringnet-warning: #f59e0b;
+  --ringnet-danger: #ef4444;
+  --ringnet-info: #0ea5e9;
+  --ringnet-surface: #ffffff;
+  --ringnet-muted-surface: #f8fafc;
+  --ringnet-border: #e2e8f0;
+  --ringnet-text: #0f172a;
+  --ringnet-muted-text: #64748b;
+  --ringnet-sidebar: #0f172a;
+  --ringnet-radius-card: 1.5rem;
+  --ringnet-shadow-card: 0 12px 32px rgba(15, 23, 42, 0.08);
 }
 
 * {

@@ -1,12 +1,13 @@
 "use client";
 
-import { adminService } from "@/services";
 import { currency, date } from "@/lib/format";
 import { AlertTriangle, Bell, CheckCheck, ChevronDown, Clock, Headphones, LogOut, Menu, ReceiptText, Search, Settings, ShieldCheck, UserCog, UserPlus, WalletCards, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuthStore } from "@/hooks/useAuth";
+import { authApi } from "@/src/features/auth/api";
+import { notificationsApi } from "@/src/features/notifications/api";
 
 type NotificationItem = {
   id: string;
@@ -76,9 +77,10 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
     if (!user) return;
     if (user.role === "mitra") return;
     
-    adminService
-      .getNotifications()
-      .then((data) => {
+    // Safely attempt notifications fetch
+    notificationsApi.list()
+      .then((res) => {
+        const data = Array.isArray(res.data?.data) ? res.data.data : [];
         setItems(data);
         setSelected(null);
         setNotificationError("");
@@ -88,6 +90,7 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
         setSelected(null);
       });
   }, [user]);
+
 
   useEffect(() => {
     function closeOnOutside(event: MouseEvent) {
@@ -107,7 +110,7 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
     setItems((current) => current.map((entry) => entry.id === item.id ? nextItem : entry));
     setNotificationError("");
     try {
-      await adminService.markNotificationRead(item.id);
+      await notificationsApi.markRead(item.id);
     } catch {
       setItems((current) => current.map((entry) => entry.id === item.id ? item : entry));
       setSelected(item);
@@ -124,7 +127,7 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
     setSelected((current) => current ? { ...current, isRead: true, readAt: current.readAt || now } : current);
     setNotificationError("");
     try {
-      await adminService.markAllNotificationsRead(unreadItems.map((item) => item.id));
+      await notificationsApi.markAllRead(unreadItems.map((item) => item.id));
     } catch {
       setItems(previousItems);
       setSelected((current) => current ? previousItems.find((item) => item.id === current.id) || current : current);
@@ -134,7 +137,7 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
 
   async function handleLogout() {
     try {
-      await adminService.logout();
+      await authApi.logout();
     } catch {
       // Keep local logout responsive even if the remote session is already gone.
     }

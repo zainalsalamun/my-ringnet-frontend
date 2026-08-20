@@ -1,5 +1,4 @@
 "use client";
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import Image from "next/image";
@@ -7,7 +6,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { useAuthStore } from "@/hooks/useAuth";
-import { mitraPortalService } from "@/services";
 import { BarChart3, ChevronDown, CircleUserRound, FileCheck2, Headphones, Network, ReceiptText, Settings2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -27,16 +25,14 @@ type MenuGroup = {
 
 const itemIsActive = (item: MenuItem, pathname: string) => item.href === pathname || item.children?.some((child) => child.href === pathname) === true;
 
-export const getMitraMenuGroups = (pops: any[] = [], isAdmin: boolean = false): MenuGroup[] => [
+export const getMitraMenuGroups = (isAdmin: boolean = false): MenuGroup[] => [
   {
     key: "documents",
     label: "Legal",
     icon: FileCheck2,
-    items: isAdmin
-      ? [{ label: "Data POP", href: "/users/pop" }]
-      : pops.length > 0
-        ? pops.map((p) => ({ label: `POP ${p.name || p.title || ""}`.trim(), href: "/mitra/legal" }))
-        : [],
+    items: isAdmin ? [
+      { label: "Data POP", href: "/users/pop" }
+    ] : [],
   },
   {
     key: "tickets",
@@ -176,20 +172,8 @@ function MitraSubItem({ item, pathname }: { item: MenuItem; pathname: string }) 
 export default function MitraSidebar({ sidebarOpen, setSidebarOpen }: { sidebarOpen?: boolean; setSidebarOpen?: (value: boolean) => void }) {
   const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
-  const token = useAuthStore((state) => state.token);
-  const [pops, setPops] = useState<any[]>([]);
-  
-  useEffect(() => {
-    if (!token) return;
-    mitraPortalService
-      .getPops()
-      .then((data) => {
-        if (data) setPops(data);
-      })
-      .catch(console.error);
-  }, [token]);
 
-  const menuGroups = useMemo(() => getMitraMenuGroups(pops, false), [pops]);
+  const menuGroups = useMemo(() => getMitraMenuGroups(false), []);
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => Object.fromEntries(menuGroups.map((group) => [group.key, group.items.some((item) => itemIsActive(item, pathname))])));
 

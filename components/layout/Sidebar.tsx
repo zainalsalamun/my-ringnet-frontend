@@ -7,6 +7,7 @@ import { useAuthStore } from "@/hooks/useAuth";
 import { BarChart3, ChevronDown, Settings, UserRoundCog, Wallet } from "lucide-react";
 import { useEffect, useState } from "react";
 import MitraSidebar, { getMitraMenuGroups } from "@/components/layout/MitraSidebar";
+import { FINANCE_MENU_ITEMS, SETTINGS_MENU_ITEMS, SUPER_ADMIN_MITRA_GROUP_KEYS, USER_MENU_ITEMS } from "@/src/config/sidebar";
 
 type SidebarItem = {
   label: string;
@@ -14,32 +15,8 @@ type SidebarItem = {
   children?: SidebarItem[];
 };
 
-const userChildren: SidebarItem[] = [
-  { label: "Privilege", href: "/users/privilege" },
-  { label: "Employee", href: "/users/employee" },
-  { label: "Admin", href: "/users/admin" },
-  { label: "Pelanggan", href: "/users/pelanggan" },
-  { label: "Pelanggan Bisnis", href: "/users/bisnis" },
-];
-
-
-
-
-const settingChildren = [
-  { label: "Pengaturan Umum", href: "/pengaturan" },
-  { label: "Profil Perusahaan", href: "/pengaturan/profil-perusahaan" },
-  { label: "Paket Layanan", href: "/pengaturan/paket-layanan" },
-  { label: "Metode Pembayaran", href: "/pengaturan/metode-pembayaran" },
-  { label: "Kategori Dokumen", href: "/pengaturan/kategori-dokumen" },
-];
-
-const financeChildren = [
-  { label: "Keuangan", href: "/keuangan" },
-  { label: "Faktur & Tagihan", href: "/internet-services" },
-];
-
-const superAdminMenuGroups = getMitraMenuGroups([], true).filter((group) =>
-  ["documents", "technical", "finance"].includes(group.key),
+const superAdminMenuGroups = getMitraMenuGroups(true).filter((group) =>
+  SUPER_ADMIN_MITRA_GROUP_KEYS.includes(group.key as (typeof SUPER_ADMIN_MITRA_GROUP_KEYS)[number]),
 );
 
 
@@ -120,7 +97,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: { sidebarOpen?:
   const [financeMenuOpen, setFinanceMenuOpen] = useState<boolean>(financeMenuActive);
   const [settingMenuOpen, setSettingMenuOpen] = useState<boolean>(settingMenuActive);
   const [mitraOpenGroups, setMitraOpenGroups] = useState<Record<string, boolean>>({});
-  const visibleUserChildren = userChildren.filter((item) => !(user?.role === "super_admin" && item.href === "/users/mitra"));
+  const visibleUserChildren = USER_MENU_ITEMS.filter((item) => !(user?.role === "super_admin" && item.href === "/users/mitra"));
 
   useEffect(() => {
     setSidebarOpen?.(false);
@@ -214,7 +191,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: { sidebarOpen?:
           {financeMenuOpen ? (
             <div className="pb-3 pl-[50px] pr-3 pt-1">
               <div className="space-y-1 border-l border-white/10 pl-4">
-                {financeChildren.map((item) => {
+                {FINANCE_MENU_ITEMS.map((item) => {
                   const active = pathname === item.href || pathname.startsWith(item.href + "/");
                   return (
                     <Link
@@ -272,7 +249,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: { sidebarOpen?:
           {settingMenuOpen ? (
             <div className="pb-3 pl-[50px] pr-3 pt-1">
               <div className="space-y-1 border-l border-white/10 pl-4">
-                {settingChildren.map((item) => {
+                {SETTINGS_MENU_ITEMS.map((item) => {
                   const active = item.href === "/pengaturan" ? pathname === "/pengaturan" : pathname === item.href || pathname.startsWith(item.href + "/");
                   return (
                     <Link

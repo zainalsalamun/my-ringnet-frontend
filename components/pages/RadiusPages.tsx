@@ -197,7 +197,7 @@ export function RadiusNasRouterPage() {
       <PageHeader
         title="NAS / Router"
         subtitle="Kelola router NAS, alamat IP, port CoA, dan status perangkat Radius."
-        action={
+        rightContent={
           <button
             type="button"
             onClick={() => setModalOpen(true)}
@@ -572,7 +572,7 @@ export function RadiusAuthenticationPage() {
       <PageHeader
         title="Autentikasi Radius"
         subtitle="Pantau akun pelanggan, konektivitas, POP, alamat IP, dan produk terkait."
-        action={
+        rightContent={
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -848,7 +848,7 @@ export function RadiusProfileGroupPage() {
       <PageHeader
         title="Grup Profil"
         subtitle="Kelola profil bandwidth, batas kecepatan, kuota, dan batas waktu Radius."
-        action={
+        rightContent={
           <button
             type="button"
             onClick={() => setModalOpen(true)}
@@ -998,7 +998,7 @@ export function RadiusUserSessionPage() {
       <PageHeader
         title="Sesi Pengguna"
         subtitle="Pantau sesi online pelanggan, trafik, NAS, port, dan putuskan sesi aktif (PoD/Disconnect)."
-        action={
+        rightContent={
           <button
             type="button"
             onClick={loadData}
@@ -1080,7 +1080,7 @@ export function RadiusHistoryPage() {
       <PageHeader
         title="Riwayat Radius"
         subtitle="Lihat log autentikasi, koneksi, dan kejadian Radius pelanggan."
-        action={
+        rightContent={
           <button
             type="button"
             onClick={loadData}

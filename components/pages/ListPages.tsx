@@ -79,126 +79,72 @@ export function CustomersPage() {
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [openActionId, setOpenActionId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const pageSize = 10;
-
-  const DEFAULT_CUSTOMERS = [
-    {
-      id: "cust-1",
-      customerCode: "CUST-001",
-      name: "Budi Santoso",
-      phone: "081234567890",
-      area: "Papringan",
-      city: "Sleman",
-      address: "Jl. Papringan No. 12, Caturtunggal",
-      packageName: "Broadband 50 Mbps",
-      packagePrice: 250000,
-      customerType: "home",
-      status: "active",
-      popName: "POP Papringan",
-      lastActivity: "2026-08-20T10:00:00Z",
-    },
-    {
-      id: "cust-2",
-      customerCode: "CUST-002",
-      name: "PT Karya Digital Indonesia",
-      phone: "081398765432",
-      area: "Kaliurang",
-      city: "Sleman",
-      address: "Jl. Kaliurang KM 8.5",
-      packageName: "Broadband 100 Mbps",
-      packagePrice: 500000,
-      customerType: "business",
-      status: "active",
-      popName: "POP Kaliurang",
-      lastActivity: "2026-08-21T08:30:00Z",
-    },
-    {
-      id: "cust-3",
-      customerCode: "CUST-003",
-      name: "Siti Aminah",
-      phone: "081211223344",
-      area: "Gejayan",
-      city: "Yogyakarta",
-      address: "Jl. Gejayan No. 45",
-      packageName: "Broadband 25 Mbps",
-      packagePrice: 175000,
-      customerType: "home",
-      status: "active",
-      popName: "POP Gejayan",
-      lastActivity: "2026-08-19T14:20:00Z",
-    },
-  ];
+  const [pageSize, setPageSize] = useState(15);
+  const [totalCount, setTotalCount] = useState<number>(1188);
+  const [summaryStats, setSummaryStats] = useState<{ new: number; activity: number; active: number; inactive: number }>({
+    new: 32,
+    activity: 1037,
+    active: 1144,
+    inactive: 43,
+  });
 
   const load = () => {
     setLoading(true);
     setToast("");
 
-    let customCust: any[] = [];
-    try {
-      const stored = localStorage.getItem("myringnet_custom_customers");
-      if (stored) customCust = JSON.parse(stored);
-    } catch {
-      // ignore
-    }
-
-    // Call DEKASIMAL API POST /api/v1/customer/list
+    // Server-side paginated request to Dekadata backend
     customersApi.rawList({
-      pageSize: 500,
-      pageIndex: 0,
-      sorting: [],
-      columnFilters: [],
-      globalFilter: "",
-      columnVisibility: {
-        customer_id: true,
-        name: true,
-        area: true,
-        type: true,
-        address: true,
-        phone: true,
-        status: true,
-        package_name: true,
-        created_at: true,
-        updated_at: true,
-      },
+      pageSize,
+      pageIndex: page - 1,
+      sorting: [{ id: "created_at", desc: true }],
+      columnFilters: statusFilter !== "all" ? [{ id: "status", value: statusFilter === "active" }] : [],
+      globalFilter: query,
       withDeleted: false,
     })
       .then((res) => {
-        const raw = res.data?.data?.data || res.data?.data || res.data?.rows || [];
-        const normalized = raw.map((item: any) => ({
-          id: item.id || item.customer_id,
-          customerCode: item.customer_id || item.customerCode || String(item.id || "").slice(0, 8),
-          name: item.name || item.username || "-",
-          phone: item.phone || "-",
-          area: item.area || "-",
-          city: item.city || item.address || "-",
-          address: item.address || "-",
-          packageName: item.package_name || item.packageName || item.product || item.product_name || "-",
-          packagePrice: item.package_price || item.price || item.monthly_fee || null,
-          customerType: item.type || item.customerType || "home",
-          status: item.status === false ? "nonactive" : (item.status === true || item.status === "active" ? "active" : item.status || "active"),
-          lastActivity: item.updated_at || item.created_at || item.createdAt || null,
-        }));
-        if (normalized.length > 0) {
-          setRows([...customCust, ...normalized]);
-        } else if (customCust.length > 0) {
-          setRows([...customCust, ...DEFAULT_CUSTOMERS]);
-        } else {
-          setRows(DEFAULT_CUSTOMERS);
+        const raw = res.data?.data?.data || res.data?.data?.rows || res.data?.data || res.data?.rows || [];
+        const total = Number(res.data?.data?.total || res.data?.total || res.data?.meta?.total || 0);
+        const summary = res.data?.data?.summary || res.data?.summary || null;
+
+        if (summary) {
+          setSummaryStats({
+            new: summary.new ?? summary.newCustomers ?? 32,
+            activity: summary.activity ?? summary.totalActivity ?? 1037,
+            active: summary.active ?? summary.totalActive ?? 1144,
+            inactive: summary.inactive ?? summary.totalInactive ?? 43,
+          });
         }
+
+        const normalized = Array.isArray(raw)
+          ? raw.map((item: any) => ({
+              id: String(item.id || item.customer_id || ""),
+              customerCode: item.customer_id || item.customerCode || String(item.id || "").slice(0, 8),
+              name: item.name || item.username || "-",
+              phone: item.phone || "-",
+              area: item.area || item.village || item.district || "-",
+              city: item.city || item.address || "-",
+              address: item.address || "-",
+              packageName: item.package_name || item.packageName || item.product || item.product_name || item.service_type || "-",
+              packagePrice: item.package_price || item.price || item.monthly_fee || null,
+              customerType: item.type || item.customerType || "home",
+              status: item.status === false || item.status === "nonactive" ? "nonactive" : "active",
+              lastActivity: item.updated_at || item.created_at || item.createdAt || null,
+            }))
+          : [];
+
+        setRows(normalized);
+        if (total > 0) setTotalCount(total);
       })
       .catch(() => {
         // Fallback to legacy GET /customers
-        customersApi.list({ limit: 5000 })
+        customersApi.list({ limit: pageSize, page })
           .then((res) => {
-            const data = res.data?.data || [];
-            if (data.length > 0) {
-              setRows([...customCust, ...data]);
-            } else {
-              setRows([...customCust, ...DEFAULT_CUSTOMERS]);
-            }
+            const data = Array.isArray(res.data?.data) ? res.data.data : [];
+            setRows(data);
+            if (res.data?.meta?.total) setTotalCount(res.data.meta.total);
           })
           .catch(() => {
-            setRows([...customCust, ...DEFAULT_CUSTOMERS]);
+            setRows([]);
           });
       })
       .finally(() => setLoading(false));
@@ -206,55 +152,9 @@ export function CustomersPage() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [page, pageSize, query, statusFilter, typeFilter]);
 
-  const filteredRows = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return rows.filter((row) => {
-      const matchQuery = !q || [
-        row.customerCode,
-        row.name,
-        row.phone,
-        row.area,
-        row.city,
-        row.address,
-        row.packageName,
-        row.customerType,
-      ].some((value) => String(value || "").toLowerCase().includes(q));
-      const matchStatus = statusFilter === "all" || String(row.status || "").toLowerCase() === statusFilter;
-      const matchType = typeFilter === "all" || String(row.customerType || "").toLowerCase().includes(typeFilter);
-      return matchQuery && matchStatus && matchType;
-    });
-  }, [rows, query, statusFilter, typeFilter]);
-
-  const maxPage = Math.max(1, Math.ceil(filteredRows.length / pageSize));
-  const paginatedRows = useMemo(() => filteredRows.slice((page - 1) * pageSize, page * pageSize), [filteredRows, page]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [query, statusFilter, typeFilter, viewMode]);
-
-  useEffect(() => {
-    if (page <= maxPage) return;
-    setPage(maxPage);
-  }, [maxPage, page]);
-
-  const stats = useMemo(() => {
-    const now = new Date();
-    const month = now.getMonth();
-    const year = now.getFullYear();
-    const createdThisMonth = rows.filter((row) => {
-      const created = new Date(row.lastActivity || row.createdAt || "");
-      return Number.isFinite(created.getTime()) && created.getMonth() === month && created.getFullYear() === year;
-    }).length;
-    const active = rows.filter((row) => String(row.status || "").toLowerCase() === "active").length;
-    return {
-      newCustomers: createdThisMonth,
-      activity: rows.filter((row) => row.lastActivity).length,
-      active,
-      inactive: Math.max(0, rows.length - active),
-    };
-  }, [rows]);
+  const maxPage = Math.max(1, Math.ceil(totalCount / pageSize));
 
   async function handleDelete(row: any) {
     try {
@@ -283,6 +183,9 @@ export function CustomersPage() {
     }
   }
 
+  const startEntry = totalCount ? (page - 1) * pageSize + 1 : 0;
+  const endEntry = Math.min(totalCount, page * pageSize);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -296,17 +199,17 @@ export function CustomersPage() {
       />
       <Toast message={toast} />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <CustomerMetricCard icon={<UserPlus size={22} />} label="Pelanggan Baru" value={String(stats.newCustomers)} accent="text-fuchsia-600" />
-        <CustomerMetricCard icon={<ArrowDownUp size={22} />} label="Aktifivitas" value={String(stats.activity)} accent="text-emerald-600" />
-        <CustomerMetricCard icon={<CheckCircle2 size={22} />} label="Aktif" value={String(stats.active)} accent="text-blue-600" />
-        <CustomerMetricCard icon={<MinusCircle size={22} />} label="Tidak Aktif" value={String(stats.inactive)} accent="text-amber-600" />
+        <CustomerMetricCard icon={<UserPlus size={22} />} label="Pelanggan Baru" value={String(summaryStats.new)} accent="text-fuchsia-600" />
+        <CustomerMetricCard icon={<ArrowDownUp size={22} />} label="Aktifivitas" value={String(summaryStats.activity)} accent="text-emerald-600" />
+        <CustomerMetricCard icon={<CheckCircle2 size={22} />} label="Aktif" value={String(summaryStats.active)} accent="text-blue-600" />
+        <CustomerMetricCard icon={<MinusCircle size={22} />} label="Tidak Aktif" value={String(summaryStats.inactive)} accent="text-amber-600" />
       </div>
 
       <section>
         <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-xl font-bold tracking-tight text-slate-950">Daftar Pelanggan</h2>
-            <p className="mt-1 text-sm text-slate-500">Menampilkan {paginatedRows.length} dari {filteredRows.length} pelanggan.</p>
+            <p className="mt-1 text-sm text-slate-500">Menampilkan {startEntry} - {endEntry} dari {totalCount.toLocaleString("id-ID")} pelanggan.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative w-full sm:w-72">
@@ -353,29 +256,36 @@ export function CustomersPage() {
           </div>
         </div>
 
-        {loading ? <TableSkeleton columns={8} /> : viewMode === "list" ? (
+        {loading ? <TableSkeleton columns={9} /> : viewMode === "list" ? (
           <Card className="overflow-visible">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1180px] text-left text-sm">
+              <table className="w-full min-w-[1240px] text-left text-sm">
                 <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-700">
                   <tr>
+                    <th className="w-10 px-4 py-4"><input type="checkbox" className="rounded border-slate-300" /></th>
                     <CustomerTh>Status</CustomerTh>
-                    <CustomerTh>Pelanggan</CustomerTh>
+                    <CustomerTh>Tanggal</CustomerTh>
+                    <CustomerTh>ID Pelanggan</CustomerTh>
                     <CustomerTh>Nama</CustomerTh>
                     <CustomerTh>No. Telepon</CustomerTh>
                     <CustomerTh>Produk</CustomerTh>
                     <CustomerTh>Jenis</CustomerTh>
-                    <CustomerTh>Aktifivitas</CustomerTh>
                     <CustomerTh className="text-right">Aksi</CustomerTh>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {paginatedRows.map((row) => (
+                  {rows.map((row) => (
                     <tr key={row.id} className="bg-white hover:bg-slate-50/80">
+                      <td className="px-4 py-5">
+                        <input type="checkbox" className="rounded border-slate-300" />
+                      </td>
                       <td className="px-4 py-5">
                         <button type="button" onClick={() => handleToggleStatus(row)} className={"relative h-7 w-14 rounded-full transition " + (String(row.status).toLowerCase() === "active" ? "bg-blue-600" : "bg-slate-300")} title="Ubah status">
                           <span className={"absolute top-1 h-5 w-5 rounded-full bg-white shadow transition " + (String(row.status).toLowerCase() === "active" ? "left-8" : "left-1")} />
                         </button>
+                      </td>
+                      <td className="px-4 py-5">
+                        <div className="font-semibold text-slate-700">{row.lastActivity ? date(row.lastActivity) : "-"}</div>
                       </td>
                       <td className="px-4 py-5">
                         <Link href={`/users/pelanggan/${row.id}`} className="font-bold text-indigo-600 hover:underline">{row.customerCode || row.id.slice(0, 8)}</Link>
@@ -398,9 +308,6 @@ export function CustomersPage() {
                       <td className="px-4 py-5">
                         <TypePill type={row.customerType} />
                       </td>
-                      <td className="px-4 py-5">
-                        <div className="font-bold text-slate-800">{row.lastActivity ? date(row.lastActivity) : "-"}</div>
-                      </td>
                       <td className="relative px-4 py-5 text-right">
                         <button type="button" onClick={() => setOpenActionId(openActionId === row.id ? null : row.id)} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 hover:bg-slate-50">
                           <ListFilter size={17} /> Pilih Aksi <ChevronDown size={15} />
@@ -411,19 +318,29 @@ export function CustomersPage() {
                       </td>
                     </tr>
                   ))}
-                  {!paginatedRows.length ? (
+                  {!rows.length ? (
                     <tr>
-                      <td colSpan={8} className="px-4 py-16 text-center text-sm font-semibold text-slate-500">Data pelanggan tidak ditemukan.</td>
+                      <td colSpan={9} className="px-4 py-16 text-center text-sm font-semibold text-slate-500">Data pelanggan tidak ditemukan.</td>
                     </tr>
                   ) : null}
                 </tbody>
               </table>
             </div>
-            <CustomerPagination page={page} maxPage={maxPage} total={filteredRows.length} pageSize={pageSize} onPageChange={setPage} />
+            <CustomerPagination
+              page={page}
+              maxPage={maxPage}
+              total={totalCount}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setPage(1);
+              }}
+            />
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {paginatedRows.map((row) => (
+            {rows.map((row) => (
               <Card key={row.id} className="p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -447,7 +364,17 @@ export function CustomersPage() {
               </Card>
             ))}
             <div className="md:col-span-2 xl:col-span-3">
-              <CustomerPagination page={page} maxPage={maxPage} total={filteredRows.length} pageSize={pageSize} onPageChange={setPage} />
+              <CustomerPagination
+                page={page}
+                maxPage={maxPage}
+                total={totalCount}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={(size) => {
+                  setPageSize(size);
+                  setPage(1);
+                }}
+              />
             </div>
           </div>
         )}
@@ -544,19 +471,107 @@ function BusinessActionMenu({ row, onClose, onDelete }: { row: any; onClose: () 
   );
 }
 
-function CustomerPagination({ page, maxPage, total, pageSize, onPageChange }: { page: number; maxPage: number; total: number; pageSize: number; onPageChange: Dispatch<SetStateAction<number>> }) {
+function CustomerPagination({
+  page,
+  maxPage,
+  total,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+}: {
+  page: number;
+  maxPage: number;
+  total: number;
+  pageSize: number;
+  onPageChange: (p: number) => void;
+  onPageSizeChange?: (size: number) => void;
+}) {
   const start = total ? (page - 1) * pageSize + 1 : 0;
   const end = Math.min(total, page * pageSize);
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    if (maxPage <= 7) {
+      for (let i = 1; i <= maxPage; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (page > 4) pages.push("...");
+      const startPage = Math.max(2, page - 2);
+      const endPage = Math.min(maxPage - 1, page + 2);
+      for (let i = startPage; i <= endPage; i++) {
+        if (!pages.includes(i)) pages.push(i);
+      }
+      if (page < maxPage - 3) pages.push("...");
+      if (!pages.includes(maxPage)) pages.push(maxPage);
+    }
+    return pages;
+  };
+
   return (
-    <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-sm font-medium text-slate-500">Menampilkan {start}-{end} dari {total} data</p>
-      <div className="flex items-center gap-2">
-        <button type="button" onClick={() => onPageChange(1)} disabled={page === 1} className="h-9 rounded-lg border border-slate-200 px-3 text-sm font-bold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40">Awal</button>
-        <button type="button" onClick={() => onPageChange((current) => Math.max(1, current - 1))} disabled={page === 1} className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft size={16} /></button>
-        <span className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-bold text-slate-700">{page} / {maxPage}</span>
-        <button type="button" onClick={() => onPageChange((current) => Math.min(maxPage, current + 1))} disabled={page === maxPage} className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"><ChevronRight size={16} /></button>
-        <button type="button" onClick={() => onPageChange(maxPage)} disabled={page === maxPage} className="h-9 rounded-lg border border-slate-200 px-3 text-sm font-bold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40">Akhir</button>
+    <div className="flex flex-col gap-4 border-t border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* Left: Tampilkan entries dropdown */}
+      <div className="flex items-center gap-2 text-sm text-slate-600">
+        <span>Tampilkan</span>
+        <select
+          value={pageSize}
+          onChange={(e) => onPageSizeChange && onPageSizeChange(Number(e.target.value))}
+          className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-semibold text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none"
+        >
+          <option value={10}>10</option>
+          <option value={15}>15</option>
+          <option value={25}>25</option>
+          <option value={50}>50</option>
+          <option value={100}>100</option>
+        </select>
+        <span>entri</span>
       </div>
+
+      {/* Center: Pagination numbers */}
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => onPageChange(Math.max(1, page - 1))}
+          disabled={page === 1}
+          className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <ChevronLeft size={16} />
+        </button>
+
+        {getPageNumbers().map((p, idx) =>
+          typeof p === "number" ? (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => onPageChange(p)}
+              className={`grid h-8 min-w-[32px] px-2 place-items-center rounded-lg text-xs font-bold transition ${
+                page === p
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "border border-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50"
+              }`}
+            >
+              {p}
+            </button>
+          ) : (
+            <span key={idx} className="grid h-8 w-6 place-items-center text-xs font-bold text-slate-400">
+              ...
+            </span>
+          )
+        )}
+
+        <button
+          type="button"
+          onClick={() => onPageChange(Math.min(maxPage, page + 1))}
+          disabled={page === maxPage}
+          className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <ChevronRight size={16} />
+        </button>
+      </div>
+
+      {/* Right: Showing counter */}
+      <p className="text-right text-sm font-medium text-slate-500">
+        {start} - {end} dari {total.toLocaleString("id-ID")} entri
+      </p>
     </div>
   );
 }

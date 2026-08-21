@@ -61,7 +61,8 @@ async function findListItem(req: Request, endpoint: string, id: string, mapper: 
     });
     if (res.ok) {
       const payload = await readJsonResponse(res);
-      rows = normalizeListPayload(payload, 5000, 0, res.ok, mapper).data;
+      const normalized = normalizeListPayload(payload, 5000, 0, res.ok, mapper);
+      rows = Array.isArray(normalized.data) ? normalized.data : Array.isArray(normalized.data?.data) ? normalized.data.data : [];
     }
   } catch {
     // ignore

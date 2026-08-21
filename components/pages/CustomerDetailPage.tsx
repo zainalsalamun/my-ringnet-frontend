@@ -7,6 +7,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { customersApi } from "@/src/features/customers/api";
 
+import api from "@/lib/api";
+
 export function CustomerDetailPage({ id }: { id: string }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [customer, setCustomer] = useState<any>(null);
@@ -18,47 +20,121 @@ export function CustomerDetailPage({ id }: { id: string }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Call DEKASIMAL API GET /api/v1/customer/read/{id}
-    customersApi.rawRead(id)
-      .then((res) => {
-        const raw = res.data?.data || {};
-        const normalized = {
-          id: raw.customer_id || raw.id || id,
-          name: raw.name || raw.username || "-",
-          address: raw.address || "-",
-          area: raw.area || "-",
-          city: raw.city || raw.area || "-",
-          coordinate: raw.coordinate || "-",
-          phone: raw.phone || "-",
-          email: raw.email || "-",
-          ktp: raw.ktp || "-",
-          npwp: raw.npwp || "-",
-          customerType: raw.type || raw.customerType || "home",
-          supportPayment: raw.pay_support || raw.supportPayment || "-",
-          supportTechnical: raw.tech_support || raw.supportTechnical || "-",
-          walletBalance: raw.walletBalance || 0,
-          status: raw.status === false ? "nonactive" : (raw.status === true || raw.status === "active" ? "active" : raw.status || "active"),
-          createdAt: raw.created_at || raw.createdAt || new Date().toISOString(),
-          packageName: raw.package_name || raw.packageName || "BROADBAND FIBER",
-          invoices: raw.invoices || [],
-          tickets: raw.tickets || [],
-        };
-        setCustomer(normalized);
-        setInvoices(normalized.invoices);
-        setTickets(normalized.tickets);
-      })
-      .catch(() => {
-        // Fallback adapter: GET /customers/{id}
-        customersApi.detail(id)
-          .then((res) => {
-            const data = res.data?.data || {};
-            setCustomer(data);
-            setInvoices(data.invoices || []);
-            setTickets(data.tickets || []);
-          })
-          .catch((err) => setError(err.response?.data?.message || "Gagal memuat detail pelanggan dari database."));
-      })
-      .finally(() => setLoading(false));
+    let active = true;
+
+    async function loadCustomer() {
+      setLoading(true);
+      setError("");
+
+      try {
+        let rawData: any = null;
+
+        // 1. Try rawRead GET /customer/read/{id}
+        try {
+          const res = await customersApi.rawRead(id);
+          const candidate = res.data?.data || res.data;
+          if (candidate && (candidate.name || candidate.username || candidate.customer_id)) {
+            rawData = candidate;
+          }
+        } catch {
+          // ignore
+        }
+
+        // 2. If not found, search in POST /customer/list with globalFilter
+        if (!rawData) {
+          try {
+            const listRes = await customersApi.rawList({
+              pageSize: 50,
+              pageIndex: 0,
+              sorting: [],
+              columnFilters: [],
+              globalFilter: id,
+              withDeleted: false,
+            });
+            const list = listRes.data?.data?.data || listRes.data?.data || listRes.data?.rows || [];
+            if (Array.isArray(list)) {
+              const matched = list.find((item: any) =>
+                String(item.customer_id || "") === id ||
+                String(item.id || "") === id ||
+                String(item._id || "") === id ||
+                String(item.name || "").toLowerCase().includes(id.toLowerCase())
+              );
+              if (matched) rawData = matched;
+            }
+          } catch {
+            // ignore
+          }
+        }
+
+        // 3. Enrich with broadband info if available (POST /broadband/list)
+        let broadbandData: any = null;
+        try {
+          const bbRes = await api.post("/broadband/list", {
+            pageSize: 10,
+            pageIndex: 0,
+            sorting: [],
+            columnFilters: [],
+            globalFilter: id,
+          });
+          const bbList = bbRes.data?.data?.data || bbRes.data?.data || bbRes.data?.rows || [];
+          if (Array.isArray(bbList) && bbList.length > 0) {
+            broadbandData = bbList.find((b: any) =>
+              String(b.customer_id || b.customer?.customer_id || "") === id ||
+              String(b.id || "") === id
+            ) || bbList[0];
+          }
+        } catch {
+          // ignore
+        }
+
+        if (!active) return;
+
+        if (rawData || broadbandData) {
+          const raw = rawData || {};
+          const bb = broadbandData || {};
+          const fullAddress = [raw.address, raw.village, raw.district, raw.city, raw.area, raw.province]
+            .filter(Boolean)
+            .filter((v, i, a) => a.indexOf(v) === i)
+            .join(", ") || raw.address || "-";
+
+          const normalized = {
+            id: raw.customer_id || raw.id || bb.customer_id || id,
+            customerCode: raw.customer_id || raw.customerCode || bb.customer_id || id,
+            name: raw.name || raw.username || bb.customer_name || bb.name || `Pelanggan ${id}`,
+            address: fullAddress,
+            area: raw.area || raw.district || raw.village || "-",
+            city: raw.city || raw.province || "-",
+            coordinate: raw.coordinate || bb.coordinate || "-",
+            phone: raw.phone || bb.phone || "-",
+            email: raw.email || bb.email || (raw.username && raw.username.includes("@") ? raw.username : "-"),
+            ktp: raw.ktp || raw.identity_card || raw.nik || "-",
+            npwp: raw.npwp || raw.tax_id || "-",
+            customerType: raw.type || raw.customerType || "home",
+            supportPayment: raw.pay_support || raw.supportPayment || raw.payment_method || bb.supportPayment || "BCA Virtual Account",
+            supportTechnical: raw.tech_support || raw.supportTechnical || bb.pop_name || bb.location_point_name || "-",
+            walletBalance: raw.walletBalance || raw.balance || 0,
+            status: raw.status === false || raw.status === "nonactive" ? "nonactive" : "active",
+            createdAt: raw.created_at || raw.createdAt || bb.created_at || new Date().toISOString(),
+            packageName: raw.package_name || raw.packageName || bb.package_name || bb.profile_name || bb.service_type || "BROADBAND FIBER",
+            invoices: raw.invoices || (bb.invoices ? bb.invoices : []),
+            tickets: raw.tickets || [],
+          };
+          setCustomer(normalized);
+          setInvoices(normalized.invoices);
+          setTickets(normalized.tickets);
+        } else {
+          setError(`Data pelanggan dengan ID ${id} tidak ditemukan.`);
+        }
+      } catch (err: any) {
+        if (!active) return;
+        setError(err.response?.data?.message || "Gagal memuat detail pelanggan dari database.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    loadCustomer();
+    return () => { active = false; };
   }, [id]);
 
 

@@ -43,20 +43,53 @@ function formatDetailValue(key: string, value: string | number | null | undefine
   return String(value);
 }
 
-function roleLabel(role?: string) {
+function roleLabel(user?: any) {
+  if (!user) return "Administrator";
+  if (typeof user === "string") {
+    const labels: Record<string, string> = {
+      super_admin: "Super Administrator",
+      superadmin: "Super Administrator",
+      admin: "Administrator",
+      finance: "Admin Finance",
+      admin_finance: "Admin Finance",
+      finance_admin: "Admin Finance",
+      teknisi: "Teknisi",
+      noc: "NOC Engineer",
+      pelanggan: "Pelanggan",
+      bisnis: "Bisnis",
+      mitra: "Mitra Bisnis",
+    };
+    return labels[user] || (user ? user.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) : "Administrator");
+  }
+
+  if (user.position) return user.position;
+  if (user.division) {
+    const div = String(user.division);
+    return div.toLowerCase().startsWith("admin") ? div : `Admin ${div}`;
+  }
+
+  const role = String(user.role || "");
   const labels: Record<string, string> = {
     super_admin: "Super Administrator",
+    superadmin: "Super Administrator",
     admin: "Administrator",
+    finance: "Admin Finance",
+    admin_finance: "Admin Finance",
+    finance_admin: "Admin Finance",
+    teknisi: "Teknisi",
+    noc: "NOC Engineer",
     pelanggan: "Pelanggan",
     bisnis: "Bisnis",
     mitra: "Mitra Bisnis",
   };
-  return labels[String(role || "")] || "Administrator";
+  return labels[role] || (role ? role.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) : "Administrator");
 }
 
 function initials(name?: string) {
-  const words = String(name || "Admin RingNet").trim().split(/\s+/).filter(Boolean);
-  return (words[0]?.[0] || "A") + (words[1]?.[0] || "R");
+  const words = String(name || "Admin").trim().split(/\s+/).filter(Boolean);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  if (words.length === 1 && words[0].length >= 2) return words[0].slice(0, 2).toUpperCase();
+  return (words[0]?.[0] || "A").toUpperCase();
 }
 
 export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: boolean) => void }) {
@@ -71,7 +104,7 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
   const panelRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const displayName = user?.name || "Admin RingNet";
-  const displayRole = roleLabel(user?.role);
+  const displayRole = roleLabel(user);
 
   useEffect(() => {
     if (!user) return;

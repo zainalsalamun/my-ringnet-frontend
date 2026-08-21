@@ -297,15 +297,15 @@ export function DataTable<T extends { id: string }>({ title, data, columns, sear
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
             <tr>
               <th className="px-4 py-3">No</th>
-              {columns.map((column) => <th key={String(column.key)} className={"px-4 py-3 " + (column.className || "")}>{column.header}</th>)}
+              {columns.map((column, colIdx) => <th key={`${String(column.key)}-${colIdx}`} className={"px-4 py-3 " + (column.className || "")}>{column.header}</th>)}
               {(editBasePath || onDelete) ? <th className="px-4 py-3 text-right">Aksi</th> : null}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {rows.map((row, index) => (
-              <tr key={row.id} className="hover:bg-slate-50/80">
+              <tr key={row.id ? `${row.id}-${index}` : `row-${(page - 1) * pageSize + index}`} className="hover:bg-slate-50/80">
                 <td className="px-4 py-3 text-slate-500">{(page - 1) * pageSize + index + 1}</td>
-                {columns.map((column) => <td key={String(column.key)} className={"px-4 py-3 text-slate-700 " + (column.className || "")}>{column.render ? column.render(row) : String((row as any)[column.key] ?? "-")}</td>)}
+                {columns.map((column, colIdx) => <td key={`${String(column.key)}-${colIdx}`} className={"px-4 py-3 text-slate-700 " + (column.className || "")}>{column.render ? column.render(row) : String((row as any)[column.key] ?? "-")}</td>)}
                 {(editBasePath || onDelete || extraActions) ? (
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">

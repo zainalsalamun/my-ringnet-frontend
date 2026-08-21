@@ -10,6 +10,7 @@ import { useAuthStore } from "@/hooks/useAuth";
 import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { technicalDataApi } from "@/src/features/technical-data/api";
+import { radiusApi } from "@/src/features/radius/api";
 import { mitraPortalApi } from "@/src/features/mitra-portal/api";
 import { currency, date } from "@/lib/format";
 
@@ -581,29 +582,35 @@ function technicalPayloadRows(payload: any): any[] {
 }
 
 function technicalKey(row: any) {
+  const explicitType = String(row.typeKey || row.type || row.assetType || row.markerType || row.marker_type || row.asset_type || "").toLowerCase().trim();
+  if (explicitType === "router" || explicitType === "ro") return "router";
+  if (explicitType === "switch" || explicitType === "sw") return "switch";
+  if (explicitType === "olt" || explicitType === "cpe") return "olt";
+  if (explicitType === "otb") return "otb";
+  if (explicitType === "odc") return "odc";
+  if (explicitType === "odp") return "odp";
+  if (explicitType === "kabel" || explicitType === "cable" || explicitType === "fiber") return "kabel";
+  if (explicitType === "closure") return "closure";
+  if (explicitType === "pop") return "pop";
+
   const raw = String(
-    row.assetType ||
-      row.asset_type ||
-      row.markerType ||
-      row.marker_type ||
-      row.type ||
-      row.category ||
-      row.jenis ||
-      row.name ||
+    row.name ||
       row.label ||
+      row.title ||
+      row.description ||
       ""
   ).toLowerCase();
 
-  if (raw.includes("router") || raw === "ro") return "router";
-  if (raw.includes("switch")) return "switch";
-  if (raw.includes("olt") || raw.includes("cpe")) return "olt";
+  if (raw.includes("router") || raw.includes("mikrotik") || raw.includes("gateway") || raw.includes("ccr") || raw.includes("rb") || raw.startsWith("ro-") || raw.startsWith("ro_") || raw === "ro") return "router";
+  if (raw.includes("switch") || raw.includes("catalyst") || raw.startsWith("sw-") || raw.startsWith("sw_") || raw === "sw") return "switch";
+  if (raw.includes("olt") || raw.includes("gpon") || raw.includes("epon") || raw.includes("cpe") || raw.includes("ma5608") || raw.includes("c320")) return "olt";
   if (raw.includes("otb")) return "otb";
   if (raw.includes("odc")) return "odc";
   if (raw.includes("odp")) return "odp";
   if (raw.includes("closure")) return "closure";
-  if (raw.includes("kabel") || raw.includes("cable") || raw.includes("fiber") || raw.includes("fo")) return "kabel";
-  if (raw.includes("pop") || raw.includes("location") || raw.includes("maps")) return "pop";
-  return "pop";
+  if (raw.includes("kabel") || raw.includes("cable") || raw.includes("fiber") || raw.includes("fo-") || raw.includes("core")) return "kabel";
+  if (raw.includes("pop")) return "pop";
+  return "router";
 }
 
 function technicalLabel(type: string) {
@@ -637,6 +644,7 @@ function normalizeTechnicalRow(row: any) {
     ...row,
     id: String(row.id || row.maps_id || row.mapsId || row.code || row.name || `${typeKey}-${coordinateFrom(row)}`),
     typeKey,
+    type: typeKey,
     category: isActive ? "active" : isPassive ? "passive" : "pop",
     assetType: technicalLabel(typeKey),
     name: row.name || row.label || row.title || row.pop_name || row.site_name || "-",
@@ -644,14 +652,14 @@ function normalizeTechnicalRow(row: any) {
     ipAddress: row.ipAddress || row.ip_address || row.ip || "",
     location: row.location || row.address || [row.area, row.city].filter(Boolean).join(" | ") || "-",
     coordinate: coordinateFrom(row),
-    status: row.status === true ? "active" : row.status === false ? "nonactive" : row.status || "active",
+    status: row.status === true || row.status === "Aktif" || row.status === "active" ? "active" : row.status === false || row.status === "nonactive" ? "nonactive" : row.status || "active",
   };
 }
 
 function uniqueTechnicalRows(rows: any[]) {
   const seen = new Set<string>();
   return rows.filter((row) => {
-    const key = `${row.id}-${row.typeKey}-${row.coordinate}`;
+    const key = `${row.id}-${row.typeKey}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -794,29 +802,68 @@ function TechnicalPage({ section }: { section: string }) {
       // ignore
     }
 
+    let customNas: any[] = [];
+    try {
+      const storedNas = localStorage.getItem("myringnet_custom_nas");
+      if (storedNas) customNas = JSON.parse(storedNas);
+    } catch {
+      // ignore
+    }
+
     Promise.allSettled([
       technicalDataApi.listLocationPoints(technicalListBody()),
       technicalDataApi.mapMarkers(),
+      radiusApi.getNasList(),
+      technicalDataApi.listFiberCables(),
     ])
       .then((results) => {
         const listPayload = results[0].status === "fulfilled" ? results[0].value.data : null;
         const markerPayload = results[1].status === "fulfilled" ? results[1].value.data : null;
+        const nasPayload = results[2].status === "fulfilled" ? results[2].value : [];
+        const cablePayload = results[3].status === "fulfilled" ? results[3].value.data : null;
+
+        const nasRows = (Array.isArray(nasPayload) ? nasPayload : []).map((nas: any) => ({
+          id: nas.id || `nas-${nas.name}`,
+          typeKey: "router",
+          type: "router",
+          category: "active",
+          assetType: "Router",
+          name: nas.name || nas.shortname || "Router NAS",
+          serialNo: nas.secret || nas.address || "-",
+          ipAddress: nas.address || nas.targetIp || "-",
+          location: nas.description || "Core IDC / POP",
+          coordinate: nas.coordinate || "-7.77720164, 110.3977788",
+          status: String(nas.status).toLowerCase().includes("aktif") ? "active" : "nonactive",
+        }));
+
+        const customNasRows = customNas.map((nas: any) => ({
+          id: nas.id || `nas-${Date.now()}`,
+          typeKey: "router",
+          type: "router",
+          category: "active",
+          assetType: "Router",
+          name: nas.name || nas.shortname || "Router NAS",
+          serialNo: nas.secret || nas.address || "-",
+          ipAddress: nas.address || nas.targetIp || "-",
+          location: nas.description || "Core IDC / POP",
+          coordinate: nas.coordinate || "-7.77720164, 110.3977788",
+          status: String(nas.status).toLowerCase().includes("aktif") ? "active" : "nonactive",
+        }));
+
         const merged = uniqueTechnicalRows([
           ...custom,
+          ...customNasRows,
+          ...nasRows,
           ...technicalPayloadRows(markerPayload),
           ...technicalPayloadRows(listPayload),
+          ...technicalPayloadRows(cablePayload),
+          ...DEFAULT_TECHNICAL_DATA,
         ].map(normalizeTechnicalRow));
 
-        if (merged.length > 0) {
-          setRows(merged);
-        } else if (custom.length > 0) {
-          setRows([...custom, ...DEFAULT_TECHNICAL_DATA]);
-        } else {
-          setRows(DEFAULT_TECHNICAL_DATA);
-        }
+        setRows(merged);
       })
       .catch(() => {
-        setRows([...custom, ...DEFAULT_TECHNICAL_DATA]);
+        setRows(uniqueTechnicalRows([...custom, ...DEFAULT_TECHNICAL_DATA].map(normalizeTechnicalRow)));
       });
   };
 

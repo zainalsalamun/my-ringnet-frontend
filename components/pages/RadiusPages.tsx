@@ -229,7 +229,7 @@ export function RadiusNasRouterPage() {
           { key: "targetPort", header: "Port CoA" },
           { key: "createdAt", header: "Tanggal Dibuat" },
           {
-            key: "id",
+            key: "actions",
             header: "Aksi",
             render: (row) => (
               <div className="flex items-center gap-2">
@@ -407,6 +407,14 @@ export function RadiusAuthenticationPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [testingId, setTestingId] = useState<string | null>(null);
+  const [profiles, setProfiles] = useState<any[]>([]);
+  const [popOptions, setPopOptions] = useState<string[]>([
+    "POP Papringan",
+    "POP Kaliurang",
+    "POP Gejayan",
+    "POP Malioboro",
+    "POP Bantul Core",
+  ]);
 
   const [form, setForm] = useState({
     customer: "",
@@ -447,6 +455,23 @@ export function RadiusAuthenticationPage() {
         }
         setRows([...custom, ...DEFAULT_AUTHS]);
       });
+
+    radiusApi.getProfiles().then((res) => {
+      if (Array.isArray(res) && res.length > 0) setProfiles(res);
+    }).catch(() => {});
+
+    try {
+      const storedPops = localStorage.getItem("myringnet_custom_pops");
+      if (storedPops) {
+        const pops = JSON.parse(storedPops);
+        const names = pops.map((p: any) => p.name || p.title).filter(Boolean);
+        if (names.length > 0) {
+          setPopOptions((prev) => Array.from(new Set([...prev, ...names])));
+        }
+      }
+    } catch {
+      // ignore
+    }
   };
 
   useEffect(() => {
@@ -495,7 +520,7 @@ export function RadiusAuthenticationPage() {
       customer: "",
       username: "",
       password: "",
-      pop: "POP Papringan",
+      pop: popOptions[0] || "POP Papringan",
       ip: "10.10.20.",
       product: "Broadband 50 Mbps",
       status: "Aktif",
@@ -590,7 +615,7 @@ export function RadiusAuthenticationPage() {
           { key: "ip", header: "Alamat IP", render: (row) => <span className="font-mono text-xs text-indigo-600">{row.ip}</span> },
           { key: "product", header: "Produk Terkait", render: (row) => <span className="font-medium text-indigo-600">{row.product}</span> },
           {
-            key: "id",
+            key: "actions",
             header: "Aksi",
             render: (row) => (
               <div className="flex items-center gap-1.5">
@@ -683,11 +708,9 @@ export function RadiusAuthenticationPage() {
                     onChange={(e) => setForm({ ...form, pop: e.target.value })}
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
                   >
-                    <option value="POP Papringan">POP Papringan (Sleman)</option>
-                    <option value="POP Kaliurang">POP Kaliurang (Sleman)</option>
-                    <option value="POP Gejayan">POP Gejayan (Yogyakarta)</option>
-                    <option value="POP Malioboro">POP Malioboro (Yogyakarta)</option>
-                    <option value="POP Bantul Core">POP Bantul Core</option>
+                    {popOptions.map((popName) => (
+                      <option key={popName} value={popName}>{popName}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -705,17 +728,25 @@ export function RadiusAuthenticationPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">Paket / Produk Terkait</label>
+                  <label className="mb-1 block text-xs font-bold text-slate-700">Paket / Profil Bandwidth</label>
                   <select
                     value={form.product}
                     onChange={(e) => setForm({ ...form, product: e.target.value })}
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
                   >
-                    <option value="Broadband 25 Mbps">Broadband 25 Mbps</option>
-                    <option value="Broadband 50 Mbps">Broadband 50 Mbps</option>
-                    <option value="Broadband 100 Mbps">Broadband 100 Mbps</option>
-                    <option value="Broadband 200 Mbps">Broadband 200 Mbps</option>
-                    <option value="Dedicated 50 Mbps">Dedicated 50 Mbps</option>
+                    {profiles.length > 0 ? (
+                      profiles.map((p) => (
+                        <option key={p.id || p.name} value={p.name}>{p.name} ({p.speedLimit || `${p.downloadRate || 50}M`})</option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="Broadband 25 Mbps">Broadband 25 Mbps</option>
+                        <option value="Broadband 50 Mbps">Broadband 50 Mbps</option>
+                        <option value="Broadband 100 Mbps">Broadband 100 Mbps</option>
+                        <option value="Broadband 200 Mbps">Broadband 200 Mbps</option>
+                        <option value="Dedicated 50 Mbps">Dedicated 50 Mbps</option>
+                      </>
+                    )}
                   </select>
                 </div>
 
@@ -1003,7 +1034,7 @@ export function RadiusUserSessionPage() {
           { key: "nasAddress", header: "Alamat NAS" },
           { key: "startedAt", header: "Mulai" },
           {
-            key: "id",
+            key: "actions",
             header: "Aksi",
             render: (row) => (
               <button

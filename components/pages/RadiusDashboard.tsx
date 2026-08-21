@@ -64,7 +64,17 @@ export function RadiusDashboard() {
           sessionList = raw.map((item: any, idx: number) => {
             const rawId = String(item.authentication_id || item.id || `8160${idx.toString(16).padStart(4, "0")}`);
             const shortId = rawId.length > 8 ? rawId.slice(-8) : rawId;
-            const isOnline = item.isOnline ?? item.is_online ?? (item.status === "active" || item.connectivity === "Terhubung");
+            const isOnline =
+              item.isOnline === true ||
+              item.is_online === true ||
+              item.online === true ||
+              item.status === true ||
+              item.status === 1 ||
+              item.status === "active" ||
+              item.status === "online" ||
+              item.status === "Online" ||
+              item.connectivity === "Terhubung" ||
+              (item.status !== false && item.status !== 0 && item.status !== "nonactive" && item.status !== "offline");
             const customerCode = item.customer?.customer_id || item.customer_id || item.customerCode || "";
             const customerName = item.customer?.name || item.customer_name || item.name || "";
             const customerDisplay = customerCode && customerName ? `${customerCode} - ${customerName}` : customerName || customerCode || "-";
@@ -482,10 +492,17 @@ export function RadiusDashboard() {
                       <input type="checkbox" className="rounded border-slate-300" />
                     </td>
                     <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-600">
-                        <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
-                        Online
-                      </span>
+                      {session.status === "Online" ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-600">
+                          <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
+                          Online
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-500">
+                          <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                          Offline
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 font-mono font-bold text-slate-700">{session.id}</td>
                     <td className="px-4 py-3">

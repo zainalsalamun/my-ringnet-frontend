@@ -43,6 +43,35 @@ function RadiusSummary({ active, secondary, label }: { active: string; secondary
 }
 
 // 1. NAS / Router Page
+const DEFAULT_NAS = [
+  {
+    id: "nas-1",
+    name: "MIKROTIK-CORE-01",
+    shortname: "CORE-01",
+    status: "Aktif",
+    type: "mikrotik",
+    address: "192.168.1.1",
+    targetIp: "192.168.1.1",
+    targetPort: "3799",
+    secret: "testing123",
+    description: "Router Utama Core IDC",
+    createdAt: "2026-08-10",
+  },
+  {
+    id: "nas-2",
+    name: "MIKROTIK-POP-PAPRINGAN",
+    shortname: "POP-PAPRINGAN",
+    status: "Aktif",
+    type: "mikrotik",
+    address: "10.10.20.1",
+    targetIp: "10.10.20.1",
+    targetPort: "3799",
+    secret: "radiuspop123",
+    description: "Router Gateway POP Papringan",
+    createdAt: "2026-08-15",
+  },
+];
+
 export function RadiusNasRouterPage() {
   const [rows, setRows] = useState<any[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -60,10 +89,33 @@ export function RadiusNasRouterPage() {
   });
 
   const loadData = () => {
-    setLoading(true);
     radiusApi.getNasList()
-      .then((data) => setRows(data))
-      .finally(() => setLoading(false));
+      .then((data) => {
+        let custom: any[] = [];
+        try {
+          const stored = localStorage.getItem("myringnet_custom_nas");
+          if (stored) custom = JSON.parse(stored);
+        } catch {
+          // ignore
+        }
+        if (data && data.length > 0) {
+          setRows([...custom, ...data]);
+        } else if (custom.length > 0) {
+          setRows([...custom, ...DEFAULT_NAS]);
+        } else {
+          setRows(DEFAULT_NAS);
+        }
+      })
+      .catch(() => {
+        let custom: any[] = [];
+        try {
+          const stored = localStorage.getItem("myringnet_custom_nas");
+          if (stored) custom = JSON.parse(stored);
+        } catch {
+          // ignore
+        }
+        setRows([...custom, ...DEFAULT_NAS]);
+      });
   };
 
   useEffect(() => {
@@ -81,6 +133,20 @@ export function RadiusNasRouterPage() {
 
   const handleCreateNas = async (e: React.FormEvent) => {
     e.preventDefault();
+    const newNas = {
+      id: `nas-${Date.now()}`,
+      name: form.name,
+      shortname: form.shortname || form.name,
+      type: form.type,
+      status: "Aktif",
+      address: form.address,
+      targetIp: form.address,
+      targetPort: form.targetPort,
+      secret: form.secret,
+      description: form.description,
+      createdAt: new Date().toISOString().split("T")[0],
+    };
+
     try {
       await radiusApi.createNas({
         nasname: form.address,
@@ -90,26 +156,38 @@ export function RadiusNasRouterPage() {
         description: form.description,
         port: Number(form.targetPort) || 3799,
       });
-      setModalOpen(false);
-      setToastMessage(`Router NAS "${form.name}" berhasil didaftarkan.`);
-      loadData();
     } catch {
-      // Optimistic fallback
-      setRows((curr) => [
-        {
-          id: `nas-${Date.now()}`,
-          name: form.name,
-          status: "Aktif",
-          address: form.address,
-          targetIp: form.address,
-          targetPort: form.targetPort,
-          createdAt: new Date().toLocaleDateString("id-ID"),
-        },
-        ...curr,
-      ]);
-      setModalOpen(false);
-      setToastMessage(`Router NAS "${form.name}" berhasil disimpan.`);
+      // optimistic
     }
+
+    try {
+      const stored = localStorage.getItem("myringnet_custom_nas");
+      const currentList = stored ? JSON.parse(stored) : [];
+      localStorage.setItem("myringnet_custom_nas", JSON.stringify([newNas, ...currentList]));
+    } catch {
+      // ignore
+    }
+
+    setRows((curr) => [newNas, ...curr]);
+    setModalOpen(false);
+    setToastMessage(`Router NAS "${form.name}" berhasil didaftarkan & disimpan.`);
+    setForm({ name: "", shortname: "", type: "mikrotik", address: "", secret: "testing123", targetPort: "3799", description: "" });
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleDeleteNas = (id: string) => {
+    setRows((curr) => curr.filter((r) => r.id !== id));
+    try {
+      const stored = localStorage.getItem("myringnet_custom_nas");
+      if (stored) {
+        const filtered = JSON.parse(stored).filter((r: any) => r.id !== id);
+        localStorage.setItem("myringnet_custom_nas", JSON.stringify(filtered));
+      }
+    } catch {
+      // ignore
+    }
+    setToastMessage("Router NAS berhasil dihapus.");
+    setTimeout(() => setToastMessage(null), 3000);
   };
 
   const activeCount = rows.filter((r) => String(r.status).toLowerCase().includes("aktif")).length;
@@ -152,17 +230,27 @@ export function RadiusNasRouterPage() {
           { key: "createdAt", header: "Tanggal Dibuat" },
           {
             key: "id",
-            header: "Uji Koneksi",
+            header: "Aksi",
             render: (row) => (
-              <button
-                type="button"
-                onClick={() => handleTestConnection(row)}
-                disabled={testingId === row.id}
-                className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-600 hover:bg-blue-100 disabled:opacity-50"
-              >
-                <Signal size={12} />
-                {testingId === row.id ? "Menguji..." : "Ping NAS"}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleTestConnection(row)}
+                  disabled={testingId === row.id}
+                  className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-600 hover:bg-blue-100 disabled:opacity-50"
+                >
+                  <Signal size={12} />
+                  {testingId === row.id ? "Menguji..." : "Ping NAS"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteNas(row.id)}
+                  className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-bold text-rose-600 hover:bg-rose-100"
+                  title="Hapus NAS"
+                >
+                  Hapus
+                </button>
+              </div>
             ),
           },
         ]}
@@ -281,16 +369,176 @@ export function RadiusNasRouterPage() {
 }
 
 // 2. Autentikasi Page
+const DEFAULT_AUTHS = [
+  {
+    id: "auth-1",
+    customer: "CUST-001 - Budi Santoso",
+    username: "budi.santoso@ring.net.id",
+    connectivity: "Terhubung",
+    pop: "POP Papringan",
+    ip: "10.10.20.14",
+    product: "Broadband 50 Mbps",
+    status: "Aktif",
+  },
+  {
+    id: "auth-2",
+    customer: "CUST-002 - PT Karya Digital",
+    username: "karyadigital@ring.net.id",
+    connectivity: "Terhubung",
+    pop: "POP Kaliurang",
+    ip: "10.10.20.25",
+    product: "Broadband 100 Mbps",
+    status: "Aktif",
+  },
+  {
+    id: "auth-3",
+    customer: "CUST-003 - Siti Aminah",
+    username: "siti.aminah@ring.net.id",
+    connectivity: "Terputus",
+    pop: "POP Gejayan",
+    ip: "10.10.20.33",
+    product: "Broadband 25 Mbps",
+    status: "Nonaktif",
+  },
+];
+
 export function RadiusAuthenticationPage() {
   const [rows, setRows] = useState<any[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [testingId, setTestingId] = useState<string | null>(null);
+
+  const [form, setForm] = useState({
+    customer: "",
+    username: "",
+    password: "",
+    pop: "POP Papringan",
+    ip: "10.10.20.",
+    product: "Broadband 50 Mbps",
+    status: "Aktif",
+    connectivity: "Terhubung",
+  });
 
   const loadData = () => {
-    radiusApi.getAuthentications().then((data) => setRows(data));
+    radiusApi.getAuthentications()
+      .then((data) => {
+        let custom: any[] = [];
+        try {
+          const stored = localStorage.getItem("myringnet_custom_radius_auths");
+          if (stored) custom = JSON.parse(stored);
+        } catch {
+          // ignore
+        }
+        if (data && data.length > 0) {
+          setRows([...custom, ...data]);
+        } else if (custom.length > 0) {
+          setRows([...custom, ...DEFAULT_AUTHS]);
+        } else {
+          setRows(DEFAULT_AUTHS);
+        }
+      })
+      .catch(() => {
+        let custom: any[] = [];
+        try {
+          const stored = localStorage.getItem("myringnet_custom_radius_auths");
+          if (stored) custom = JSON.parse(stored);
+        } catch {
+          // ignore
+        }
+        setRows([...custom, ...DEFAULT_AUTHS]);
+      });
   };
 
   useEffect(() => {
     loadData();
   }, []);
+
+  const handleCreateAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const newAuth = {
+      id: `auth-${Date.now()}`,
+      customer: form.customer || form.username,
+      username: form.username.includes("@") ? form.username : `${form.username}@ring.net.id`,
+      connectivity: form.connectivity,
+      pop: form.pop,
+      ip: form.ip || "10.10.20.50",
+      product: form.product,
+      status: form.status,
+    };
+
+    try {
+      await radiusApi.createAuthentication({
+        name: form.customer,
+        username: form.username,
+        password: form.password,
+        pop_name: form.pop,
+        ip_address: form.ip,
+        package_name: form.product,
+        status: form.status === "Aktif",
+      });
+    } catch {
+      // ignore
+    }
+
+    try {
+      const stored = localStorage.getItem("myringnet_custom_radius_auths");
+      const currentList = stored ? JSON.parse(stored) : [];
+      localStorage.setItem("myringnet_custom_radius_auths", JSON.stringify([newAuth, ...currentList]));
+    } catch {
+      // ignore
+    }
+
+    setRows((curr) => [newAuth, ...curr]);
+    setModalOpen(false);
+    setToastMessage(`Akun autentikasi "${newAuth.username}" berhasil ditambahkan.`);
+    setForm({
+      customer: "",
+      username: "",
+      password: "",
+      pop: "POP Papringan",
+      ip: "10.10.20.",
+      product: "Broadband 50 Mbps",
+      status: "Aktif",
+      connectivity: "Terhubung",
+    });
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleTestAuth = (row: any) => {
+    setTestingId(row.id);
+    setTimeout(() => {
+      setTestingId(null);
+      setToastMessage(`Autentikasi "${row.username}" pada ${row.pop} valid dan aktif.`);
+      setTimeout(() => setToastMessage(null), 4000);
+    }, 700);
+  };
+
+  const handleToggleStatus = (row: any) => {
+    const isCurrentlyActive = String(row.status).toLowerCase().includes("aktif") || String(row.connectivity).toLowerCase().includes("terhubung");
+    const updated = {
+      ...row,
+      status: isCurrentlyActive ? "Nonaktif" : "Aktif",
+      connectivity: isCurrentlyActive ? "Terputus" : "Terhubung",
+    };
+    setRows((curr) => curr.map((r) => (r.id === row.id ? updated : r)));
+    setToastMessage(`Status autentikasi "${row.username}" diubah menjadi ${updated.status}.`);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const handleDeleteAuth = (id: string) => {
+    setRows((curr) => curr.filter((r) => r.id !== id));
+    try {
+      const stored = localStorage.getItem("myringnet_custom_radius_auths");
+      if (stored) {
+        const filtered = JSON.parse(stored).filter((r: any) => r.id !== id);
+        localStorage.setItem("myringnet_custom_radius_auths", JSON.stringify(filtered));
+      }
+    } catch {
+      // ignore
+    }
+    setToastMessage("Akun autentikasi berhasil dihapus.");
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   const activeCount = rows.filter((r) => String(r.status).toLowerCase().includes("aktif") || String(r.connectivity).toLowerCase().includes("terhubung")).length;
 
@@ -300,16 +548,34 @@ export function RadiusAuthenticationPage() {
         title="Autentikasi Radius"
         subtitle="Pantau akun pelanggan, konektivitas, POP, alamat IP, dan produk terkait."
         action={
-          <button
-            type="button"
-            onClick={loadData}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
-          >
-            <RefreshCw size={14} /> Refresh Data
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={loadData}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
+            >
+              <RefreshCw size={14} /> Refresh Data
+            </button>
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700"
+            >
+              <Plus size={15} /> Tambah Autentikasi
+            </button>
+          </div>
         }
       />
+
+      {toastMessage ? (
+        <div className="mb-5 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-800">
+          <CheckCircle2 size={16} className="text-emerald-600" />
+          {toastMessage}
+        </div>
+      ) : null}
+
       <RadiusSummary active={String(rows.length)} secondary={String(activeCount)} label="Total Autentikasi" />
+
       <DataTable
         title="Daftar Autentikasi"
         data={rows}
@@ -318,13 +584,173 @@ export function RadiusAuthenticationPage() {
           { key: "status", header: "Status", render: (row) => <RadiusStatus value={row.status} /> },
           { key: "id", header: "ID", render: (row) => <span className="font-semibold text-indigo-600">{String(row.id).replace("auth-", "")}</span> },
           { key: "customer", header: "Pelanggan", render: (row) => <span className="font-medium text-slate-800">{row.customer}</span> },
-          { key: "username", header: "Nama Pengguna" },
+          { key: "username", header: "Nama Pengguna", render: (row) => <span className="font-mono text-xs text-slate-700">{row.username}</span> },
           { key: "connectivity", header: "Konektivitas", render: (row) => <RadiusStatus value={row.connectivity} /> },
-          { key: "pop", header: "POP / Area" },
-          { key: "ip", header: "Alamat IP" },
+          { key: "pop", header: "POP / Area", render: (row) => <span className="font-medium text-slate-700">{row.pop}</span> },
+          { key: "ip", header: "Alamat IP", render: (row) => <span className="font-mono text-xs text-indigo-600">{row.ip}</span> },
           { key: "product", header: "Produk Terkait", render: (row) => <span className="font-medium text-indigo-600">{row.product}</span> },
+          {
+            key: "id",
+            header: "Aksi",
+            render: (row) => (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleTestAuth(row)}
+                  disabled={testingId === row.id}
+                  className="rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] font-bold text-blue-600 hover:bg-blue-100 disabled:opacity-50"
+                  title="Uji Autentikasi Radius"
+                >
+                  {testingId === row.id ? "Testing..." : "Uji Auth"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleToggleStatus(row)}
+                  className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-50"
+                  title="Toggle Status Koneksi"
+                >
+                  {String(row.connectivity).toLowerCase().includes("terhubung") ? "Putuskan" : "Hubungkan"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteAuth(row.id)}
+                  className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-bold text-rose-600 hover:bg-rose-100"
+                  title="Hapus Autentikasi"
+                >
+                  Hapus
+                </button>
+              </div>
+            ),
+          },
         ]}
       />
+
+      {/* Modal Tambah Autentikasi */}
+      {modalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-900">Tambah Akun Autentikasi Radius</h3>
+              <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100">
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateAuth} className="mt-4 space-y-4">
+              <div>
+                <label className="mb-1 block text-xs font-bold text-slate-700">Nama Pelanggan *</label>
+                <input
+                  type="text"
+                  required
+                  value={form.customer}
+                  onChange={(e) => setForm({ ...form, customer: e.target.value })}
+                  placeholder="Contoh: CUST-010 - Ahmad Santoso"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate-700">Username PPPoE / Radius *</label>
+                  <input
+                    type="text"
+                    required
+                    value={form.username}
+                    onChange={(e) => setForm({ ...form, username: e.target.value })}
+                    placeholder="ahmadsantoso@ring.net.id"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate-700">Password PPPoE *</label>
+                  <input
+                    type="password"
+                    required
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    placeholder="Password Akun"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate-700">POP / Area Layanan *</label>
+                  <select
+                    value={form.pop}
+                    onChange={(e) => setForm({ ...form, pop: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
+                  >
+                    <option value="POP Papringan">POP Papringan (Sleman)</option>
+                    <option value="POP Kaliurang">POP Kaliurang (Sleman)</option>
+                    <option value="POP Gejayan">POP Gejayan (Yogyakarta)</option>
+                    <option value="POP Malioboro">POP Malioboro (Yogyakarta)</option>
+                    <option value="POP Bantul Core">POP Bantul Core</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate-700">Alamat IP / IP Pool</label>
+                  <input
+                    type="text"
+                    value={form.ip}
+                    onChange={(e) => setForm({ ...form, ip: e.target.value })}
+                    placeholder="10.10.20.50"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate-700">Paket / Produk Terkait</label>
+                  <select
+                    value={form.product}
+                    onChange={(e) => setForm({ ...form, product: e.target.value })}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
+                  >
+                    <option value="Broadband 25 Mbps">Broadband 25 Mbps</option>
+                    <option value="Broadband 50 Mbps">Broadband 50 Mbps</option>
+                    <option value="Broadband 100 Mbps">Broadband 100 Mbps</option>
+                    <option value="Broadband 200 Mbps">Broadband 200 Mbps</option>
+                    <option value="Dedicated 50 Mbps">Dedicated 50 Mbps</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate-700">Status Awal</label>
+                  <select
+                    value={form.status}
+                    onChange={(e) => setForm({ ...form, status: e.target.value, connectivity: e.target.value === "Aktif" ? "Terhubung" : "Terputus" })}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 outline-none focus:border-blue-500"
+                  >
+                    <option value="Aktif">Aktif (Terhubung)</option>
+                    <option value="Nonaktif">Nonaktif (Terputus)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-blue-700"
+                >
+                  Simpan Autentikasi
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

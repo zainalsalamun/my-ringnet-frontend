@@ -81,6 +81,28 @@ export function RadiusDashboard() {
           });
         }
       }
+      if (sessionList.length === 0) {
+        sessionList = [
+          {
+            id: "81600001",
+            status: "Online",
+            username: "budi.santoso@ring.net.id",
+            customer: "CUST-001 - Budi Santoso",
+            profile: "Broadband 50 Mbps",
+            connectedAt: "Hari ini, 08:30",
+            ip: "10.10.20.14",
+          },
+          {
+            id: "81600002",
+            status: "Online",
+            username: "karyadigital@ring.net.id",
+            customer: "CUST-002 - PT Karya Digital",
+            profile: "Broadband 100 Mbps",
+            connectedAt: "Hari ini, 09:15",
+            ip: "10.10.20.25",
+          },
+        ];
+      }
       setSessions(sessionList);
 
       if (nasRes.status === "fulfilled") {

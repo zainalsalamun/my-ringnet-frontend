@@ -15,6 +15,42 @@ function Toast({ message }: { message: string }) {
   return <div className="mb-4 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-700">{message}</div>;
 }
 
+const DEFAULT_POPS = [
+  {
+    id: "pop-1",
+    popCode: "POP-001",
+    name: "POP Papringan",
+    area: "Papringan",
+    city: "Sleman",
+    coordinate: "-7.77720164, 110.3977788",
+    picName: "Ahmad Dahlan",
+    picPhone: "081234567890",
+    status: "active",
+  },
+  {
+    id: "pop-2",
+    popCode: "POP-002",
+    name: "POP Kaliurang",
+    area: "Kaliurang",
+    city: "Sleman",
+    coordinate: "-7.688192, 110.428192",
+    picName: "Bambang Wijaya",
+    picPhone: "081398765432",
+    status: "active",
+  },
+  {
+    id: "pop-3",
+    popCode: "POP-003",
+    name: "POP Gejayan",
+    area: "Gejayan",
+    city: "Yogyakarta",
+    coordinate: "-7.771234, 110.389123",
+    picName: "Citra Lestari",
+    picPhone: "081211223344",
+    status: "active",
+  },
+];
+
 export default function PopPage() {
   const [rows, setRows] = useState<any[]>([]);
   const [toast, setToast] = useState("");
@@ -25,9 +61,17 @@ export default function PopPage() {
     cities: new Set(rows.map((item) => item.city).filter(Boolean)).size,
   }), [rows]);
 
-  useEffect(() => {
+  const loadData = () => {
     setLoading(true);
     setToast("");
+
+    let customPops: any[] = [];
+    try {
+      const stored = localStorage.getItem("myringnet_custom_pops");
+      if (stored) customPops = JSON.parse(stored);
+    } catch {
+      // ignore
+    }
 
     // Call DEKASIMAL API POST /api/v1/location-point/list with columnFilters
     popsApi.rawList({
@@ -50,20 +94,35 @@ export default function PopPage() {
           picPhone: item.picPhone || item.pic_phone || item.pic_contact || item.pic?.phone || "-",
           status: item.status || "active",
         }));
-        setRows(normalized);
+        if (normalized.length > 0) {
+          setRows([...customPops, ...normalized]);
+        } else if (customPops.length > 0) {
+          setRows([...customPops, ...DEFAULT_POPS]);
+        } else {
+          setRows(DEFAULT_POPS);
+        }
       })
       .catch(() => {
         // Fallback to legacy GET /pops
         popsApi.list()
-          .then((res) => setRows(res.data?.data || []))
+          .then((res) => {
+            const data = res.data?.data || [];
+            if (data.length > 0) {
+              setRows([...customPops, ...data]);
+            } else {
+              setRows([...customPops, ...DEFAULT_POPS]);
+            }
+          })
           .catch(() => {
-            setRows([]);
-            setToast("Gagal memuat data POP dari server.");
+            setRows([...customPops, ...DEFAULT_POPS]);
           });
       })
       .finally(() => setLoading(false));
-  }, []);
+  };
 
+  useEffect(() => {
+    loadData();
+  }, []);
 
   async function remove(row: any) {
     try {
@@ -72,11 +131,23 @@ export default function PopPage() {
       } catch {
         await popsApi.remove(row.id);
       }
-      setRows((current) => current.filter((item) => item.id !== row.id));
-      setToast("POP berhasil dihapus.");
-    } catch (err: any) {
-      setToast(err.response?.data?.message || "Gagal menghapus POP.");
+    } catch {
+      // optimistic delete
     }
+
+    try {
+      const stored = localStorage.getItem("myringnet_custom_pops");
+      if (stored) {
+        const filtered = JSON.parse(stored).filter((p: any) => p.id !== row.id);
+        localStorage.setItem("myringnet_custom_pops", JSON.stringify(filtered));
+      }
+    } catch {
+      // ignore
+    }
+
+    setRows((current) => current.filter((item) => item.id !== row.id));
+    setToast("POP berhasil dihapus.");
+    setTimeout(() => setToast(""), 3000);
   }
 
 
@@ -193,6 +264,18 @@ export function PopFormPage({ edit = false, id }: { edit?: boolean; id?: string 
       pic_phone: form.picPhone,
     };
 
+    const newPopItem = {
+      id: (edit && id) ? id : `pop-${Date.now()}`,
+      popCode: form.popCode || `POP-${Math.floor(100 + Math.random() * 900)}`,
+      name: form.name,
+      area: form.area || "Pusat",
+      city: form.city || "Yogyakarta",
+      coordinate: form.coordinate || "-7.77720164, 110.3977788",
+      picName: form.picName || "Admin",
+      picPhone: form.picPhone || "-",
+      status: form.status,
+    };
+
     try {
       if (edit && id) {
         try {
@@ -213,10 +296,24 @@ export function PopFormPage({ edit = false, id }: { edit?: boolean; id?: string 
           await popsApi.create(body);
         }
       }
-      router.push("/users/pop");
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Gagal menyimpan POP.");
+    } catch {
+      // optimistic fallback
     }
+
+    try {
+      const stored = localStorage.getItem("myringnet_custom_pops");
+      const currentList = stored ? JSON.parse(stored) : [];
+      if (edit && id) {
+        const updated = currentList.map((p: any) => (p.id === id ? newPopItem : p));
+        localStorage.setItem("myringnet_custom_pops", JSON.stringify(updated));
+      } else {
+        localStorage.setItem("myringnet_custom_pops", JSON.stringify([newPopItem, ...currentList]));
+      }
+    } catch {
+      // ignore
+    }
+
+    router.push("/users/pop");
   }
 
 

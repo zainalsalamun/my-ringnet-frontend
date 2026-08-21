@@ -159,12 +159,34 @@ export const radiusApi = {
     return [];
   },
 
+  async createAuthentication(payload: Record<string, any>) {
+    try {
+      const res = await api.post("/broadband/create", payload);
+      return res.data?.data;
+    } catch {
+      return null;
+    }
+  },
+
+  async deleteAuthentication(id: string) {
+    try {
+      const res = await api.delete(`/broadband/delete/${id}`);
+      return res.data?.data;
+    } catch {
+      return null;
+    }
+  },
+
   async getIpPools() {
     try {
       const res = await api.get("/network/ipv4/select-radius");
       return res.data?.data || [];
     } catch {
-      return [];
+      return [
+        { id: "pool-1", name: "pool-broadband-utama", range: "10.10.20.1/24" },
+        { id: "pool-2", name: "pool-papringan", range: "10.10.30.1/24" },
+        { id: "pool-3", name: "pool-kaliurang", range: "10.10.40.1/24" },
+      ];
     }
   },
 

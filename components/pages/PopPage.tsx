@@ -210,42 +210,78 @@ export function PopFormPage({ edit = false, id }: { edit?: boolean; id?: string 
 
   useEffect(() => {
     if (!edit || !id) return;
-    
+    setError("");
+
+    let customPops: any[] = [];
+    try {
+      const stored = localStorage.getItem("myringnet_custom_pops");
+      if (stored) customPops = JSON.parse(stored);
+    } catch {
+      // ignore
+    }
+
+    const localFound = [...customPops, ...DEFAULT_POPS].find((p) =>
+      String(p.id) === String(id) ||
+      String(p.popCode) === String(id) ||
+      String(p.name).toLowerCase() === String(id).toLowerCase()
+    );
+
+    if (localFound) {
+      setForm({
+        popCode: localFound.popCode || localFound.code || localFound.maps_id || "",
+        name: localFound.name || "",
+        area: localFound.area || localFound.group || "",
+        city: localFound.city || "",
+        address: localFound.address || "",
+        coordinate: localFound.coordinate || "",
+        status: localFound.status || "active",
+        notes: localFound.notes || "",
+        picName: localFound.picName || localFound.pic_name || "",
+        picPhone: localFound.picPhone || localFound.pic_phone || "",
+      });
+    }
+
+    // Skip backend call if it is a local dummy/mock POP ID
+    if (String(id).startsWith("pop-") || String(id).startsWith("local-")) {
+      return;
+    }
+
     // Try DEKASIMAL API GET /location-point/report/{mapsId} or GET /location-point/{id}
     popsApi.rawReport(id)
       .then((res) => {
         const data = res.data?.data?.node || res.data?.data || {};
-        setForm({
-          popCode: data.maps_id || data.code || "",
-          name: data.name || "",
-          area: data.group || data.area || "",
-          city: data.location?.city || data.city || "",
-          address: data.address || "",
-          coordinate: data.coordinate || "",
-          status: data.status || "active",
-          notes: data.notes || "",
-          picName: data.picName || data.pic_name || data.pic?.name || "",
-          picPhone: data.picPhone || data.pic_phone || data.pic_contact || data.pic?.phone || "",
-        });
+        if (data && (data.name || data.maps_id)) {
+          setForm({
+            popCode: data.maps_id || data.code || "",
+            name: data.name || "",
+            area: data.group || data.area || "",
+            city: data.location?.city || data.city || "",
+            address: data.address || "",
+            coordinate: data.coordinate || "",
+            status: data.status || "active",
+            notes: data.notes || "",
+            picName: data.picName || data.pic_name || data.pic?.name || "",
+            picPhone: data.picPhone || data.pic_phone || data.pic_contact || data.pic?.phone || "",
+          });
+        }
       })
       .catch(() => {
-        popsApi.detail(id)
-          .then((res) => {
-            const data = res.data?.data || {};
-            setForm({
-              popCode: data.popCode || "", name: data.name || "", area: data.area || "", city: data.city || "",
-              address: data.address || "", coordinate: data.coordinate || "", status: data.status || "active", notes: data.notes || "",
-              picName: data.picName || data.pic_name || data.pic?.name || "", picPhone: data.picPhone || data.pic_phone || data.pic_contact || data.pic?.phone || ""
+        if (!localFound) {
+          popsApi.detail(id)
+            .then((res) => {
+              const data = res.data?.data || {};
+              if (data && data.name) {
+                setForm({
+                  popCode: data.popCode || "", name: data.name || "", area: data.area || "", city: data.city || "",
+                  address: data.address || "", coordinate: data.coordinate || "", status: data.status || "active", notes: data.notes || "",
+                  picName: data.picName || data.pic_name || data.pic?.name || "", picPhone: data.picPhone || data.pic_phone || data.pic_contact || data.pic?.phone || ""
+                });
+              }
+            })
+            .catch(() => {
+              if (!localFound) setError("Gagal memuat data POP dari backend.");
             });
-            setExistingFiles({
-              picKtp: data.picKtp || null,
-              locationPermit: data.locationPermit || null,
-              leaseAgreement: data.leaseAgreement || null,
-              locationPhoto: data.locationPhoto || null,
-              contract: data.contract || null,
-            });
-          })
-          .catch(() => setError("Gagal memuat data POP."));
+        }
       });
   }, [edit, id]);
 

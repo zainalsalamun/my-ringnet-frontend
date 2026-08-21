@@ -1,7 +1,7 @@
 "use client";
 
 import { currency, date } from "@/lib/format";
-import { AlertTriangle, Bell, CheckCheck, ChevronDown, Clock, Headphones, LogOut, Menu, ReceiptText, Search, Settings, ShieldCheck, UserCog, UserPlus, WalletCards, X } from "lucide-react";
+import { AlertTriangle, Bell, CheckCheck, ChevronDown, Clock, Headphones, LogOut, Menu, ReceiptText, Search, Settings, UserCog, UserPlus, WalletCards, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -281,13 +281,6 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
                   <div className="grid h-9 w-9 place-items-center rounded-lg bg-slate-100 text-slate-600"><Settings size={17} /></div>
                   Pengaturan Akun
                 </Link>
-                <div className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-700">
-                  <div className="grid h-9 w-9 place-items-center rounded-lg bg-emerald-50 text-emerald-600"><ShieldCheck size={17} /></div>
-                  <div>
-                    <p>Status sesi aktif</p>
-                    <p className="text-xs font-medium text-slate-400">JWT tersimpan di browser</p>
-                  </div>
-                </div>
               </div>
 
               <div className="border-t border-slate-100 p-2">

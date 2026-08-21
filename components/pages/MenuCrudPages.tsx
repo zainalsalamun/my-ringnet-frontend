@@ -688,14 +688,16 @@ export function ServicePackageFormPage({ edit = false, id }: { edit?: boolean; i
   useEffect(() => {
     if (!edit || !id) return;
     productsApi.servicePackageDetail(id).then((res) => {
-      const data = res.data.data;
-      setForm({
-        name: data.name || "",
-        speedMbps: data.speedMbps ? String(data.speedMbps) : "",
-        monthlyPrice: data.monthlyPrice ? String(data.monthlyPrice) : "",
-        description: data.description || "",
-        status: data.status || "active",
-      });
+      const data = res.data?.data || res.data;
+      if (data && (data.name || data.speedMbps || data.bandwidth)) {
+        setForm({
+          name: data.name || data.product_name || "",
+          speedMbps: data.speedMbps ? String(data.speedMbps) : data.bandwidth ? String(data.bandwidth) : "",
+          monthlyPrice: data.monthlyPrice ? String(data.monthlyPrice) : data.price ? String(data.price) : "",
+          description: data.description || "",
+          status: data.status === false ? "nonactive" : "active",
+        });
+      }
     }).catch(() => setError("Gagal memuat data paket layanan."));
   }, [edit, id]);
 
@@ -737,15 +739,30 @@ export function PaymentMethodFormPage({ edit = false, id }: { edit?: boolean; id
 
   useEffect(() => {
     if (!edit || !id) return;
+    const defaultPmList = [
+      { id: "pm-1", name: "BCA Virtual Account", code: "BCA_VA", description: "Pembayaran otomatis via BCA Virtual Account.", status: "active" },
+      { id: "pm-2", name: "Mandiri Virtual Account", code: "MANDIRI_VA", description: "Pembayaran otomatis via Mandiri Virtual Account.", status: "active" },
+      { id: "pm-3", name: "QRIS", code: "QRIS", description: "Pembayaran instan QRIS semua e-wallet & m-banking.", status: "active" },
+      { id: "pm-4", name: "Transfer Bank Manual", code: "BANK_TRANSFER", description: "Transfer rekening bank manual dengan bukti bayar.", status: "active" },
+    ];
+    const localPm = defaultPmList.find((pm) => pm.id === id || pm.code.toLowerCase() === id.toLowerCase());
+    if (localPm) {
+      setForm(localPm);
+    }
+
     paymentMethodsApi.detail(id).then((res) => {
-      const data = res.data.data;
-      setForm({
-        name: data.name || "",
-        code: data.code || "",
-        description: data.description || "",
-        status: data.status || "active",
-      });
-    }).catch(() => setError("Gagal memuat metode pembayaran."));
+      const data = res.data?.data || res.data;
+      if (data && data.name) {
+        setForm({
+          name: data.name || "",
+          code: data.code || "",
+          description: data.description || "",
+          status: data.status || "active",
+        });
+      }
+    }).catch(() => {
+      if (!localPm) setError("Gagal memuat metode pembayaran.");
+    });
   }, [edit, id]);
 
   async function submit() {

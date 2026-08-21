@@ -83,18 +83,34 @@ export async function readJsonResponse(res: Response): Promise<JsonRecord> {
 export async function forwardJson(req: Request, endpoint: string, init?: { method?: HttpMethod; body?: unknown }) {
   const method = init?.method || req.method;
   const hasBody = init?.body !== undefined;
-  const res = await fetch(backendUrl(endpoint), {
-    method,
-    headers: jsonHeaders(req),
-    body: hasBody ? JSON.stringify(init.body) : ["GET", "HEAD"].includes(method) ? undefined : await req.text(),
-  });
-  const text = await res.text();
+  try {
+    const res = await fetch(backendUrl(endpoint), {
+      method,
+      headers: jsonHeaders(req),
+      body: hasBody ? JSON.stringify(init.body) : ["GET", "HEAD"].includes(method) ? undefined : await req.text(),
+    });
+    const text = await res.text();
 
-  return new Response(text, {
-    status: res.status,
-    statusText: res.statusText,
-    headers: { "Content-Type": res.headers.get("content-type") || "application/json" },
-  });
+    if (!res.ok && res.status >= 500) {
+      return Response.json({
+        success: false,
+        message: "Data tidak ditemukan di server backend.",
+        data: null,
+      }, { status: 404 });
+    }
+
+    return new Response(text, {
+      status: res.status,
+      statusText: res.statusText,
+      headers: { "Content-Type": res.headers.get("content-type") || "application/json" },
+    });
+  } catch {
+    return Response.json({
+      success: false,
+      message: "Gagal menghubungi server backend.",
+      data: null,
+    }, { status: 404 });
+  }
 }
 
 export function successJson(message: string, data: unknown = [], meta: JsonRecord = {}) {

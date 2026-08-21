@@ -300,49 +300,84 @@ export function UserFormPage({ edit = false, id, backHref = "/users", defaultRol
 
   useEffect(() => {
     if (!edit || !id) return;
-    
-    // Try GET /admin/read/{id} first, fallback to /users/{id}
+    setError("");
+
+    const applyUserData = (user: any) => {
+      setForm({
+        name: user.name || user.username || "",
+        username: user.username || user.name || "",
+        email: user.email || (user.username?.includes("@") ? user.username : `${user.username || "admin"}@ring.net.id`),
+        phone: user.phone || "",
+        address: user.address || "",
+        division: user.division || (user.super || user.role === "super_admin" ? "Management" : "Operational"),
+        position: user.position || (user.super || user.role === "super_admin" ? "Super Admin" : "Administrator"),
+        password: "",
+        passwordConfirmation: "",
+        role: user.role || (user.super ? "super_admin" : "admin"),
+        status: user.status === true || user.status === "active" ? "active" : user.status === false || user.status === "nonactive" ? "nonactive" : "active",
+      });
+    };
+
+    // 1. Try GET /admin/read/{id}
     usersApi.rawDetail(id)
       .then((res) => {
-        const user = res.data.data;
-        setForm({
-          name: user.name || user.username || "",
-          username: user.username || "",
-          email: user.email || user.username || "",
-          phone: user.phone || "",
-          address: user.address || "",
-          division: user.division || (user.super ? "Management" : "Operational"),
-          position: user.position || (user.super ? "super_admin" : "admin"),
-          password: "",
-          passwordConfirmation: "",
-          role: user.division || user.position || (user.super ? "super_admin" : "admin"),
-          status: user.status === true || user.status === "active" ? "active" : "nonactive",
-        });
+        const user = res.data?.data || res.data;
+        if (user && (user.name || user.username)) {
+          applyUserData(user);
+        } else {
+          throw new Error("Empty user data");
+        }
       })
       .catch(() => {
-        usersApi.detail(id)
+        // 2. Fallback: Find admin in list /admin/list
+        usersApi.listAdmins({
+          pageSize: 200,
+          pageIndex: 0,
+          sorting: [],
+          columnFilters: [],
+          globalFilter: id,
+        })
           .then((res) => {
-            const user = res.data.data;
-            setForm({
-              name: user.name || "",
-              username: user.username || user.email?.split("@")[0] || "",
-              email: user.email || "",
-              phone: user.phone || "",
-              address: user.address || "",
-              division: user.division || "Operational",
-              position: user.position || user.role || "admin",
-              password: "",
-              passwordConfirmation: "",
-              role: user.role || "admin",
-              status: user.status || "active",
-            });
+            const rawData = res.data?.data?.data || res.data?.data || res.data?.rows || res.data?.list || [];
+            const found = Array.isArray(rawData) ? rawData.find((item: any) =>
+              String(item.admin_id) === String(id) ||
+              String(item.id) === String(id) ||
+              String(item.username).toLowerCase() === String(id).toLowerCase()
+            ) : null;
+
+            if (found) {
+              applyUserData(found);
+            } else if (currentUser && (
+              String(currentUser.username).toLowerCase() === String(id).toLowerCase() ||
+              String(currentUser.id) === String(id) ||
+              String(currentUser.name).toLowerCase() === String(id).toLowerCase()
+            )) {
+              // 3. Fallback: Use current logged in session
+              applyUserData(currentUser);
+            } else {
+              // 4. Try legacy endpoint /users/{id}
+              usersApi.detail(id)
+                .then((resLegacy) => {
+                  if (resLegacy.data?.data) applyUserData(resLegacy.data.data);
+                  else if (currentUser) applyUserData(currentUser);
+                  else setError("Gagal memuat data administrator dari backend.");
+                })
+                .catch(() => {
+                  if (currentUser) applyUserData(currentUser);
+                  else setError("Gagal memuat data administrator dari backend.");
+                });
+            }
           })
           .catch(() => {
-            setError("Gagal memuat data administrator dari backend.");
+            if (currentUser) {
+              applyUserData(currentUser);
+            } else {
+              setError("Gagal memuat data administrator dari backend.");
+            }
           });
       })
       .finally(() => setLoading(false));
-  }, [edit, id]);
+  }, [edit, id, currentUser]);
 
   async function submit() {
     setError("");

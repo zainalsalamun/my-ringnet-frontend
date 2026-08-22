@@ -15,8 +15,8 @@ export const USER_MENU_ITEMS: SidebarItemConfig[] = [
 ];
 
 export const FINANCE_MENU_ITEMS: SidebarItemConfig[] = [
-  { label: "Keuangan", href: ROUTES.finance.root },
-  { label: "Faktur & Tagihan", href: ROUTES.finance.invoices },
+  { label: "Tagihan", href: ROUTES.finance.invoices },
+  { label: "Laporan Pendapatan", href: ROUTES.finance.revenueReport },
 ];
 
 export const SETTINGS_MENU_ITEMS: SidebarItemConfig[] = [

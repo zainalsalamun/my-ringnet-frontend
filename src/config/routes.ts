@@ -30,6 +30,7 @@ export const ROUTES = {
   finance: {
     root: "/keuangan",
     invoices: "/internet-services",
+    revenueReport: "/keuangan/laporan-pendapatan",
   },
 
   technical: {

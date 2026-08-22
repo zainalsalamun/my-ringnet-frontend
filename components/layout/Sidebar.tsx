@@ -103,7 +103,8 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: { sidebarOpen?:
     setSidebarOpen?.(false);
   }, [pathname, setSidebarOpen]);
 
-  if (user?.role === "mitra") return <MitraSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />;
+  const isMitra = user?.role === "mitra" || user?.role === "partner" || user?.role === "pic";
+  if (isMitra) return <MitraSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />;
 
   return (
     <>

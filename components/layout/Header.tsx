@@ -105,10 +105,11 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
   const profileRef = useRef<HTMLDivElement>(null);
   const displayName = user?.name || "Admin RingNet";
   const displayRole = roleLabel(user);
+  const isMitraUser = user?.role === "mitra" || user?.role === "partner" || user?.role === "pic";
 
   useEffect(() => {
     if (!user) return;
-    if (user.role === "mitra") return;
+    if (isMitraUser) return;
     
     // Safely attempt notifications fetch
     notificationsApi.list()
@@ -306,11 +307,11 @@ export default function Header({ setSidebarOpen }: { setSidebarOpen?: (val: bool
               </div>
 
               <div className="p-2">
-                <Link href={user?.role === "mitra" ? "/mitra/profil" : "/users"} onClick={() => setProfileOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-slate-950">
+                <Link href={isMitraUser ? "/mitra/profil" : "/users"} onClick={() => setProfileOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-slate-950">
                   <div className="grid h-9 w-9 place-items-center rounded-lg bg-indigo-50 text-indigo-600"><UserCog size={17} /></div>
                   User Management
                 </Link>
-                <Link href={user?.role === "mitra" ? "/mitra/profil" : "/pengaturan"} onClick={() => setProfileOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-slate-950">
+                <Link href={isMitraUser ? "/mitra/profil" : "/pengaturan"} onClick={() => setProfileOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-slate-950">
                   <div className="grid h-9 w-9 place-items-center rounded-lg bg-slate-100 text-slate-600"><Settings size={17} /></div>
                   Pengaturan Akun
                 </Link>

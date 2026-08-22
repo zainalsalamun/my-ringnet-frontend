@@ -12,5 +12,6 @@ function AdminDashboardPage() {
 export default function DashboardPage() {
   const user = useAuthStore((state) => state.user);
   if (!user) return <div className="space-y-4"><ShimmerBlock className="h-24" /><ShimmerBlock className="h-80" /></div>;
-  return user.role === "mitra" ? <MitraDashboardPage /> : <AdminDashboardPage />;
+  const isMitra = user.role === "mitra" || user.role === "partner" || user.role === "pic";
+  return isMitra ? <MitraDashboardPage /> : <AdminDashboardPage />;
 }

@@ -2,10 +2,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/set-state-in-effect */
 
-import { Badge, Card, DataTable, PageHeader, SelectInput, TableSkeleton } from "@/components/ui/AdminUI";
+import { Badge, Card, DataTable, PageHeader, SelectInput, StatSkeleton, TableSkeleton } from "@/components/ui/AdminUI";
 import { currency, date, extractArrayData, monthName } from "@/lib/format";
 import Link from "next/link";
-import { ArrowDownUp, Building2, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, FileText, Filter, Grid3X3, List, ListFilter, Mail, MinusCircle, Phone, PlusCircle, Power, RefreshCw, Search, Store, Trash2, Upload, UserPlus, Users } from "lucide-react";
+import { ArrowDownUp, Building2, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Clock, FileText, Filter, Grid3X3, List, ListFilter, Mail, MinusCircle, Phone, PlusCircle, Power, RefreshCw, RotateCcw, Search, Store, Trash2, Upload, UserPlus, Users, Wallet } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { businessCustomersApi } from "@/src/features/business-customers/api";
@@ -922,13 +922,25 @@ function invoiceStatus(row: any, now: Date | null) {
 }
 
 function invoicePurpose(row: any) {
-  const code = safeText(row.customer?.customerCode);
-  const name = safeText(row.customer?.name || row.customerName);
-  return code ? `${code} - ${name}` : name || "-";
+  const code = safeText(row.customer?.customerCode || row.customerCode || row.customer_id);
+  const name = safeText(row.customer?.name || row.customerName || row.customer_name);
+  if (code && code !== "-") {
+    return (
+      <div className="flex items-center gap-1.5 font-semibold text-slate-900">
+        <Link href={`/users/pelanggan?search=${encodeURIComponent(code)}`} className="text-indigo-600 hover:underline">
+          {code}
+        </Link>
+        <span className="text-slate-400">-</span>
+        <span>{name}</span>
+      </div>
+    );
+  }
+  return <span className="font-semibold text-slate-900">{name || "-"}</span>;
 }
 
 function invoiceName(row: any) {
   if (row.invoiceName) return safeText(row.invoiceName);
+  if (row.invoice_name) return safeText(row.invoice_name);
   if (row.periodMonth && row.periodYear) return `Periode ${monthName(row.periodMonth)} ${row.periodYear}`;
   return safeText(row.serviceType);
 }
@@ -937,6 +949,29 @@ function safeText(value: any, fallback = "-") {
   if (value === null || value === undefined || value === "") return fallback;
   if (typeof value === "object") return String(value.name || value.customer_id || value._id || value.id || fallback);
   return String(value);
+}
+
+function formatInvoiceNo(row: any): string {
+  if (!row) return "-";
+  const existing = String(row.noFaktur || row.noInvoice || row.invoice_id || row.faktur_id || "").trim();
+  if (existing && !/^[0-9a-fA-F]{24}$/.test(existing) && !existing.startsWith("BRD-6") && !existing.startsWith("BRD-")) {
+    return existing;
+  }
+
+  const customerCode = String(row.customer?.customerCode || row.customerCode || row.customer_id || "").trim();
+  const month = String(row.periodMonth || row.period_month || (row.createdAt ? new Date(row.createdAt).getMonth() + 1 : new Date().getMonth() + 1)).padStart(2, "0");
+  const year = String(row.periodYear || row.period_year || (row.createdAt ? new Date(row.createdAt).getFullYear() : new Date().getFullYear()));
+
+  if (customerCode && customerCode !== "-") {
+    return `INV/${year}/${month}/${customerCode}`;
+  }
+
+  const id = String(row.id || "");
+  if (id && /^[0-9a-fA-F]{24}$/.test(id)) {
+    return `INV/${year}/${month}/${id.slice(-6).toUpperCase()}`;
+  }
+
+  return existing || `INV/${year}/${month}/AUTO`;
 }
 
 function AddInvoiceMenu() {
@@ -978,18 +1013,75 @@ function AddInvoiceMenu() {
   );
 }
 
-function filterInvoices(rows: any[], search: string) {
-  const list = Array.isArray(rows) ? rows : [];
+function getInvoiceMonth(row: any): number | null {
+  if (row.periodMonth) return Number(row.periodMonth);
+  if (row.period_month) return Number(row.period_month);
+  const text = String([row.invoiceName, row.noFaktur, row.noInvoice].filter(Boolean).join(" ")).toLowerCase();
+  const found = Object.entries(invoiceMonthMap).find(([name]) => text.includes(name));
+  if (found) return found[1];
+  const numMatch = String(row.noFaktur || row.noInvoice || "").match(/\/(0?[1-9]|1[0-2])\/(20\d{2})/);
+  if (numMatch) return Number(numMatch[1]);
+  if (row.createdAt) {
+    const d = new Date(row.createdAt);
+    if (!isNaN(d.getTime())) return d.getMonth() + 1;
+  }
+  return null;
+}
+
+function getInvoiceYear(row: any): number | null {
+  if (row.periodYear) return Number(row.periodYear);
+  if (row.period_year) return Number(row.period_year);
+  const text = String([row.invoiceName, row.noFaktur, row.noInvoice].filter(Boolean).join(" "));
+  const yearMatch = text.match(/20\d{2}/);
+  if (yearMatch) return Number(yearMatch[0]);
+  if (row.createdAt) {
+    const d = new Date(row.createdAt);
+    if (!isNaN(d.getTime())) return d.getFullYear();
+  }
+  return null;
+}
+
+function getInvoiceTypeCategory(row: any): "pelanggan" | "bisnis" {
+  const type = String(row.invoiceType || row.type || "").toLowerCase();
+  if (type.includes("bisnis") || type.includes("mitra") || type.includes("corporate") || type.includes("company")) return "bisnis";
+  if (row.customer?.companyName || row.company || row.customer?.type === "business") return "bisnis";
+  return "pelanggan";
+}
+
+function isInvoicePaid(row: any): boolean {
+  const s = String(row.status || "").toUpperCase();
+  return s === "PAID" || s === "LUNAS" || s === "VERIFIED" || s === "SUCCESS";
+}
+
+function filterInvoices(rows: any[], search: string, month = "all", year = "all", customerType = "all") {
+  let list = Array.isArray(rows) ? rows : [];
   const keyword = search.trim().toLowerCase();
-  if (!keyword) return list;
-  return list.filter((row) => [
-    row.noFaktur,
-    row.noInvoice,
-    row.customerName,
-    row.serviceType,
-    row.customer?.customerCode,
-    row.customer?.name,
-  ].some((value) => String(value || "").toLowerCase().includes(keyword)));
+  if (keyword) {
+    list = list.filter((row) => [
+      row.noFaktur,
+      row.noInvoice,
+      row.customerName,
+      row.serviceType,
+      row.customer?.customerCode,
+      row.customer?.name,
+    ].some((value) => String(value || "").toLowerCase().includes(keyword)));
+  }
+
+  if (month && month !== "all") {
+    const targetMonth = Number(month);
+    list = list.filter((row) => getInvoiceMonth(row) === targetMonth);
+  }
+
+  if (year && year !== "all") {
+    const targetYear = Number(year);
+    list = list.filter((row) => getInvoiceYear(row) === targetYear);
+  }
+
+  if (customerType && customerType !== "all") {
+    list = list.filter((row) => getInvoiceTypeCategory(row) === customerType);
+  }
+
+  return list;
 }
 
 const invoiceMonthMap: Record<string, number> = {
@@ -1041,25 +1133,98 @@ function pageNumbers(page: number, totalPages: number) {
   return Array.from({ length: end - start + 1 }, (_, index) => start + index);
 }
 
+const MONTH_OPTIONS = [
+  { label: "Semua Bulan", value: "all" },
+  { label: "Januari", value: "1" },
+  { label: "Februari", value: "2" },
+  { label: "Maret", value: "3" },
+  { label: "April", value: "4" },
+  { label: "Mei", value: "5" },
+  { label: "Juni", value: "6" },
+  { label: "Juli", value: "7" },
+  { label: "Agustus", value: "8" },
+  { label: "September", value: "9" },
+  { label: "Oktober", value: "10" },
+  { label: "November", value: "11" },
+  { label: "Desember", value: "12" },
+];
+
+const YEAR_OPTIONS = [
+  { label: "Semua Tahun", value: "all" },
+  { label: "2024", value: "2024" },
+  { label: "2025", value: "2025" },
+  { label: "2026", value: "2026" },
+  { label: "2027", value: "2027" },
+];
+
+const CUSTOMER_TYPE_OPTIONS = [
+  { label: "Semua Jenis", value: "all" },
+  { label: "Pelanggan", value: "pelanggan" },
+  { label: "Pelanggan Bisnis", value: "bisnis" },
+];
+
 export function InternetServicesPage() {
   const pageSize = 10;
   const { rows, setRows, toast, setToast, loading } = useRows<any>("/internet-services?limit=5000&sort=latest");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [now, setNow] = useState<Date | null>(null);
   const [search, setSearch] = useState("");
+  const [monthFilter, setMonthFilter] = useState("all");
+  const [yearFilter, setYearFilter] = useState("all");
+  const [customerTypeFilter, setCustomerTypeFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
   const user = useAuthStore((state) => state.user);
   const canDeleteInvoice = user?.role === "super_admin";
 
   const safeRows = useMemo(() => (Array.isArray(rows) ? rows : []), [rows]);
-  const filteredRows = useMemo(() => sortInvoicesByLatest(filterInvoices(safeRows, search)), [safeRows, search]);
+  const filteredRows = useMemo(
+    () => sortInvoicesByLatest(filterInvoices(safeRows, search, monthFilter, yearFilter, customerTypeFilter)),
+    [safeRows, search, monthFilter, yearFilter, customerTypeFilter]
+  );
+
+  const stats = useMemo(() => {
+    let totalCount = 0;
+    let totalAmount = 0;
+    let paidCount = 0;
+    let paidAmount = 0;
+    let unpaidCount = 0;
+    let unpaidAmount = 0;
+
+    safeRows.forEach((row) => {
+      const amt = Number(row.amount || 0);
+      totalCount += 1;
+      totalAmount += amt;
+      if (isInvoicePaid(row)) {
+        paidCount += 1;
+        paidAmount += amt;
+      } else {
+        unpaidCount += 1;
+        unpaidAmount += amt;
+      }
+    });
+
+    return { totalCount, totalAmount, paidCount, paidAmount, unpaidCount, unpaidAmount };
+  }, [safeRows]);
+
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
   const visibleRows = filteredRows.slice((page - 1) * pageSize, page * pageSize);
   const showingStart = filteredRows.length === 0 ? 0 : (page - 1) * pageSize + 1;
   const showingEnd = Math.min(page * pageSize, filteredRows.length);
-  const tableHeaders = canDeleteInvoice ? ["Status", "Nomor Faktur", "Jenis", "Tujuan", "Total Tagihan", "Nama Faktur", "Dukungan Pembayaran", "Aksi"] : ["Status", "Nomor Faktur", "Jenis", "Tujuan", "Total Tagihan", "Nama Faktur", "Dukungan Pembayaran"];
+  const tableHeaders = canDeleteInvoice
+    ? ["Status", "Nomor Faktur", "Jenis", "Tujuan", "Total Tagihan", "Nama Faktur", "Dukungan Pembayaran", "Aksi"]
+    : ["Status", "Nomor Faktur", "Jenis", "Tujuan", "Total Tagihan", "Nama Faktur", "Dukungan Pembayaran"];
   const detailColSpan = tableHeaders.length;
+
+  const hasActiveFilters = search !== "" || monthFilter !== "all" || yearFilter !== "all" || customerTypeFilter !== "all";
+
+  const handleResetFilters = () => {
+    setSearch("");
+    setMonthFilter("all");
+    setYearFilter("all");
+    setCustomerTypeFilter("all");
+    setPage(1);
+  };
 
   useEffect(() => {
     setNow(new Date());
@@ -1068,7 +1233,7 @@ export function InternetServicesPage() {
   useEffect(() => {
     setPage(1);
     setExpandedId(null);
-  }, [search, rows]);
+  }, [search, monthFilter, yearFilter, customerTypeFilter, rows]);
 
   useEffect(() => {
     setPage((current) => Math.min(current, totalPages));
@@ -1078,19 +1243,66 @@ export function InternetServicesPage() {
     <div>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="text-xs font-medium text-slate-500">Dashboard / Keuangan / Faktur & Tagihan</div>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">Faktur & Tagihan</h1>
-          <p className="mt-1 text-sm text-slate-500">Kelola faktur pelanggan, faktur umum, dan faktur mitra bisnis.</p>
+          <div className="text-xs font-medium text-slate-500">Dashboard / Keuangan / Tagihan</div>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">Tagihan</h1>
+          <p className="mt-1 text-sm text-slate-500">Kelola tagihan pelanggan, tagihan umum, dan tagihan mitra bisnis.</p>
         </div>
         <AddInvoiceMenu />
       </div>
       <Toast message={toast} />
+
+      {/* Summary Stat Cards */}
+      {loading ? (
+        <StatSkeleton count={3} />
+      ) : (
+        <div className="mb-6 grid gap-4 sm:grid-cols-3">
+          <Card className="p-5 border-l-4 border-l-indigo-500">
+            <div className="flex items-center gap-4">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-indigo-500 text-white shadow-md shadow-indigo-100">
+                <Wallet size={22} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Jumlah Tagihan</p>
+                <p className="mt-1 text-2xl font-black text-slate-950 truncate">{currency(stats.totalAmount)}</p>
+                <p className="mt-0.5 text-xs font-semibold text-indigo-600">{stats.totalCount} faktur tercatat</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-5 border-l-4 border-l-amber-500">
+            <div className="flex items-center gap-4">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-amber-500 text-white shadow-md shadow-amber-100">
+                <Clock size={22} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Belum Bayar</p>
+                <p className="mt-1 text-2xl font-black text-slate-950 truncate">{currency(stats.unpaidAmount)}</p>
+                <p className="mt-0.5 text-xs font-semibold text-amber-600">{stats.unpaidCount} faktur belum bayar</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-5 border-l-4 border-l-emerald-500">
+            <div className="flex items-center gap-4">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-emerald-500 text-white shadow-md shadow-emerald-100">
+                <CheckCircle2 size={22} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Sudah Dibayar</p>
+                <p className="mt-1 text-2xl font-black text-slate-950 truncate">{currency(stats.paidAmount)}</p>
+                <p className="mt-0.5 text-xs font-semibold text-emerald-600">{stats.paidCount} faktur lunas</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
       {deleteConfirm ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 px-4">
           <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-950/20">
             <h2 className="text-lg font-bold text-slate-950">Hapus faktur?</h2>
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              Faktur <span className="font-bold text-slate-800">{deleteConfirm.noFaktur || deleteConfirm.noInvoice}</span> akan dihapus permanen. Aksi ini hanya tersedia untuk superadmin.
+              Faktur <span className="font-bold text-slate-800">{formatInvoiceNo(deleteConfirm)}</span> akan dihapus permanen. Aksi ini hanya tersedia untuk superadmin.
             </p>
             <div className="mt-6 flex justify-end gap-3">
               <button type="button" onClick={() => setDeleteConfirm(null)} className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-bold text-slate-600 hover:bg-slate-50">Batal</button>
@@ -1109,35 +1321,87 @@ export function InternetServicesPage() {
           </div>
         </div>
       ) : null}
+
       {loading ? (
         <TableSkeleton columns={canDeleteInvoice ? 8 : 7} />
       ) : (
         <Card className="overflow-visible">
-          <div className="flex flex-col gap-4 border-b border-slate-200 p-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-slate-700">
-                Menampilkan {showingStart} - {showingEnd} dari {filteredRows.length} data
-              </p>
-              <p className="mt-1 text-xs text-slate-400">10 faktur per halaman</p>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <label className="relative block">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Cari faktur, tujuan, layanan..."
-                  className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 sm:w-80"
-                />
-              </label>
-              <button className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600" type="button" title="Filter">
-                <Filter size={16} /> Filter
-              </button>
-              <button className="grid h-10 w-10 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-indigo-200 hover:text-indigo-600" type="button" title="Refresh">
-                <RefreshCw size={16} />
-              </button>
+          {/* Header & Filter Bar */}
+          <div className="flex flex-col gap-4 border-b border-slate-200 p-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-slate-700">
+                  Menampilkan {showingStart} - {showingEnd} dari {filteredRows.length} data
+                </p>
+                <p className="mt-1 text-xs text-slate-400">10 faktur per halaman</p>
+              </div>
+
+              {/* Filters */}
+              <div className="flex flex-wrap items-center gap-2.5">
+                <label className="relative block">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
+                  <input
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Cari faktur, tujuan, layanan..."
+                    className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 sm:w-64"
+                  />
+                </label>
+
+                {/* Filter Tipe Pelanggan */}
+                <div className="w-40">
+                  <SelectInput
+                    options={CUSTOMER_TYPE_OPTIONS}
+                    value={customerTypeFilter}
+                    onChange={(e) => setCustomerTypeFilter(e.target.value)}
+                  />
+                </div>
+
+                {/* Filter Bulan */}
+                <div className="w-36">
+                  <SelectInput
+                    options={MONTH_OPTIONS}
+                    value={monthFilter}
+                    onChange={(e) => setMonthFilter(e.target.value)}
+                  />
+                </div>
+
+                {/* Filter Tahun */}
+                <div className="w-36">
+                  <SelectInput
+                    options={YEAR_OPTIONS}
+                    value={yearFilter}
+                    onChange={(e) => setYearFilter(e.target.value)}
+                  />
+                </div>
+
+                {hasActiveFilters ? (
+                  <button
+                    type="button"
+                    onClick={handleResetFilters}
+                    className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3 text-xs font-bold text-rose-600 transition hover:bg-rose-100"
+                    title="Reset Filter"
+                  >
+                    <RotateCcw size={14} /> Reset
+                  </button>
+                ) : null}
+
+                <button
+                  className="grid h-10 w-10 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-indigo-200 hover:text-indigo-600"
+                  type="button"
+                  title="Refresh"
+                  onClick={() => {
+                    resourcesApi.list("/internet-services?limit=5000&sort=latest")
+                      .then((res) => setRows(extractArrayData<any>(res?.data)))
+                      .catch(() => {});
+                  }}
+                >
+                  <RefreshCw size={16} />
+                </button>
+              </div>
             </div>
           </div>
+
           <div className="overflow-x-auto bg-white">
             <table className="w-full min-w-[1180px] border-separate border-spacing-0 text-left text-sm">
               <thead className="bg-slate-50">
@@ -1163,7 +1427,7 @@ export function InternetServicesPage() {
                           </button>
                         </td>
                         <td className="border-b border-slate-100 px-4 py-4 font-bold">
-                          <Link className="text-indigo-600 hover:underline" href={"/internet-services/" + row.id}>{row.noFaktur || row.noInvoice}</Link>
+                          <Link className="text-indigo-600 hover:underline" href={"/internet-services/" + row.id}>{formatInvoiceNo(row)}</Link>
                         </td>
                         <td className="border-b border-slate-100 px-4 py-4">
                           <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-bold text-indigo-700 ring-1 ring-indigo-200">{row.invoiceType || "Pelanggan"}</span>
@@ -1218,7 +1482,7 @@ export function InternetServicesPage() {
               </tbody>
             </table>
             {filteredRows.length === 0 ? (
-              <div className="py-16 text-center text-sm font-semibold text-slate-500">Data faktur belum tersedia.</div>
+              <div className="py-16 text-center text-sm font-semibold text-slate-500">Data faktur tidak ditemukan. Coba ubah kata kunci atau filter pencarian.</div>
             ) : null}
             <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-4 text-sm sm:flex-row sm:items-center sm:justify-between">
               <div className="font-medium text-slate-500">Halaman {page} dari {totalPages}</div>

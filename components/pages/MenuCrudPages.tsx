@@ -4,7 +4,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import { Badge, Card, DataTable, PageHeader, SelectInput, StatSkeleton, TableSkeleton, TextArea, TextInput } from "@/components/ui/AdminUI";
-import { currency, date } from "@/lib/format";
+import { currency, date, extractArrayData } from "@/lib/format";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Check, CreditCard, Edit3, Wallet, X } from "lucide-react";
@@ -28,7 +28,7 @@ function useRows(fetchRows: () => Promise<any>, removeRow: (id: string) => Promi
     setLoading(true);
     setToast("");
     fetchRows()
-      .then((res) => setRows(res.data.data))
+      .then((res) => setRows(extractArrayData(res?.data)))
       .catch(() => {
         setRows([]);
         setToast("Gagal memuat data. Pastikan backend aktif dan sesi login valid.");
@@ -39,14 +39,14 @@ function useRows(fetchRows: () => Promise<any>, removeRow: (id: string) => Promi
   async function remove(row: any, successMessage: string) {
     try {
       await removeRow(row.id);
-      setRows((current) => current.filter((item) => item.id !== row.id));
+      setRows((current) => (Array.isArray(current) ? current : []).filter((item) => item.id !== row.id));
       setToast(successMessage);
     } catch (err: any) {
       setToast(err.response?.data?.message || "Gagal menghapus data.");
     }
   }
 
-  return { rows, setRows, toast, setToast, remove, loading };
+  return { rows: Array.isArray(rows) ? rows : [], setRows, toast, setToast, remove, loading };
 }
 
 function toInputDate(value?: string | null) {
@@ -77,7 +77,8 @@ function paymentTimeValue(row: any) {
 }
 
 function sortPaymentsByLatest(rows: any[]) {
-  return [...rows].sort((a, b) => {
+  const list = Array.isArray(rows) ? rows : [];
+  return [...list].sort((a, b) => {
     const timeDiff = paymentTimeValue(b) - paymentTimeValue(a);
     if (timeDiff !== 0) return timeDiff;
     return String(b.referenceNo || "").localeCompare(String(a.referenceNo || ""));
@@ -95,12 +96,13 @@ export function FinanceCrudPage() {
     () => financeApi.payments({ limit: 5000, sort: "latest" }),
     financeApi.removePayment
   );
-  const sortedRows = useMemo(() => sortPaymentsByLatest(rows), [rows]);
+  const safeRows = useMemo(() => (Array.isArray(rows) ? rows : []), [rows]);
+  const sortedRows = useMemo(() => sortPaymentsByLatest(safeRows), [safeRows]);
   const stats = useMemo(() => ({
-    total: rows.reduce((sum, item) => sum + Number(item.amount || 0), 0),
-    verified: rows.filter((item) => String(item.status || "").toLowerCase() === "verified").length,
-    pending: rows.filter((item) => String(item.status || "").toLowerCase() === "pending").length,
-  }), [rows]);
+    total: safeRows.reduce((sum, item) => sum + Number(item.amount || 0), 0),
+    verified: safeRows.filter((item) => String(item.status || "").toLowerCase() === "verified").length,
+    pending: safeRows.filter((item) => String(item.status || "").toLowerCase() === "pending").length,
+  }), [safeRows]);
 
   return (
     <div>
@@ -183,6 +185,7 @@ export function SettingsCrudPage() {
   );
   const [editingTaxKey, setEditingTaxKey] = useState("");
   const [taxDraft, setTaxDraft] = useState("");
+  const safeRows = Array.isArray(rows) ? rows : [];
   const taxItems = [
     { key: "tax_ppn", label: "PPN (%)", value: "11" },
     { key: "tax_pph23", label: "PPH23 (%)", value: "2" },
@@ -190,7 +193,7 @@ export function SettingsCrudPage() {
     { key: "tax_uso", label: "USO (%)", value: "1,25" },
     { key: "tax_kso", label: "KSO (%)", value: "2" },
   ].map((item) => {
-    const saved = rows.find((row) => row.settingKey === item.key);
+    const saved = safeRows.find((row) => row.settingKey === item.key);
     return {
       ...item,
       id: saved?.id,
@@ -326,10 +329,11 @@ export function CompanyProfilePage() {
   );
   const [editingKey, setEditingKey] = useState("");
   const [draft, setDraft] = useState("");
-  const logoSetting = rows.find((row) => row.settingKey === "company_logo_url");
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const logoSetting = safeRows.find((row) => row.settingKey === "company_logo_url");
   const logoUrl = logoSetting?.settingValue || "/assets/logo.png";
   const profileItems = companyProfileDefaults.map((item) => {
-    const saved = rows.find((row) => row.settingKey === item.key);
+    const saved = safeRows.find((row) => row.settingKey === item.key);
     return { ...item, id: saved?.id, value: saved?.settingValue || item.value };
   });
 
@@ -344,9 +348,10 @@ export function CompanyProfilePage() {
       const res = item.id ? await settingsApi.update(item.id, payload) : await settingsApi.create(payload);
       const saved = res.data.data;
       setRows((current) => {
-        const exists = current.some((row) => row.id === saved.id);
-        if (exists) return current.map((row) => row.id === saved.id ? saved : row);
-        return [saved, ...current];
+        const list = Array.isArray(current) ? current : [];
+        const exists = list.some((row) => row.id === saved.id);
+        if (exists) return list.map((row) => row.id === saved.id ? saved : row);
+        return [saved, ...list];
       });
       setEditingKey("");
       setDraft("");
@@ -455,11 +460,12 @@ export function ServicePackagesCrudPage() {
     () => productsApi.servicePackages(),
     productsApi.removeServicePackage
   );
+  const safeRows = useMemo(() => (Array.isArray(rows) ? rows : []), [rows]);
   const stats = useMemo(() => ({
-    total: rows.length,
-    active: rows.filter((item) => item.status === "active").length,
-    avgPrice: rows.length ? rows.reduce((sum, item) => sum + Number(item.monthlyPrice || 0), 0) / rows.length : 0,
-  }), [rows]);
+    total: safeRows.length,
+    active: safeRows.filter((item) => item.status === "active").length,
+    avgPrice: safeRows.length ? safeRows.reduce((sum, item) => sum + Number(item.monthlyPrice || 0), 0) / safeRows.length : 0,
+  }), [safeRows]);
 
   return (
     <div>
@@ -472,7 +478,7 @@ export function ServicePackagesCrudPage() {
       </div>}
       {loading ? <TableSkeleton columns={6} /> :
       <DataTable
-        data={rows}
+        data={safeRows}
         editBasePath="/pengaturan/paket-layanan"
         onDelete={(row) => remove(row, "Paket layanan berhasil dihapus.")}
         columns={[
@@ -493,11 +499,12 @@ export function PaymentMethodsCrudPage() {
     () => paymentMethodsApi.list(),
     paymentMethodsApi.remove
   );
+  const safeRows = useMemo(() => (Array.isArray(rows) ? rows : []), [rows]);
   const stats = useMemo(() => ({
-    total: rows.length,
-    active: rows.filter((item) => item.status === "active").length,
-    nonactive: rows.filter((item) => item.status !== "active").length,
-  }), [rows]);
+    total: safeRows.length,
+    active: safeRows.filter((item) => item.status === "active").length,
+    nonactive: safeRows.filter((item) => item.status !== "active").length,
+  }), [safeRows]);
 
   return (
     <div>
@@ -510,7 +517,7 @@ export function PaymentMethodsCrudPage() {
       </div>}
       {loading ? <TableSkeleton columns={5} /> :
       <DataTable
-        data={rows}
+        data={safeRows}
         editBasePath="/pengaturan/metode-pembayaran"
         onDelete={(row) => remove(row, "Metode pembayaran berhasil dihapus.")}
         columns={[
@@ -535,7 +542,8 @@ export function FinanceFormPage({ edit = false, id, invoiceQuery = "" }: { edit?
   useEffect(() => {
     paymentMethodsApi.list({ limit: 100 })
       .then((res) => {
-        const activeMethods = (res.data.data || [])
+        const methodsList = extractArrayData(res?.data);
+        const activeMethods = methodsList
           .filter((item: any) => item.status === "active")
           .map((item: any) => ({ label: item.name, value: item.name }));
         setPaymentMethodOptions(activeMethods);
@@ -552,7 +560,7 @@ export function FinanceFormPage({ edit = false, id, invoiceQuery = "" }: { edit?
   useEffect(() => {
     if (!edit || !id) return;
     financeApi.paymentDetail(id).then((res) => {
-      const data = res.data.data;
+      const data = res.data?.data || res.data || {};
       setForm({ referenceNo: data.referenceNo || "", customerName: data.customerName || "", invoiceNo: data.invoiceNo || "", amount: String(data.amount || ""), method: data.method || "", status: data.status || "verified", paidAt: toInputDate(data.paidAt), notes: data.notes || "" });
     }).catch((err) => setError(err.response?.data?.message || "Gagal memuat pembayaran dari database."));
   }, [edit, id]);
@@ -561,12 +569,14 @@ export function FinanceFormPage({ edit = false, id, invoiceQuery = "" }: { edit?
     if (edit || !invoiceQuery) return;
     financeApi.invoices({ limit: 1, search: invoiceQuery })
       .then(async (res) => {
-        const invoice = Array.isArray(res.data.data) ? res.data.data[0] : null;
+        const invoiceList = extractArrayData(res?.data);
+        const invoice = invoiceList[0] || null;
         if (!invoice) return;
         const invoiceNo = invoice.noInvoice || invoice.noFaktur || invoiceQuery;
         const referenceNo = `PAY-${invoiceNo.replace(/[^A-Za-z0-9]/g, "-")}`;
         const paymentRes = await financeApi.payments({ limit: 1, search: invoiceNo }).catch(() => null);
-        const existingPayment = Array.isArray(paymentRes?.data?.data) ? paymentRes.data.data[0] : null;
+        const paymentList = extractArrayData(paymentRes?.data);
+        const existingPayment = paymentList[0] || null;
         if (existingPayment?.id) setExistingPaymentId(existingPayment.id);
         setForm((current) => ({
           ...current,

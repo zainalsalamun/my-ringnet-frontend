@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Calendar, Download, Eye, FileText, Upload, Users, FileBadge } from "lucide-react";
 import { documentsApi } from "@/src/features/documents/api";
 import { partnersApi } from "@/src/features/partners/api";
+import { extractArrayData } from "@/lib/format";
 
 function Toast({ message }: { message: string }) {
   if (!message) return null;
@@ -18,9 +19,9 @@ function Toast({ message }: { message: string }) {
 export function useDocumentCategories() {
   const [categories, setCategories] = useState<{ id: string, name: string, slug: string }[]>([]);
   useEffect(() => {
-    documentsApi.categories().then(res => setCategories(res.data.data)).catch(() => {});
+    documentsApi.categories().then(res => setCategories(extractArrayData(res?.data))).catch(() => {});
   }, []);
-  return categories;
+  return Array.isArray(categories) ? categories : [];
 }
 
 function useDocuments(categoryId?: string) {
@@ -34,7 +35,7 @@ function useDocuments(categoryId?: string) {
     const params: Record<string, string | number> = { limit: 5000 };
     if (categoryId && categoryId !== "SEMUA") params.categoryId = categoryId;
     documentsApi.list(params)
-      .then((res) => setRows(res.data.data))
+      .then((res) => setRows(extractArrayData(res?.data)))
       .catch(() => {
         setRows([]);
         setToast("Gagal memuat data. Pastikan backend aktif dan sesi login valid.");
@@ -45,14 +46,14 @@ function useDocuments(categoryId?: string) {
   async function remove(row: any, successMessage: string) {
     try {
       await documentsApi.remove(row.id);
-      setRows((current) => current.filter((item) => item.id !== row.id));
+      setRows((current) => (Array.isArray(current) ? current : []).filter((item) => item.id !== row.id));
       setToast(successMessage);
     } catch (err: any) {
       setToast(err.response?.data?.message || "Gagal menghapus dokumen.");
     }
   }
 
-  return { rows, toast, remove, loading };
+  return { rows: Array.isArray(rows) ? rows : [], toast, remove, loading };
 }
 
 // ─── Dynamic Category Badge ───

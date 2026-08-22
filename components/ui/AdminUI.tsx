@@ -270,10 +270,11 @@ export function DataTable<T extends { id: string }>({ title, data, columns, sear
   const [page, setPage] = useState(1);
   const [confirm, setConfirm] = useState<T | null>(null);
   const pageSize = 8;
+  const safeData = Array.isArray(data) ? data : [];
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
-    return data.filter((row) => JSON.stringify(row).toLowerCase().includes(q));
-  }, [data, query]);
+    return safeData.filter((row) => JSON.stringify(row).toLowerCase().includes(q));
+  }, [safeData, query]);
   const maxPage = Math.max(1, Math.ceil(filtered.length / pageSize));
   const rows = filtered.slice((page - 1) * pageSize, page * pageSize);
 

@@ -3,7 +3,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import { Badge, Card, DataTable, PageHeader, SelectInput, TableSkeleton } from "@/components/ui/AdminUI";
-import { currency, date, monthName } from "@/lib/format";
+import { currency, date, extractArrayData, monthName } from "@/lib/format";
 import Link from "next/link";
 import { ArrowDownUp, Building2, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, FileText, Filter, Grid3X3, List, ListFilter, Mail, MinusCircle, Phone, PlusCircle, Power, RefreshCw, Search, Store, Trash2, Upload, UserPlus, Users } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
@@ -21,14 +21,14 @@ function useRows<T>(endpoint: string) {
     setLoading(true);
     setToast("");
     resourcesApi.list(endpoint)
-      .then((res) => setRows(res.data.data))
+      .then((res) => setRows(extractArrayData<T>(res?.data)))
       .catch(() => {
         setRows([]);
         setToast("Gagal memuat data. Pastikan backend aktif dan sesi login valid.");
       })
       .finally(() => setLoading(false));
   }, [endpoint]);
-  return { rows, setRows, toast, setToast, loading };
+  return { rows: Array.isArray(rows) ? rows : [], setRows, toast, setToast, loading };
 }
 
 function Toast({ message }: { message: string }) {
@@ -39,7 +39,7 @@ function Toast({ message }: { message: string }) {
 async function deleteRow(endpoint: string, row: any, setRows: Dispatch<SetStateAction<any[]>>, setToast: (message: string) => void, successMessage: string) {
   try {
     await resourcesApi.remove(endpoint, row.id);
-    setRows((current) => current.filter((item) => item.id !== row.id));
+    setRows((current) => (Array.isArray(current) ? current : []).filter((item) => item.id !== row.id));
     setToast(successMessage);
   } catch (err: any) {
     setToast(err.response?.data?.message || "Gagal menghapus data.");
@@ -69,13 +69,23 @@ export function UsersPage({ role, title }: { role: string; title: string }) {
   );
 }
 
-export function CustomersPage() {
+export function CustomersPage({
+  title = "Pelanggan",
+  subtitle = "Data pelanggan individu beserta paket, status layanan, dan aktivitas.",
+  initialStatus = "all",
+  initialType = "all",
+}: {
+  title?: string;
+  subtitle?: string;
+  initialStatus?: string;
+  initialType?: string;
+} = {}) {
   const [rows, setRows] = useState<any[]>([]);
   const [toast, setToast] = useState("");
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
+  const [typeFilter, setTypeFilter] = useState(initialType);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [openActionId, setOpenActionId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -189,8 +199,8 @@ export function CustomersPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Pelanggan"
-        subtitle="Data pelanggan individu beserta paket, status layanan, dan aktivitas."
+        title={title}
+        subtitle={subtitle}
         rightContent={
           <Link href="/users/pelanggan/new" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-bold text-white shadow-sm shadow-indigo-200 transition hover:bg-indigo-500">
             <PlusCircle size={18} /> Pelanggan Baru
@@ -969,9 +979,10 @@ function AddInvoiceMenu() {
 }
 
 function filterInvoices(rows: any[], search: string) {
+  const list = Array.isArray(rows) ? rows : [];
   const keyword = search.trim().toLowerCase();
-  if (!keyword) return rows;
-  return rows.filter((row) => [
+  if (!keyword) return list;
+  return list.filter((row) => [
     row.noFaktur,
     row.noInvoice,
     row.customerName,
@@ -1014,7 +1025,8 @@ function invoicePeriodValue(row: any) {
 }
 
 function sortInvoicesByLatest(rows: any[]) {
-  return [...rows].sort((a, b) => {
+  const list = Array.isArray(rows) ? rows : [];
+  return [...list].sort((a, b) => {
     const periodDiff = invoicePeriodValue(b) - invoicePeriodValue(a);
     if (periodDiff !== 0) return periodDiff;
     const createdDiff = new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
@@ -1040,7 +1052,8 @@ export function InternetServicesPage() {
   const user = useAuthStore((state) => state.user);
   const canDeleteInvoice = user?.role === "super_admin";
 
-  const filteredRows = useMemo(() => sortInvoicesByLatest(filterInvoices(rows, search)), [rows, search]);
+  const safeRows = useMemo(() => (Array.isArray(rows) ? rows : []), [rows]);
+  const filteredRows = useMemo(() => sortInvoicesByLatest(filterInvoices(safeRows, search)), [safeRows, search]);
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
   const visibleRows = filteredRows.slice((page - 1) * pageSize, page * pageSize);
   const showingStart = filteredRows.length === 0 ? 0 : (page - 1) * pageSize + 1;

@@ -97,7 +97,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: { sidebarOpen?:
   const [financeMenuOpen, setFinanceMenuOpen] = useState<boolean>(financeMenuActive);
   const [settingMenuOpen, setSettingMenuOpen] = useState<boolean>(settingMenuActive);
   const [mitraOpenGroups, setMitraOpenGroups] = useState<Record<string, boolean>>({});
-  const visibleUserChildren = USER_MENU_ITEMS.filter((item) => !(user?.role === "super_admin" && item.href === "/users/mitra"));
+  const visibleUserChildren = USER_MENU_ITEMS;
 
   useEffect(() => {
     setSidebarOpen?.(false);
@@ -162,13 +162,15 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: { sidebarOpen?:
                   if (!item.href) return null;
                   const active = item.href === "/users" ? pathname === "/users" : pathname === item.href || pathname.startsWith(item.href + "/");
                   return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={"block rounded-lg px-3 py-2 text-sm font-medium transition " + (active ? "bg-white/10 text-white" : "text-slate-500 hover:bg-white/5 hover:text-slate-200")}
-                    >
-                      {item.label}
-                    </Link>
+                    <div key={item.href}>
+                      <Link
+                        href={item.href}
+                        className={"block rounded-lg px-3 py-2 text-sm font-medium transition " + (active ? "bg-white/10 text-white font-semibold" : "text-slate-400 hover:bg-white/5 hover:text-slate-200")}
+                      >
+                        {item.label}
+                      </Link>
+                      {item.dividerAfter ? <div className="my-2 border-t border-white/10" /> : null}
+                    </div>
                   );
                 })}
               </div>

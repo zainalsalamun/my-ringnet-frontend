@@ -139,4 +139,76 @@ export const API_ENDPOINTS = {
     categories: "/document-categories",
     categoryDetail: (id: string) => `/document-categories/${id}`,
   },
+
+  partnerApi: {
+    // 1. Customers (Residential)
+    customersList: "/p-api/v1/customers/list",
+    customersListStatus: "/p-api/v1/customers/list-status",
+    customerRead: (id: string) => `/p-api/v1/customers/read/${id}`,
+    customerCreate: "/p-api/v1/customers/create",
+    customerUpdate: "/p-api/v1/customers/update",
+    customerDelete: (id: string) => `/p-api/v1/customers/delete/${id}`,
+    customerChangeStatus: "/p-api/v1/customers/change-status",
+
+    // 2. Business Customers (Corporate)
+    businessList: "/p-api/v1/business/list",
+    businessListStatus: "/p-api/v1/business/list-status",
+    businessRead: (id: string) => `/p-api/v1/business/read/${id}`,
+    businessCreate: "/p-api/v1/business/create",
+    businessUpdate: "/p-api/v1/business/update",
+    businessDelete: (id: string) => `/p-api/v1/business/delete/${id}`,
+    businessChangeStatus: "/p-api/v1/business/change-status",
+
+    // 3. POP & Partner Profile (Legal & Data POP)
+    profile: "/p-api/v1/partners/profile",
+    partnerRead: (id: string) => `/p-api/v1/partners/read/${id}`,
+    documents: "/p-api/v1/partners/documents",
+    documentFile: (filename: string) => `/p-api/v1/partners/documents/${encodeURIComponent(filename)}`,
+
+    // 4 & 5. Network Devices (Aktif & Pasif)
+    networkDevicesList: "/p-api/v1/network-devices/list",
+    networkDevicesStats: "/p-api/v1/network-devices/stats",
+    networkDeviceRead: (id: string) => `/p-api/v1/network-devices/read/${id}`,
+    networkDeviceCreate: "/p-api/v1/network-devices/create",
+    networkDeviceUpdate: (id: string) => `/p-api/v1/network-devices/update/${id}`,
+    networkDeviceDelete: (id: string) => `/p-api/v1/network-devices/delete/${id}`,
+
+    // 6. Map & Infrastructure
+    mapMarkers: (types?: string) => `/p-api/v1/map/markers${types ? `?types=${encodeURIComponent(types)}` : ""}`,
+    mapMarkerTypes: "/p-api/v1/map/marker-types",
+    mapNodeRead: (id: string) => `/p-api/v1/map/nodes/read/${id}`,
+    mapNodeReport: (id: string) => `/p-api/v1/map/nodes/report/${id}`,
+    mapCablesList: (params?: string) => `/p-api/v1/map/cables/list${params ? `?${params}` : ""}`,
+    mapCableCoreCapacities: "/p-api/v1/map/cables/core-capacities",
+    mapCableRead: (id: string) => `/p-api/v1/map/cables/read/${id}`,
+    mapSplicesByCable: (id: string) => `/p-api/v1/map/cables/splices/by-cable/${id}`,
+    mapSplicesByNode: (id: string) => `/p-api/v1/map/cables/splices/by-node/${id}`,
+    mapNodeTopology: (id: string) => `/p-api/v1/map/cables/node-topology/${id}`,
+
+    // 7. RADIUS
+    radiusUsersList: "/p-api/v1/radius/users/list",
+    radiusUsersListStatus: "/p-api/v1/radius/users/list-status",
+    radiusUserRead: (id: string) => `/p-api/v1/radius/users/read/${id}`,
+    radiusUserCreate: "/p-api/v1/radius/users/create",
+    radiusUserUpdate: (id: string) => `/p-api/v1/radius/users/update/${id}`,
+    radiusUserDelete: (id: string) => `/p-api/v1/radius/users/delete/${id}`,
+    radiusUserChangeStatus: "/p-api/v1/radius/users/change-status",
+    radiusSessionsList: "/p-api/v1/radius/sessions/list",
+    radiusSessionDisconnect: "/p-api/v1/radius/sessions/disconnect",
+    radiusLogsList: (id: string) => `/p-api/v1/radius/logs/list/${id}`,
+    radiusProfilesList: "/p-api/v1/radius/profiles/list",
+    radiusProfilesSelect: "/p-api/v1/radius/profiles/select",
+    radiusProfileRead: (id: string) => `/p-api/v1/radius/profiles/read/${id}`,
+    radiusProfileCreate: "/p-api/v1/radius/profiles/create",
+    radiusProfileUpdate: "/p-api/v1/radius/profiles/update",
+    radiusProfileUpdateBatch: "/p-api/v1/radius/profiles/update-batch",
+    radiusProfileDelete: (id: string) => `/p-api/v1/radius/profiles/delete/${id}`,
+
+    // 8. Products (Broadband)
+    productsBroadbandList: "/p-api/v1/products/broadband/list",
+    productsBroadbandRead: (id: string) => `/p-api/v1/products/broadband/read/${id}`,
+    productsBroadbandCreate: "/p-api/v1/products/broadband/create",
+    productsBroadbandUpdate: (id: string) => `/p-api/v1/products/broadband/update/${id}`,
+    productsBroadbandDelete: (id: string) => `/p-api/v1/products/broadband/delete/${id}`,
+  },
 } as const;

@@ -34,6 +34,17 @@ export async function handleProxy(req: Request, pathParts: string[]) {
 }
 
 export function normalizeProxyPath(path: string[]) {
+  // If the path contains p-api (Partner / POP API)
+  const pApiIdx = path.findIndex((p) => p === "p-api");
+  if (pApiIdx !== -1) {
+    return path.slice(pApiIdx);
+  }
+
+  // If the path already has api/v1 or api
+  if (path[0] === "api") {
+    return path;
+  }
+
   return [API_PREFIX.split("/")[0], ...path];
 }
 

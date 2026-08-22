@@ -18,3 +18,4 @@ export { usersApi } from "./users/api";
 export { radiusApi } from "./radius/api";
 export { fiberCableApi } from "./fiber-cables/api";
 export { privilegeApi } from "./privilege/api";
+export { partnerApi } from "./partner-api/api";

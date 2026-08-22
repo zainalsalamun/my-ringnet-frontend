@@ -46,4 +46,35 @@ export const customersApi = {
   remove(id: string) {
     return api.delete(API_ENDPOINTS.customers.delete(id));
   },
+
+  // Official Partner / POP API v1 endpoints (/p-api/v1/customers/...)
+  partnerList(body: Record<string, unknown> = { pageSize: 15, pageIndex: 0 }) {
+    return api.post(API_ENDPOINTS.partnerApi.customersList, body);
+  },
+
+  partnerListStatus() {
+    return api.get(API_ENDPOINTS.partnerApi.customersListStatus);
+  },
+
+  partnerRead(customerId: string) {
+    return api.get(API_ENDPOINTS.partnerApi.customerRead(customerId));
+  },
+
+  partnerCreate(payload: FormData | Record<string, unknown>) {
+    const headers = payload instanceof FormData ? { "Content-Type": "multipart/form-data" } : undefined;
+    return api.post(API_ENDPOINTS.partnerApi.customerCreate, payload, { headers });
+  },
+
+  partnerUpdate(payload: FormData | Record<string, unknown>) {
+    const headers = payload instanceof FormData ? { "Content-Type": "multipart/form-data" } : undefined;
+    return api.patch(API_ENDPOINTS.partnerApi.customerUpdate, payload, { headers });
+  },
+
+  partnerDelete(customerId: string) {
+    return api.delete(API_ENDPOINTS.partnerApi.customerDelete(customerId));
+  },
+
+  partnerChangeStatus(id: string, status?: boolean) {
+    return api.patch(API_ENDPOINTS.partnerApi.customerChangeStatus, { id, status });
+  },
 };

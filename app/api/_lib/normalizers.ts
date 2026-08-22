@@ -60,39 +60,109 @@ export function mapDekadataRecord(row: JsonRecord): JsonRecord {
   };
 }
 
+function getEstimatedPackagePrice(packageName: string): number {
+  const p = String(packageName || "").toLowerCase();
+  if (p.includes("25") || p.includes("bronze")) return 165000;
+  if (p.includes("50") || p.includes("silver")) return 275000;
+  if (p.includes("75") || p.includes("rimax")) return 330000;
+  if (p.includes("100") || p.includes("gold")) return 450000;
+  if (p.includes("150") || p.includes("platinum")) return 600000;
+  if (p.includes("200")) return 750000;
+  return 200000;
+}
+
+function monthName(m: number) {
+  const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+  return months[m - 1] || m;
+}
+
 export function mapDekadataBroadbandInvoice(row: JsonRecord): JsonRecord {
   const customer = typeof row.customer === "object" && row.customer ? row.customer as JsonRecord : {};
   const rawId = row.invoice_id || row.billing_id || row.broadband_id || row.service_id || row.customer_id || row._id || row.id || "";
-  const invoiceNo = textValue(row.no_invoice || row.noInvoice || row.invoice_no || row.invoiceNo || row.no_faktur || row.noFaktur || (rawId ? `BRD-${rawId}` : ""));
-  const amount = Number(row.amount || row.grandTotal || row.grand_total || row.total || row.price || row.package_price || row.monthly_fee || row.bill_amount || 0) || 0;
-  const customerName = textValue(row.customerName || row.customer_name || customer.name || row.customer || row.name || row.fullname);
+  const customerCode = textValue(row.customer_id || row.customerId || row.customer_code || customer.customer_id || customer.customerCode || customer.code, "");
+  const customerName = textValue(row.customer_name || row.customerName || customer.name || customer.fullname || row.customer || row.name || row.fullname);
   const packageName = textValue(row.packageName || row.package_name || row.product_name || row.product || row.profile || row.profile_name || row.serviceType, "Broadband");
+
+  const rawAmount = Number(
+    row.amount ||
+    row.grandTotal ||
+    row.grand_total ||
+    row.total ||
+    row.total_amount ||
+    row.price ||
+    row.package_price ||
+    row.monthly_fee ||
+    row.bill_amount ||
+    row.nominal ||
+    (typeof row.package === "object" && (row.package as JsonRecord)?.price) ||
+    (typeof row.product === "object" && (row.product as JsonRecord)?.price) ||
+    0
+  );
+  const amount = rawAmount > 0 ? rawAmount : getEstimatedPackagePrice(packageName);
+
+  const month = row.periodMonth || row.period_month || row.month || (row.createdAt ? new Date(String(row.createdAt)).getMonth() + 1 : new Date().getMonth() + 1);
+  const year = row.periodYear || row.period_year || row.year || (row.createdAt ? new Date(String(row.createdAt)).getFullYear() : new Date().getFullYear());
+  const formattedMonth = String(month).padStart(2, "0");
+  const formattedYear = String(year);
+
+  // Check if invoice number is provided as real ID / number from API (e.g. "2211348" or "2217209")
+  const rawInvoiceNo = textValue(
+    row.invoice_id ||
+    row.no_invoice ||
+    row.noInvoice ||
+    row.invoice_no ||
+    row.invoiceNo ||
+    row.no_faktur ||
+    row.noFaktur ||
+    row.code ||
+    row.number ||
+    (rawId && !/^[0-9a-fA-F]{24}$/.test(String(rawId)) ? String(rawId) : "")
+  );
+
+  let invoiceNo = rawInvoiceNo;
+  if (!invoiceNo || /^[0-9a-fA-F]{24}$/.test(invoiceNo) || invoiceNo.startsWith("BRD-6") || invoiceNo.startsWith("BRD-")) {
+    if (customerCode) {
+      invoiceNo = `INV/${formattedYear}/${formattedMonth}/${customerCode}`;
+    } else {
+      invoiceNo = `INV/${formattedYear}/${formattedMonth}/${String(rawId).slice(-6).toUpperCase() || "AUTO"}`;
+    }
+  }
+
+  const noFaktur = textValue(row.no_faktur || row.noFaktur, invoiceNo);
+  const invoiceName = textValue(
+    row.invoice_name ||
+    row.invoiceName ||
+    row.name ||
+    row.description ||
+    row.period ||
+    (row.periodMonth && row.periodYear ? `Periode ${monthName(Number(row.periodMonth))} ${row.periodYear}` : packageName)
+  );
 
   return {
     ...row,
     id: String(rawId || invoiceNo || customerName),
     noInvoice: invoiceNo,
-    noFaktur: textValue(row.no_faktur || row.noFaktur || invoiceNo),
-    invoiceName: textValue(row.invoiceName || row.invoice_name || packageName),
-    invoiceType: textValue(row.invoiceType || row.invoice_type, "Pelanggan"),
+    noFaktur,
+    invoiceName,
+    invoiceType: textValue(row.invoiceType || row.invoice_type || row.type, "Pelanggan"),
     customerName,
     amount,
     grandTotal: amount,
     serviceType: packageName,
-    supportPayment: textValue(row.supportPayment || row.support_payment || row.payment_support),
-    periodMonth: row.periodMonth || row.period_month || row.month,
-    periodYear: row.periodYear || row.period_year || row.year,
-    createdAt: row.createdAt || row.created_at || row.billing_date || row.invoice_date,
-    dueDate: row.dueDate || row.due_date || row.expired_at || row.deadline,
+    supportPayment: textValue(row.supportPayment || row.support_payment || row.payment_support || row.payment_method || row.method),
+    periodMonth: Number(month),
+    periodYear: Number(year),
+    createdAt: row.createdAt || row.created_at || row.billing_date || row.invoice_date || new Date().toISOString(),
+    dueDate: row.dueDate || row.due_date || row.expired_at || row.deadline || new Date(Date.now() + 7 * 86400000).toISOString(),
     status: normalizeStatus(row.payment_status || row.invoice_status || row.billing_status || row.status_payment || row.status),
     customer: {
-      id: textValue(row.customer_id || row.customerId || customer.customer_id || customer._id || rawId, ""),
-      customerCode: textValue(row.customer_id || row.customerCode || customer.customer_id, ""),
+      id: textValue(customerCode || customer._id || rawId, ""),
+      customerCode: textValue(customerCode || customer._id || rawId, ""),
       name: customerName,
       phone: textValue(row.phone || row.customer_phone || customer.phone, ""),
       email: textValue(row.email || row.username || customer.email, ""),
       username: textValue(row.username || row.pppoe_username || customer.username, ""),
-      supportPayment: textValue(row.supportPayment || row.support_payment),
+      supportPayment: textValue(row.supportPayment || row.support_payment || row.payment_support || row.payment_method),
     },
   };
 }

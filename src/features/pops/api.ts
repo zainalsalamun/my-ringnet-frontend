@@ -41,4 +41,33 @@ export const popsApi = {
   rawRemove(id: string) {
     return api.delete(API_ENDPOINTS.pops.rawDelete(id));
   },
+
+  // Partner / POP API v1 Endpoints (/p-api/v1/...)
+  partnerProfile() {
+    return api.get(API_ENDPOINTS.partnerApi.profile);
+  },
+
+  partnerRead(partnerId: string) {
+    return api.get(API_ENDPOINTS.partnerApi.partnerRead(partnerId));
+  },
+
+  partnerDocuments() {
+    return api.get(API_ENDPOINTS.partnerApi.documents);
+  },
+
+  mapMarkers(types = "pop") {
+    return api.get(API_ENDPOINTS.partnerApi.mapMarkers(types));
+  },
+
+  mapNodeRead(id: string) {
+    return api.get(API_ENDPOINTS.partnerApi.mapNodeRead(id));
+  },
+
+  mapNodeReport(id: string) {
+    return api.get(API_ENDPOINTS.partnerApi.mapNodeReport(id));
+  },
+
+  networkDevices(payload: { pageSize?: number; pageIndex?: number } = { pageSize: 100, pageIndex: 0 }) {
+    return api.post(API_ENDPOINTS.partnerApi.networkDevicesList, payload);
+  },
 };

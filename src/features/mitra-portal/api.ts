@@ -1,8 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import api from "@/src/lib/api/client";
 import { API_ENDPOINTS } from "@/src/lib/api/endpoints";
+import { partnerApi } from "@/src/features/partner-api/api";
 
 export const mitraPortalApi = {
+  partnerApi,
+
   register(payload: FormData) {
     return api.post(API_ENDPOINTS.mitraPortal.register, payload);
   },
@@ -31,7 +33,13 @@ export const mitraPortalApi = {
     return api.delete(`${admin ? API_ENDPOINTS.documents.create : API_ENDPOINTS.mitraPortal.documents}/${id}`);
   },
 
-  profile() {
+  async profile() {
+    try {
+      const res = await partnerApi.partners.profile();
+      if (res.data?.data) return res;
+    } catch {
+      // fallback
+    }
     return api.get(API_ENDPOINTS.mitraPortal.profile);
   },
 
@@ -44,6 +52,29 @@ export const mitraPortalApi = {
   },
 
   async products() {
+    // 1. Try Partner API v1: POST /p-api/v1/products/broadband/list
+    try {
+      const res = await partnerApi.products.broadbandList({ pageSize: 100, pageIndex: 0 });
+      const raw = res.data?.data?.data || res.data?.data || res.data?.rows || (Array.isArray(res.data) ? res.data : []);
+      if (Array.isArray(raw) && raw.length > 0) {
+        return {
+          data: {
+            data: raw.map((item: any) => ({
+              id: item.id || item.product_id || item._id,
+              name: item.name || item.product_name,
+              speedMbps: item.speed_mbps || item.speed || item.bandwidth || item.speedMbps || 0,
+              monthlyPrice: item.monthly_price || item.price || item.cost || item.monthlyPrice || 0,
+              description: item.description || "Paket internet broadband FTTH",
+              status: item.status ?? true,
+            })),
+          },
+        };
+      }
+    } catch {
+      // fallback
+    }
+
+    // 2. Fallback to /product/broadband/list
     try {
       const res = await api.post("/product/broadband/list", {
         pageSize: 100,
@@ -53,7 +84,7 @@ export const mitraPortalApi = {
         globalFilter: "",
       });
       const raw = res.data?.data?.data || res.data?.data || res.data?.rows || [];
-      if (Array.isArray(raw)) {
+      if (Array.isArray(raw) && raw.length > 0) {
         return {
           data: {
             data: raw.map((item: any) => ({
@@ -95,6 +126,32 @@ export const mitraPortalApi = {
   },
 
   async customers() {
+    // 1. Try Partner API v1: POST /p-api/v1/customers/list
+    try {
+      const res = await partnerApi.customers.list({ pageSize: 500, pageIndex: 0 });
+      const raw = res.data?.data?.data || res.data?.data || res.data?.rows || (Array.isArray(res.data) ? res.data : []);
+      if (Array.isArray(raw) && raw.length > 0) {
+        return {
+          data: {
+            data: raw.map((item: any) => ({
+              id: item.id || item.customer_id || item._id,
+              customerCode: item.customer_id || item.customerCode || "-",
+              name: item.name || item.username || "-",
+              phone: item.phone || "-",
+              email: item.email || "-",
+              area: item.area || item.city || "-",
+              packageName: item.package_name || item.packageName || item.serviceType || "-",
+              outstandingAmount: item.outstanding_amount || item.outstandingAmount || 0,
+              status: item.status ? "active" : "inactive",
+            })),
+          },
+        };
+      }
+    } catch {
+      // fallback
+    }
+
+    // 2. Fallback to /customer-partner/list
     try {
       const res = await api.post("/customer-partner/list", {
         pageSize: 500,
@@ -104,7 +161,7 @@ export const mitraPortalApi = {
         globalFilter: "",
       });
       const raw = res.data?.data?.data || res.data?.data || res.data?.rows || [];
-      if (Array.isArray(raw)) {
+      if (Array.isArray(raw) && raw.length > 0) {
         return {
           data: {
             data: raw.map((item: any) => ({
@@ -155,6 +212,30 @@ export const mitraPortalApi = {
     }
 
     return { data: { data: [] } };
+  },
+
+  async networkDevices(payload = { pageSize: 100, pageIndex: 0 }) {
+    try {
+      return await partnerApi.networkDevices.list(payload);
+    } catch {
+      return { data: { data: { data: [], total: 0 } } };
+    }
+  },
+
+  async mapMarkers(types = "pop,odc,odp") {
+    try {
+      return await partnerApi.map.markers(types);
+    } catch {
+      return { data: { data: [] } };
+    }
+  },
+
+  async mapCables() {
+    try {
+      return await partnerApi.map.cablesList();
+    } catch {
+      return { data: { data: [] } };
+    }
   },
 
   async finance() {

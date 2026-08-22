@@ -13,6 +13,9 @@ const LIST_ENDPOINTS: Record<string, string> = {
   [`${API_PREFIX}/broadband-profile/list`]: "broadband-profile/list",
   [`${API_PREFIX}/product/broadband/list`]: "product/broadband/list",
   [`${API_PREFIX}/radius-nas/list`]: "radius-nas/list",
+  [`${API_PREFIX}/finance/invoice/list`]: "finance/invoice/list",
+  [`${API_PREFIX}/finance/payment/list`]: "finance/payment/list",
+  [`${API_PREFIX}/finance/transaction/list`]: "finance/transaction/list",
 };
 
 const SIMPLE_LIST_ROUTES: Record<string, { endpoint: string; mapper?: RowMapper }> = {
@@ -20,8 +23,8 @@ const SIMPLE_LIST_ROUTES: Record<string, { endpoint: string; mapper?: RowMapper 
   [`${API_PREFIX}/companies`]: { endpoint: "partner/list" },
   [`${API_PREFIX}/partners`]: { endpoint: "partner/list" },
   [`${API_PREFIX}/pops`]: { endpoint: "location-point/list" },
-  [`${API_PREFIX}/internet-services`]: { endpoint: "broadband/list", mapper: mapDekadataBroadbandInvoice },
-  [`${API_PREFIX}/finance`]: { endpoint: "broadband/list", mapper: mapDekadataBroadbandPayment },
+  [`${API_PREFIX}/internet-services`]: { endpoint: "finance/invoice/list", mapper: mapDekadataBroadbandInvoice },
+  [`${API_PREFIX}/finance`]: { endpoint: "finance/payment/list", mapper: mapDekadataBroadbandPayment },
 };
 
 async function postBackendList(req: Request, endpoint: string, body: JsonRecord, mapper: RowMapper = mapDekadataRecord) {
@@ -303,10 +306,10 @@ async function handleDetailCompatibility(req: Request, path: string, method: Htt
   }
 
   const invoice = path.match(new RegExp(`^${API_PREFIX}/internet-services/([^/]+)$`));
-  if (invoice && method === "GET") return findListItem(req, "broadband/list", invoice[1], mapDekadataBroadbandInvoice);
+  if (invoice && method === "GET") return findListItem(req, "finance/invoice/list", invoice[1], mapDekadataBroadbandInvoice);
 
   const payment = path.match(new RegExp(`^${API_PREFIX}/finance/([^/]+)$`));
-  if (payment && method === "GET") return findListItem(req, "broadband/list", payment[1], mapDekadataBroadbandPayment);
+  if (payment && method === "GET") return findListItem(req, "finance/payment/list", payment[1], mapDekadataBroadbandPayment);
 
   const paymentMethod = path.match(new RegExp(`^${API_PREFIX}/payment-methods/([^/]+)$`));
   if (paymentMethod) {
